@@ -1,0 +1,892 @@
+/**
+ * Fontify - Material 3 Expressive Design System
+ * Inspired by LSPosed & Android 16 / POCO F7 Native Aesthetics
+ * Powered by KernelSU & MMRL Dynamic Theming
+ *
+ * Author: Lava
+ */
+
+@import url('https://mui.kernelsu.org/internal/insets.css');
+@import url('https://mui.kernelsu.org/internal/colors.css');
+
+:root {
+    /* Insets */
+    --top-inset: var(--window-inset-top, 0px);
+    --bottom-inset: var(--window-inset-bottom, 0px);
+
+    /* Dynamic Material 3 System Colors (Light Mode Defaults & KernelSU/MMRL Host Variable Mappings) */
+    --md-sys-color-primary: var(--primary, #386a20);
+    --md-sys-color-on-primary: var(--onPrimary, #ffffff);
+    --md-sys-color-primary-container: var(--primaryContainer, #b7f397);
+    --md-sys-color-on-primary-container: var(--onPrimaryContainer, #042100);
+
+    --md-sys-color-secondary: var(--secondary, #55624c);
+    --md-sys-color-on-secondary: var(--onSecondary, #ffffff);
+    --md-sys-color-secondary-container: var(--secondaryContainer, #d9e7cb);
+    --md-sys-color-on-secondary-container: var(--onSecondaryContainer, #131f0d);
+
+    --md-sys-color-tertiary: var(--tertiary, #386666);
+    --md-sys-color-on-tertiary: var(--onTertiary, #ffffff);
+    --md-sys-color-tertiary-container: var(--tertiaryContainer, #bcecee);
+    --md-sys-color-on-tertiary-container: var(--onTertiaryContainer, #002021);
+
+    --md-sys-color-surface: var(--surface, #f8faf0);
+    --md-sys-color-surface-dim: var(--surfaceDim, #d8dad2);
+    --md-sys-color-surface-bright: var(--surfaceBright, #f8faf0);
+    --md-sys-color-surface-container-lowest: var(--surfaceContainerLowest, #ffffff);
+    --md-sys-color-surface-container-low: var(--surfaceContainerLow, #f2f4ea);
+    --md-sys-color-surface-container: var(--surfaceContainer, #ecefe5);
+    --md-sys-color-surface-container-high: var(--surfaceContainerHigh, #e7e9df);
+    --md-sys-color-surface-container-highest: var(--surfaceContainerHighest, #e1e4da);
+
+    --md-sys-color-on-surface: var(--onSurface, #191d17);
+    --md-sys-color-on-surface-variant: var(--onSurfaceVariant, #44483e);
+    --md-sys-color-outline: var(--outline, #74796d);
+    --md-sys-color-outline-variant: var(--outlineVariant, #c4c8ba);
+
+    --md-sys-color-error: var(--error, #ba1a1a);
+    --md-sys-color-on-error: var(--onError, #ffffff);
+    --md-sys-color-error-container: var(--errorContainer, #ffdad6);
+    --md-sys-color-on-error-container: var(--onErrorContainer, #410002);
+
+    /* M3 Expressive Motion Curves */
+    --m3-easing-standard: cubic-bezier(0.2, 0, 0, 1);
+    --m3-easing-decelerate: cubic-bezier(0.05, 0.7, 0.1, 1.0);
+    --m3-easing-accelerate: cubic-bezier(0.3, 0, 0.8, 0.15);
+    --m3-easing-spring: cubic-bezier(0.34, 1.35, 0.64, 1);
+
+    /* Shapes */
+    --m3-radius-dialog: 28px;
+    --m3-radius-card: 24px;
+    --m3-radius-pill: 9999px;
+}
+
+@media (prefers-color-scheme: dark) {
+    :root {
+        --md-sys-color-primary: var(--primary, #9cd67d);
+        --md-sys-color-on-primary: var(--onPrimary, #0e3900);
+        --md-sys-color-primary-container: var(--primaryContainer, #225108);
+        --md-sys-color-on-primary-container: var(--onPrimaryContainer, #b7f397);
+
+        --md-sys-color-secondary: var(--secondary, #bdcbb0);
+        --md-sys-color-on-secondary: var(--onSecondary, #273420);
+        --md-sys-color-secondary-container: var(--secondaryContainer, #3e4a35);
+        --md-sys-color-on-secondary-container: var(--onSecondaryContainer, #d9e7cb);
+
+        --md-sys-color-tertiary: var(--tertiary, #a0d0d2);
+        --md-sys-color-on-tertiary: var(--onTertiary, #003738);
+        --md-sys-color-tertiary-container: var(--tertiaryContainer, #1f4e4e);
+        --md-sys-color-on-tertiary-container: var(--onTertiaryContainer, #bcecee);
+
+        --md-sys-color-surface: var(--surface, #11140e);
+        --md-sys-color-surface-dim: var(--surfaceDim, #11140e);
+        --md-sys-color-surface-bright: var(--surfaceBright, #373a33);
+        --md-sys-color-surface-container-lowest: var(--surfaceContainerLowest, #0c0f09);
+        --md-sys-color-surface-container-low: var(--surfaceContainerLow, #191d16);
+        --md-sys-color-surface-container: var(--surfaceContainer, #1d211a);
+        --md-sys-color-surface-container-high: var(--surfaceContainerHigh, #272b24);
+        --md-sys-color-surface-container-highest: var(--surfaceContainerHighest, #32362f);
+
+        --md-sys-color-on-surface: var(--onSurface, #e1e4da);
+        --md-sys-color-on-surface-variant: var(--onSurfaceVariant, #c4c8ba);
+        --md-sys-color-outline: var(--outline, #8e9286);
+        --md-sys-color-outline-variant: var(--outlineVariant, #44483e);
+
+        --md-sys-color-error: var(--error, #ffb4ab);
+        --md-sys-color-on-error: var(--onError, #690005);
+        --md-sys-color-error-container: var(--errorContainer, #93000a);
+        --md-sys-color-on-error-container: var(--onErrorContainer, #ffdad6);
+    }
+}
+
+/* Reset */
+*, *::before, *::after {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+    -webkit-tap-highlight-color: transparent;
+}
+
+html {
+    color-scheme: dark light;
+    background-color: var(--md-sys-color-surface);
+    height: 100%;
+}
+
+body {
+    color-scheme: dark light;
+    font-family: "Google Sans", "Google Sans Flex", "Google Sans Text", Roboto, system-ui, -apple-system, sans-serif;
+    background-color: var(--md-sys-color-surface);
+    color: var(--md-sys-color-on-surface);
+    min-height: 100vh;
+    padding-bottom: max(96px, calc(var(--bottom-inset) + 80px));
+    line-height: 1.45;
+    font-size: 15px;
+    letter-spacing: 0.1px;
+    transition: background-color 250ms var(--m3-easing-standard), color 250ms var(--m3-easing-standard);
+    overflow-x: hidden;
+}
+
+/* App Header (LSPosed Big Title) */
+.app-header {
+    background-color: var(--md-sys-color-surface);
+    padding-top: max(24px, calc(var(--top-inset) + 20px));
+    padding-bottom: 20px;
+    padding-left: max(24px, calc(env(safe-area-inset-left, 0px) + 24px));
+    padding-right: max(24px, calc(env(safe-area-inset-right, 0px) + 24px));
+}
+
+.header-inner {
+    max-width: 640px;
+    margin: 0 auto;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.brand-title {
+    font-size: 2.35rem;
+    font-weight: 500;
+    letter-spacing: -0.6px;
+    color: var(--md-sys-color-on-surface);
+}
+
+/* Page Container */
+.page-container {
+    max-width: 640px;
+    margin: 0 auto;
+    padding: 0 16px;
+}
+
+/* Tab Views */
+.tab-view {
+    display: none;
+}
+
+.tab-view.active {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    animation: tab-enter 280ms var(--m3-easing-decelerate) forwards;
+}
+
+@keyframes tab-enter {
+    from {
+        opacity: 0;
+        transform: translateY(12px) scale(0.99);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+}
+
+/* 1. Hero Status Card (LSPosed Banner) */
+.m3-banner-card {
+    border-radius: var(--m3-radius-card);
+    padding: 20px 22px;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    transition: background-color 250ms var(--m3-easing-standard), color 250ms var(--m3-easing-standard), transform 180ms var(--m3-easing-spring);
+}
+
+.m3-banner-card.is-active {
+    background-color: var(--md-sys-color-primary-container);
+    color: var(--md-sys-color-on-primary-container);
+}
+
+.m3-banner-card.is-stock {
+    background-color: var(--md-sys-color-surface-container);
+    color: var(--md-sys-color-on-surface);
+}
+
+.banner-icon-container {
+    width: 42px;
+    height: 42px;
+    border-radius: 50%;
+    background-color: rgba(255, 255, 255, 0.12);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    transition: background-color 200ms ease, color 200ms ease;
+}
+
+.is-active .banner-icon-container {
+    background-color: var(--md-sys-color-primary);
+    color: var(--md-sys-color-on-primary);
+}
+
+.banner-text-content {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+}
+
+.banner-title {
+    font-size: 1.18rem;
+    font-weight: 600;
+    color: var(--md-sys-color-on-surface);
+}
+
+.banner-subtitle {
+    font-size: 0.88rem;
+    color: var(--md-sys-color-on-surface-variant);
+    margin-top: 2px;
+}
+
+.banner-badge-chip {
+    padding: 4px 10px;
+    border-radius: 8px;
+    background-color: rgba(255, 255, 255, 0.1);
+    color: var(--md-sys-color-primary);
+    font-size: 0.75rem;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+}
+
+/* 2. Property Info Card (LSPosed Style) */
+.m3-info-card {
+    background-color: var(--md-sys-color-surface-container);
+    border-radius: var(--m3-radius-card);
+    padding: 22px 24px;
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+    transition: transform 180ms var(--m3-easing-spring);
+}
+
+.info-prop-row {
+    display: flex;
+    flex-direction: column;
+}
+
+.prop-label {
+    font-size: 1rem;
+    font-weight: 500;
+    color: var(--md-sys-color-on-surface);
+}
+
+.prop-val {
+    font-size: 0.88rem;
+    color: var(--md-sys-color-on-surface-variant);
+    margin-top: 3px;
+}
+
+.m3-mini-badge {
+    padding: 2px 8px;
+    border-radius: 6px;
+    background-color: var(--md-sys-color-primary-container);
+    color: var(--md-sys-color-on-primary-container);
+    font-size: 0.75rem;
+    font-weight: 700;
+}
+
+/* 3. Customize & Picker Components */
+.m3-hero-picker-card {
+    background-color: var(--md-sys-color-surface-container);
+    border-radius: var(--m3-radius-card);
+    padding: 28px 24px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    gap: 16px;
+    cursor: pointer;
+    transition: background-color 180ms var(--m3-easing-standard), transform 180ms var(--m3-easing-spring);
+}
+
+.m3-hero-picker-card:hover {
+    background-color: var(--md-sys-color-surface-container-high);
+}
+
+.m3-hero-picker-card:active {
+    transform: scale(0.985);
+}
+
+.picker-icon-box {
+    width: 64px;
+    height: 64px;
+    border-radius: 22px;
+    background-color: var(--md-sys-color-primary-container);
+    color: var(--md-sys-color-on-primary-container);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: transform 200ms var(--m3-easing-spring);
+}
+
+.m3-hero-picker-card:hover .picker-icon-box {
+    transform: scale(1.06);
+}
+
+.picker-title {
+    font-size: 1.25rem;
+    font-weight: 600;
+    color: var(--md-sys-color-on-surface);
+}
+
+.picker-subtitle {
+    font-size: 0.88rem;
+    color: var(--md-sys-color-on-surface-variant);
+    margin-top: 4px;
+}
+
+.m3-pill-btn {
+    padding: 12px 28px;
+    border-radius: var(--m3-radius-pill);
+    border: none;
+    background-color: var(--md-sys-color-primary);
+    color: var(--md-sys-color-on-primary);
+    font-size: 0.95rem;
+    font-weight: 700;
+    cursor: pointer;
+    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.25);
+    transition: transform 180ms var(--m3-easing-spring), filter 180ms ease, background-color 200ms var(--m3-easing-standard);
+}
+
+.m3-pill-btn:hover {
+    filter: brightness(1.1);
+}
+
+.m3-pill-btn:active {
+    transform: scale(0.94);
+}
+
+/* Tuning Card */
+.m3-tuning-card {
+    background-color: var(--md-sys-color-surface-container);
+    border-radius: var(--m3-radius-card);
+    padding: 22px 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+}
+
+.card-title {
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: var(--md-sys-color-on-surface);
+}
+
+.card-subtitle {
+    font-size: 0.85rem;
+    color: var(--md-sys-color-on-surface-variant);
+}
+
+.m3-presets-scroll {
+    display: flex;
+    gap: 8px;
+    overflow-x: auto;
+    padding-top: 12px;
+    padding-bottom: 4px;
+    scrollbar-width: none;
+}
+
+.m3-presets-scroll::-webkit-scrollbar {
+    display: none;
+}
+
+.m3-chip {
+    padding: 8px 16px;
+    border-radius: var(--m3-radius-pill);
+    border: 1px solid var(--md-sys-color-outline-variant);
+    background-color: var(--md-sys-color-surface-container-high);
+    color: var(--md-sys-color-on-surface);
+    font-size: 0.82rem;
+    font-weight: 600;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: background-color 200ms var(--m3-easing-standard), color 200ms var(--m3-easing-standard), transform 150ms var(--m3-easing-spring), border-color 200ms ease;
+}
+
+.m3-chip:active {
+    transform: scale(0.92);
+}
+
+.m3-chip.active {
+    background-color: var(--md-sys-color-primary);
+    color: var(--md-sys-color-on-primary);
+    border-color: var(--md-sys-color-primary);
+}
+
+.tuning-card-body {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.slider-unit-box {
+    background-color: var(--md-sys-color-surface-container-high);
+    border-radius: 18px;
+    padding: 14px 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.slider-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.axis-name {
+    font-size: 0.92rem;
+    font-weight: 600;
+    color: var(--md-sys-color-on-surface);
+}
+
+.axis-val-chip {
+    padding: 2px 10px;
+    border-radius: var(--m3-radius-pill);
+    background-color: var(--md-sys-color-primary-container);
+    color: var(--md-sys-color-on-primary-container);
+    font-size: 0.8rem;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+    transition: background-color 150ms ease;
+}
+
+/* Custom M3 Sliders */
+input[type="range"] {
+    -webkit-appearance: none;
+    width: 100%;
+    height: 38px;
+    border-radius: 19px;
+    background: var(--md-sys-color-surface-container-highest);
+    outline: none;
+    cursor: pointer;
+    transition: background-color 150ms ease;
+}
+
+input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 38px;
+    height: 38px;
+    border-radius: 19px;
+    background: var(--md-sys-color-primary);
+    cursor: pointer;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.35);
+    transition: transform 180ms var(--m3-easing-spring);
+}
+
+input[type="range"]::-webkit-slider-thumb:active {
+    transform: scale(1.2);
+}
+
+/* 4. Preview & Playground */
+.m3-preview-card {
+    background-color: var(--md-sys-color-surface-container);
+    border-radius: var(--m3-radius-card);
+    padding: 24px 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+}
+
+.preview-specimens-stage {
+    background-color: var(--md-sys-color-surface-container-lowest);
+    border-radius: 20px;
+    padding: 22px 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+}
+
+.specimen-hero {
+    font-size: 2.8rem;
+    font-weight: 800;
+    line-height: 1.1;
+    letter-spacing: -0.6px;
+    outline: none;
+    border-bottom: 2px dashed transparent;
+    transition: border-color 200ms ease;
+}
+
+.specimen-hero:focus {
+    border-bottom-color: var(--md-sys-color-primary);
+}
+
+.specimen-headline {
+    font-size: 1.45rem;
+    font-weight: 700;
+    line-height: 1.25;
+    outline: none;
+    border-bottom: 2px dashed transparent;
+    transition: border-color 200ms ease;
+}
+
+.specimen-headline:focus {
+    border-bottom-color: var(--md-sys-color-primary);
+}
+
+.specimen-body {
+    font-size: 0.92rem;
+    color: var(--md-sys-color-on-surface-variant);
+    line-height: 1.55;
+    outline: none;
+    border-bottom: 2px dashed transparent;
+    transition: border-color 200ms ease;
+}
+
+.specimen-body:focus {
+    border-bottom-color: var(--md-sys-color-primary);
+}
+
+.specimen-glyphs {
+    font-size: 0.95rem;
+    color: var(--md-sys-color-primary);
+    font-weight: 700;
+    letter-spacing: 0.6px;
+    outline: none;
+}
+
+/* 5. System Actions View */
+.m3-actions-card {
+    background-color: var(--md-sys-color-surface-container);
+    border-radius: var(--m3-radius-card);
+    padding: 24px 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+}
+
+.actions-header {
+    margin-bottom: 4px;
+}
+
+.m3-action-item-btn {
+    width: 100%;
+    border: none;
+    border-radius: 20px;
+    padding: 16px 20px;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    cursor: pointer;
+    text-align: left;
+    transition: transform 160ms var(--m3-easing-spring), filter 160ms ease, background-color 200ms var(--m3-easing-standard);
+}
+
+.m3-action-item-btn:active {
+    transform: scale(0.975);
+}
+
+.action-btn-icon {
+    width: 42px;
+    height: 42px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    transition: transform 180ms var(--m3-easing-spring);
+}
+
+.m3-action-item-btn:hover .action-btn-icon {
+    transform: scale(1.08);
+}
+
+.action-btn-text {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+}
+
+.action-btn-title {
+    font-size: 1.02rem;
+    font-weight: 600;
+}
+
+.action-btn-sub {
+    font-size: 0.82rem;
+    opacity: 0.85;
+    margin-top: 2px;
+}
+
+.card-header-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.m3-action-item-btn.btn-primary {
+    background-color: var(--md-sys-color-primary);
+    color: var(--md-sys-color-on-primary);
+}
+
+.m3-action-item-btn.btn-primary .action-btn-icon {
+    background-color: rgba(0, 0, 0, 0.15);
+    color: var(--md-sys-color-on-primary);
+}
+
+.m3-action-item-btn.btn-primary:disabled {
+    background-color: var(--md-sys-color-surface-container-high);
+    color: var(--md-sys-color-on-surface-variant);
+    opacity: 0.6;
+    cursor: not-allowed;
+    transform: none;
+}
+
+.m3-action-item-btn.btn-primary:disabled .action-btn-icon {
+    background-color: var(--md-sys-color-surface-container-highest);
+    color: var(--md-sys-color-on-surface-variant);
+}
+
+.m3-action-item-btn.btn-tonal {
+    background-color: var(--md-sys-color-secondary-container);
+    color: var(--md-sys-color-on-secondary-container);
+}
+
+.m3-action-item-btn.btn-tonal .action-btn-icon {
+    background-color: rgba(0, 0, 0, 0.08);
+    color: var(--md-sys-color-on-secondary-container);
+}
+
+.m3-action-item-btn.btn-outlined {
+    background-color: var(--md-sys-color-surface-container-high);
+    color: var(--md-sys-color-on-surface);
+    border: 1px solid var(--md-sys-color-outline-variant);
+}
+
+.m3-action-item-btn.btn-outlined .action-btn-icon {
+    background-color: var(--md-sys-color-surface-container-highest);
+    color: var(--md-sys-color-secondary);
+}
+
+/* 6. Bottom Navigation Bar (2 Tabs) */
+.bottom-nav-bar {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    z-index: 60;
+    background-color: var(--md-sys-color-surface-container);
+    padding-top: 10px;
+    padding-bottom: max(12px, var(--bottom-inset));
+    border-top: 1px solid rgba(255, 255, 255, 0.04);
+}
+
+.nav-bar-inner {
+    max-width: 440px;
+    margin: 0 auto;
+    display: flex;
+    justify-content: space-around;
+    align-items: center;
+}
+
+.nav-tab {
+    background: transparent;
+    border: none;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    cursor: pointer;
+    color: var(--md-sys-color-on-surface-variant);
+    transition: color 200ms var(--m3-easing-standard);
+    padding: 0 16px;
+}
+
+.nav-tab-pill {
+    width: 64px;
+    height: 32px;
+    border-radius: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background-color 220ms var(--m3-easing-standard), color 220ms var(--m3-easing-standard), transform 200ms var(--m3-easing-spring);
+}
+
+.nav-tab-label {
+    font-size: 0.78rem;
+    font-weight: 600;
+}
+
+.nav-tab:active .nav-tab-pill {
+    transform: scale(0.92);
+}
+
+.nav-tab.active {
+    color: var(--md-sys-color-on-surface);
+}
+
+.nav-tab.active .nav-tab-pill {
+    background-color: var(--md-sys-color-secondary-container);
+    color: var(--md-sys-color-on-secondary-container);
+    transform: scale(1.02);
+}
+
+/* =========================================================
+   7. MATERIAL 3 EXPRESSIVE DIALOG (MODAL) & MOTION
+   ========================================================= */
+.modal-backdrop {
+    position: fixed;
+    inset: 0;
+    background-color: rgba(0, 0, 0, 0.65);
+    backdrop-filter: blur(14px);
+    -webkit-backdrop-filter: blur(14px);
+    z-index: 100;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 280ms var(--m3-easing-standard);
+}
+
+.modal-backdrop.open {
+    opacity: 1;
+    pointer-events: auto;
+}
+
+.m3-dialog {
+    background-color: var(--md-sys-color-surface-container-high);
+    border-radius: var(--m3-radius-dialog);
+    padding: 28px 24px;
+    max-width: 440px;
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    transform: scale(0.86) translateY(24px);
+    opacity: 0;
+    transition: transform 320ms var(--m3-easing-spring), opacity 240ms var(--m3-easing-standard);
+    box-shadow: 0 24px 48px -12px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(255, 255, 255, 0.05);
+}
+
+.modal-backdrop.open .m3-dialog {
+    transform: scale(1) translateY(0);
+    opacity: 1;
+}
+
+.dialog-header-group {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    gap: 14px;
+}
+
+.dialog-icon-container {
+    width: 52px;
+    height: 52px;
+    border-radius: 20px;
+    background-color: var(--md-sys-color-primary-container);
+    color: var(--md-sys-color-on-primary-container);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.2);
+    transition: transform 250ms var(--m3-easing-spring);
+}
+
+.modal-backdrop.open .dialog-icon-container {
+    transform: scale(1.05);
+}
+
+.dialog-title {
+    font-size: 1.45rem;
+    font-weight: 600;
+    letter-spacing: -0.3px;
+    color: var(--md-sys-color-on-surface);
+}
+
+.dialog-body {
+    font-size: 0.95rem;
+    color: var(--md-sys-color-on-surface-variant);
+    line-height: 1.55;
+    text-align: center;
+    padding: 0 6px;
+}
+
+.dialog-actions {
+    display: flex;
+    justify-content: stretch;
+    gap: 12px;
+    margin-top: 10px;
+}
+
+.m3-dialog-btn {
+    flex: 1;
+    height: 48px;
+    padding: 0 20px;
+    border-radius: var(--m3-radius-pill);
+    border: none;
+    font-size: 0.92rem;
+    font-weight: 700;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    transition: transform 160ms var(--m3-easing-spring), filter 160ms ease, background-color 200ms var(--m3-easing-standard);
+}
+
+.m3-dialog-btn:active {
+    transform: scale(0.94);
+}
+
+.m3-dialog-btn-tonal {
+    background-color: var(--md-sys-color-surface-container-highest);
+    color: var(--md-sys-color-on-surface);
+}
+
+.m3-dialog-btn-tonal:hover {
+    filter: brightness(1.08);
+}
+
+.m3-dialog-btn-filled {
+    background-color: var(--md-sys-color-primary);
+    color: var(--md-sys-color-on-primary);
+    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.25);
+}
+
+.m3-dialog-btn-filled:hover {
+    filter: brightness(1.08);
+}
+
+/* Toast */
+.toast-stack {
+    position: fixed;
+    bottom: calc(var(--bottom-inset) + 76px);
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 110;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    width: 90%;
+    max-width: 380px;
+    pointer-events: none;
+}
+
+.toast-item {
+    background-color: var(--md-sys-color-on-surface);
+    color: var(--md-sys-color-surface);
+    padding: 14px 20px;
+    border-radius: 16px;
+    font-size: 0.9rem;
+    font-weight: 600;
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.35);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    animation: toast-in 260ms var(--m3-easing-spring) forwards;
+    pointer-events: auto;
+}
+
+@keyframes toast-in {
+    from {
+        opacity: 0;
+        transform: translateY(20px) scale(0.95);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+}

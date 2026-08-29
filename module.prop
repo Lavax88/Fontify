@@ -1,0 +1,8 @@
+id=fontify
+name=Fontify
+version=v1.0.0
+versionCode=1000
+author=Lava
+description=Customize Android's font with a WebUI
+web=true
+updateJson=https://raw.githubusercontent.com/Lavax88/Fontify/master/update.json

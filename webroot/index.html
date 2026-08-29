@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="color-scheme" content="dark light">
+    <meta name="theme-color" id="meta-theme-color" content="#0f140e">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <title>Fontify</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <!-- Top Header (LSPosed / Material 3 Large Title) -->
+    <header class="app-header">
+        <div class="header-inner">
+            <h1 class="brand-title">Fontify</h1>
+        </div>
+    </header>
+
+    <!-- Main Views Container -->
+    <main class="page-container">
+        <!-- ================= TAB 1: OVERVIEW (HOME) ================= -->
+        <section class="tab-view active" id="view-overview">
+            <!-- 1. Hero Status Card (LSPosed Banner Style) -->
+            <div class="m3-banner-card is-stock" id="overview-banner">
+                <div class="banner-icon-container" id="banner-icon-box">
+                    <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor" id="banner-icon">
+                        <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
+                    </svg>
+                </div>
+                <div class="banner-text-content">
+                    <div class="banner-title" id="banner-title">Default Font</div>
+                    <div class="banner-subtitle" id="banner-subtitle">Stock System Font</div>
+                </div>
+                <div class="banner-badge-chip" id="banner-badge">STOCK</div>
+            </div>
+
+            <!-- 2. Property Info Card (LSPosed Info Card Style) -->
+            <div class="m3-info-card">
+                <div class="info-prop-row">
+                    <div class="prop-label">Active Font</div>
+                    <div class="prop-val" id="info-active-font">Roboto / Google Sans</div>
+                </div>
+                <div class="info-prop-row">
+                    <div class="prop-label">Overlay Target</div>
+                    <div class="prop-val">/system + /product</div>
+                </div>
+                <div class="info-prop-row">
+                    <div class="prop-label">System version</div>
+                    <div class="prop-val" id="info-system-ver">16 (API 36.1)</div>
+                </div>
+                <div class="info-prop-row">
+                    <div class="prop-label">Device</div>
+                    <div class="prop-val" id="info-device-name">POCO F7 (onyx)</div>
+                </div>
+                <div class="info-prop-row">
+                    <div class="prop-label">System ABI</div>
+                    <div class="prop-val" id="info-system-abi">arm64-v8a (4K)</div>
+                </div>
+                <div class="info-prop-row">
+                    <div class="prop-label">Stock Backup</div>
+                    <div class="prop-val" id="info-backup-status">Protected (/data/adb)</div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ================= TAB 2: CUSTOMIZE ================= -->
+        <section class="tab-view" id="view-customize">
+            <input type="file" id="file-input" accept=".ttf,.otf,.ttc,.woff,.woff2" style="display: none;">
+            
+            <!-- 1. Hero Font Picker Card -->
+            <div class="m3-hero-picker-card" id="dropzone">
+                <div class="picker-icon-box">
+                    <svg width="32" height="32" viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M19.35 10.04C18.67 6.59 15.64 4 12 4 9.11 4 6.6 5.64 5.35 8.04 2.34 8.36 0 10.91 0 14c0 3.31 2.69 6 6 6h13c2.76 0 5-2.24 5-5 0-2.64-2.05-4.78-4.65-4.96zM14 13v4h-4v-4H7l5-5 5 5h-3z"/>
+                    </svg>
+                </div>
+                <div class="picker-text">
+                    <h2 class="picker-title" id="picker-title">Import Font File</h2>
+                    <p class="picker-subtitle" id="picker-subtitle">Tap to select or drop any .ttf or .otf font</p>
+                </div>
+                <button class="m3-pill-btn" id="btn-select-file" type="button">Select Font</button>
+            </div>
+
+            <!-- 2. Loaded Font Properties Card -->
+            <div class="m3-info-card" id="font-info-row" style="display: none;">
+                <div class="info-prop-row">
+                    <div class="prop-label">Font Family</div>
+                    <div class="prop-val" id="font-name">Custom Font</div>
+                </div>
+                <div class="info-prop-row">
+                    <div class="prop-label">Format</div>
+                    <div class="prop-val" id="font-format">TrueType Variable Font</div>
+                </div>
+                <div class="info-prop-row">
+                    <div class="prop-label">Font Type</div>
+                    <div class="prop-val"><span class="m3-mini-badge" id="font-type-badge">Variable</span></div>
+                </div>
+            </div>
+
+            <!-- 3. Variable Font Axis Tuning Card -->
+            <div class="m3-tuning-card" id="variable-controls-group" style="display: none;">
+                <div class="tuning-card-header">
+                    <h3 class="card-title">Weight & Style Presets</h3>
+                    <div class="m3-presets-scroll" id="presets-container">
+                        <!-- Populated dynamically -->
+                    </div>
+                </div>
+
+                <div class="tuning-card-body" id="sliders-container">
+                    <!-- Populated dynamically -->
+                </div>
+            </div>
+
+            <!-- 4. Font Preview Card -->
+            <div class="m3-preview-card">
+                <div class="card-header-row">
+                    <h3 class="card-title">Font Preview</h3>
+                </div>
+
+                <div class="preview-specimens-stage" id="playground-box">
+                    <div class="specimen-hero preview-text" contenteditable="true" spellcheck="false">Fontify</div>
+                    <div class="specimen-headline preview-text" contenteditable="true" spellcheck="false">The quick brown fox jumps over the lazy dog.</div>
+                    <div class="specimen-body preview-text" contenteditable="true" spellcheck="false">
+                        Pack my box with five dozen liquor jugs. System UI elements, lock screen clocks, notifications, and settings will dynamically render using your customized font parameters.
+                    </div>
+                    <div class="specimen-glyphs preview-text" contenteditable="true" spellcheck="false">0123456789 • &@#%*+-=:;!?</div>
+                </div>
+            </div>
+
+            <!-- 5. Quick Actions -->
+            <div class="m3-actions-card">
+                <!-- Apply Font -->
+                <button class="m3-action-item-btn btn-primary" id="btn-apply" disabled>
+                    <div class="action-btn-icon">
+                        <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor">
+                            <path d="M9 16.2L4.8 12l-1.4 1.4L9 19 21 7l-1.4-1.4L9 16.2z"/>
+                        </svg>
+                    </div>
+                    <div class="action-btn-text">
+                        <div class="action-btn-title">Apply Font</div>
+                        <div class="action-btn-sub">Apply selected font across SystemUI & apps</div>
+                    </div>
+                </button>
+
+                <!-- Revert to Stock -->
+                <button class="m3-action-item-btn btn-tonal" id="btn-restore">
+                    <div class="action-btn-icon">
+                        <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor">
+                            <path d="M13 3c-4.97 0-9 4.03-9 9H1l3.89 3.89.07.14L9 12H6c0-3.87 3.13-7 7-7s7 3.13 7 7-3.13 7-7 7c-1.93 0-3.68-.79-4.94-2.06l-1.42 1.42C8.27 19.99 10.51 21 13 21c4.97 0 9-4.03 9-9s-4.03-9-9-9zm-1 5v5l4.28 2.54.72-1.21-3.5-2.08V8H12z"/>
+                        </svg>
+                    </div>
+                    <div class="action-btn-text">
+                        <div class="action-btn-title">Revert to Stock</div>
+                        <div class="action-btn-sub">Safely remove custom font overlays</div>
+                    </div>
+                </button>
+
+                <!-- Reboot -->
+                <button class="m3-action-item-btn btn-outlined" id="btn-soft-reboot">
+                    <div class="action-btn-icon">
+                        <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor">
+                            <path d="M17.65 6.35C16.2 4.9 14.21 4 12 4c-4.42 0-7.99 3.58-7.99 8s3.57 8 7.99 8c3.73 0 6.84-2.55 7.73-6h-2.08c-.82 2.33-3.04 4-5.65 4-3.31 0-6-2.69-6-6s2.69-6 6-6c1.66 0 3.14.69 4.22 1.78L13 11h7V4l-2.35 2.35z"/>
+                        </svg>
+                    </div>
+                    <div class="action-btn-text">
+                        <div class="action-btn-title">Reboot</div>
+                        <div class="action-btn-sub">Restart framework to reload fonts</div>
+                    </div>
+                </button>
+            </div>
+        </section>
+    </main>
+
+    <!-- Bottom Navigation Bar (2 Tabs: Overview & Customize) -->
+    <nav class="bottom-nav-bar">
+        <div class="nav-bar-inner">
+            <button class="nav-tab active" data-tab="overview" onclick="switchTab('overview')">
+                <div class="nav-tab-pill">
+                    <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/>
+                    </svg>
+                </div>
+                <span class="nav-tab-label">Overview</span>
+            </button>
+
+            <button class="nav-tab" data-tab="customize" onclick="switchTab('customize')">
+                <div class="nav-tab-pill">
+                    <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M9.93 13.5h4.14L12 7.98zM20 2H4c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm-4.05 16.5l-1.14-3H9.17l-1.12 3H5.96l5.11-13h1.86l5.11 13h-2.09z"/>
+                    </svg>
+                </div>
+                <span class="nav-tab-label">Customize</span>
+            </button>
+        </div>
+    </nav>
+
+    <!-- Material 3 Expressive Dialog Modal -->
+    <div class="modal-backdrop" id="modal-overlay">
+        <div class="m3-dialog">
+            <div class="dialog-header-group">
+                <div class="dialog-icon-container" id="dialog-icon-box">
+                    <svg width="26" height="26" viewBox="0 0 24 24" fill="currentColor" id="dialog-icon-svg">
+                        <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
+                    </svg>
+                </div>
+                <h3 class="dialog-title" id="modal-title">Confirmation</h3>
+            </div>
+            <div class="dialog-body" id="modal-body">Description</div>
+            <div class="dialog-actions">
+                <button class="m3-dialog-btn m3-dialog-btn-tonal" id="modal-cancel-btn">Cancel</button>
+                <button class="m3-dialog-btn m3-dialog-btn-filled" id="modal-confirm-btn">Confirm</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Floating Toast Container -->
+    <div class="toast-stack" id="toast-container"></div>
+
+    <!-- Scripts -->
+    <script src="font-parser.js"></script>
+    <script src="app.js"></script>
+</body>
+</html>

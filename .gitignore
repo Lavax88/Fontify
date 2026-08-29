@@ -1,0 +1,11 @@
+*.zip
+*.log
+.DS_Store
+__pycache__/
+*.tmp
+*.png
+*.jpg
+*.jpeg
+device_fonts*.xml
+data/*.ttf
+data/*.json
