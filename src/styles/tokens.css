@@ -1,0 +1,119 @@
+/**
+ * Fontify - Material 3 Expressive Tokens & Reset
+ * External KernelSU Dynamic Theming Imports
+ */
+
+@import url('https://mui.kernelsu.org/internal/insets.css');
+@import url('https://mui.kernelsu.org/internal/colors.css');
+
+:root {
+  /* Edge-to-edge Insets with Desktop/Dev fallbacks */
+  --top-inset: var(--window-inset-top, 0px);
+  --bottom-inset: var(--window-inset-bottom, 0px);
+
+  /* Dynamic Material 3 System Colors (Light Mode Defaults & KernelSU/MMRL Host Variable Mappings) */
+  --md-sys-color-primary: var(--primary, #386a20);
+  --md-sys-color-on-primary: var(--onPrimary, #ffffff);
+  --md-sys-color-primary-container: var(--primaryContainer, #b7f397);
+  --md-sys-color-on-primary-container: var(--onPrimaryContainer, #042100);
+
+  --md-sys-color-secondary: var(--secondary, #55624c);
+  --md-sys-color-on-secondary: var(--onSecondary, #ffffff);
+  --md-sys-color-secondary-container: var(--secondaryContainer, #d9e7cb);
+  --md-sys-color-on-secondary-container: var(--onSecondaryContainer, #131f0d);
+
+  --md-sys-color-tertiary: var(--tertiary, #386666);
+  --md-sys-color-on-tertiary: var(--onTertiary, #ffffff);
+  --md-sys-color-tertiary-container: var(--tertiaryContainer, #bcecee);
+  --md-sys-color-on-tertiary-container: var(--onTertiaryContainer, #002021);
+
+  --md-sys-color-surface: var(--surface, #f8faf0);
+  --md-sys-color-surface-dim: var(--surfaceDim, #d8dad2);
+  --md-sys-color-surface-bright: var(--surfaceBright, #f8faf0);
+  --md-sys-color-surface-container-lowest: var(--surfaceContainerLowest, #ffffff);
+  --md-sys-color-surface-container-low: var(--surfaceContainerLow, #f2f4ea);
+  --md-sys-color-surface-container: var(--surfaceContainer, #ecefe5);
+  --md-sys-color-surface-container-high: var(--surfaceContainerHigh, #e7e9df);
+  --md-sys-color-surface-container-highest: var(--surfaceContainerHighest, #e1e4da);
+
+  --md-sys-color-on-surface: var(--onSurface, #191d17);
+  --md-sys-color-on-surface-variant: var(--onSurfaceVariant, #44483e);
+  --md-sys-color-outline: var(--outline, #74796d);
+  --md-sys-color-outline-variant: var(--outlineVariant, #c4c8ba);
+
+  --md-sys-color-error: var(--error, #ba1a1a);
+  --md-sys-color-on-error: var(--onError, #ffffff);
+  --md-sys-color-error-container: var(--errorContainer, #ffdad6);
+  --md-sys-color-on-error-container: var(--onErrorContainer, #410002);
+
+  /* Shapes */
+  --m3-radius-dialog: 28px;
+  --m3-radius-card: 24px;
+  --m3-radius-pill: 9999px;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --md-sys-color-primary: var(--primary, #9cd67d);
+    --md-sys-color-on-primary: var(--onPrimary, #0e3900);
+    --md-sys-color-primary-container: var(--primaryContainer, #225108);
+    --md-sys-color-on-primary-container: var(--onPrimaryContainer, #b7f397);
+
+    --md-sys-color-secondary: var(--secondary, #bdcbb0);
+    --md-sys-color-on-secondary: var(--onSecondary, #273420);
+    --md-sys-color-secondary-container: var(--secondaryContainer, #3e4a35);
+    --md-sys-color-on-secondary-container: var(--onSecondaryContainer, #d9e7cb);
+
+    --md-sys-color-tertiary: var(--tertiary, #a0d0d2);
+    --md-sys-color-on-tertiary: var(--onTertiary, #003738);
+    --md-sys-color-tertiary-container: var(--tertiaryContainer, #1f4e4e);
+    --md-sys-color-on-tertiary-container: var(--onTertiaryContainer, #bcecee);
+
+    --md-sys-color-surface: var(--surface, #11140e);
+    --md-sys-color-surface-dim: var(--surfaceDim, #11140e);
+    --md-sys-color-surface-bright: var(--surfaceBright, #373a33);
+    --md-sys-color-surface-container-lowest: var(--surfaceContainerLowest, #0c0f09);
+    --md-sys-color-surface-container-low: var(--surfaceContainerLow, #191d16);
+    --md-sys-color-surface-container: var(--surfaceContainer, #1d211a);
+    --md-sys-color-surface-container-high: var(--surfaceContainerHigh, #272b24);
+    --md-sys-color-surface-container-highest: var(--surfaceContainerHighest, #32362f);
+
+    --md-sys-color-on-surface: var(--onSurface, #e1e4da);
+    --md-sys-color-on-surface-variant: var(--onSurfaceVariant, #c4c8ba);
+    --md-sys-color-outline: var(--outline, #8e9286);
+    --md-sys-color-outline-variant: var(--outlineVariant, #44483e);
+
+    --md-sys-color-error: var(--error, #ffb4ab);
+    --md-sys-color-on-error: var(--onError, #690005);
+    --md-sys-color-error-container: var(--errorContainer, #93000a);
+    --md-sys-color-on-error-container: var(--onErrorContainer, #ffdad6);
+  }
+}
+
+/* Reset */
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+  -webkit-tap-highlight-color: transparent;
+}
+
+html {
+  color-scheme: dark light;
+  background-color: var(--md-sys-color-surface);
+  height: 100%;
+}
+
+body {
+  color-scheme: dark light;
+  font-family: "Google Sans", "Google Sans Flex", "Google Sans Text", Roboto, system-ui, -apple-system, sans-serif;
+  background-color: var(--md-sys-color-surface);
+  color: var(--md-sys-color-on-surface);
+  min-height: 100vh;
+  padding-bottom: max(96px, calc(var(--bottom-inset) + 80px));
+  line-height: 1.45;
+  font-size: 15px;
+  letter-spacing: 0.1px;
+  transition: background-color 250ms var(--m3-easing-standard), color 250ms var(--m3-easing-standard);
+  overflow-x: hidden;
+}

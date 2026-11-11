@@ -26,6 +26,19 @@ jobs:
       with:
         fetch-depth: 0
 
+    - name: Set up Node.js (LTS)
+      uses: actions/setup-node@v4
+      with:
+        node-version: 22
+        cache: 'npm'
+
+    - name: Install Dependencies, Typecheck & Test
+      run: |
+        npm ci
+        npm run typecheck
+        npm test
+        npm run build
+
     - name: Update Version & Increment VersionCode
       id: update_metadata
       env:
@@ -103,7 +116,7 @@ jobs:
         git config --local user.email "github-actions[bot]@users.noreply.github.com"
         git config --local user.name "github-actions[bot]"
         
-        git add module.prop changelog.md update.json
+        git add module.prop changelog.md update.json webroot package.json package-lock.json
         if ! git diff --staged --quiet; then
           git commit -m "chore: release ${RELEASE_VER} [skip ci]"
           git push origin HEAD:${{ github.ref }}
@@ -115,7 +128,7 @@ jobs:
       env:
         RELEASE_VER: ${{ github.event.inputs.version }}
       run: |
-        git archive --format=zip --output=Fontify-${RELEASE_VER}.zip HEAD
+        ./build.sh
         echo "Zip verification:"
         unzip -l Fontify-${RELEASE_VER}.zip
 

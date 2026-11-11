@@ -15,12 +15,16 @@ ui_print "- Cleaning up previous installation files..."
 for dir in "$MODULE_DIR" "$OLD_MODULE_DIR"; do
     if [ -d "$dir" ]; then
         rm -rf "$dir/system" 2>/dev/null
+        rm -rf "$dir/product" 2>/dev/null
         rm -rf "$dir/bin" 2>/dev/null
         rm -rf "$dir/webroot" 2>/dev/null
         rm -f "$dir"/*.sh 2>/dev/null
         rm -f "$dir/module.prop" 2>/dev/null
     fi
 done
+
+# Clean legacy external temp file
+rm -f /data/local/tmp/fontify_custom_font.ttf 2>/dev/null
 
 # 2. Prepare module directories
 ui_print "- Setting up directory structure..."

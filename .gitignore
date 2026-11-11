@@ -1,8 +1,17 @@
+# Build and Package Output
 *.zip
 *.log
+*.tmp
 .DS_Store
 __pycache__/
-*.tmp
+
+# Dependencies and build caches
+node_modules/
+dist/
+.vite/
+coverage/
+
+# Custom data
 *.png
 *.jpg
 *.jpeg
