@@ -1,6 +1,4 @@
-/**
- * Fontify - Material 3 Expressive Main Stylesheet
- */
+/* Hallmark · checked: 2026-10-25 · genre: modern-minimal · shape: app screen · redesign: polish · built: the project · v2.0.0 */
 
 @import './tokens.css';
 @import './motion.css';
@@ -52,7 +50,7 @@
 /* 1. Hero Status Card (LSPosed Banner) */
 .m3-banner-card {
   border-radius: var(--m3-radius-card);
-  padding: 20px 22px;
+  padding: 20px 24px;
   display: flex;
   align-items: center;
   gap: 16px;
@@ -70,20 +68,18 @@
 }
 
 .banner-icon-container {
-  width: 42px;
-  height: 42px;
-  border-radius: 50%;
-  background-color: rgba(255, 255, 255, 0.12);
+  width: 32px;
+  height: 32px;
   display: flex;
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
-  transition: background-color 200ms ease, color 200ms ease;
+  color: var(--md-sys-color-primary);
+  transition: color 200ms ease;
 }
 
 .is-active .banner-icon-container {
-  background-color: var(--md-sys-color-primary);
-  color: var(--md-sys-color-on-primary);
+  color: var(--md-sys-color-on-primary-container);
 }
 
 .banner-text-content {
@@ -105,23 +101,25 @@
 }
 
 .banner-badge-chip {
-  padding: 4px 10px;
+  padding: 4px 8px;
   border-radius: var(--md-sys-shape-corner-small);
-  background-color: rgba(255, 255, 255, 0.1);
+  background-color: var(--md-sys-color-surface-variant);
   color: var(--md-sys-color-primary);
   font-size: var(--md-sys-typescale-label-small-size);
   font-weight: var(--md-sys-typescale-label-small-weight);
-  letter-spacing: 0.5px;
+  letter-spacing: normal;
+  text-transform: none;
 }
 
 /* 2. Property Info Card (LSPosed Style) */
 .m3-info-card {
   background-color: var(--md-sys-color-surface-container);
+  color: var(--md-sys-color-on-surface);
   border-radius: var(--m3-radius-card);
-  padding: 22px 24px;
+  padding: 24px;
   display: flex;
   flex-direction: column;
-  gap: 18px;
+  gap: 16px;
   transition: transform 180ms var(--m3-easing-spring);
 }
 
@@ -139,7 +137,7 @@
 .prop-val {
   font-size: var(--md-sys-typescale-body-medium-size);
   color: var(--md-sys-color-on-surface-variant);
-  margin-top: 3px;
+  margin-top: 4px;
 }
 
 .m3-mini-badge {
@@ -154,6 +152,7 @@
 /* 3. Customize & Picker Components */
 .m3-hero-picker-card {
   background-color: var(--md-sys-color-surface-container);
+  color: var(--md-sys-color-on-surface);
   border-radius: var(--m3-radius-card);
   padding: 28px 24px;
   display: flex;
@@ -210,7 +209,7 @@
   font-size: var(--md-sys-typescale-label-large-size);
   font-weight: var(--md-sys-typescale-label-large-weight);
   cursor: pointer;
-  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.25);
+  box-shadow: var(--elevation-shadow-1);
   transition: transform 180ms var(--m3-easing-spring), filter 180ms ease, background-color 200ms var(--m3-easing-standard);
 }
 
@@ -222,14 +221,21 @@
   transform: scale(0.94);
 }
 
+.m3-pill-btn:disabled {
+  opacity: 0.38;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
 /* Tuning Card */
 .m3-tuning-card {
   background-color: var(--md-sys-color-surface-container);
+  color: var(--md-sys-color-on-surface);
   border-radius: var(--m3-radius-card);
-  padding: 22px 20px;
+  padding: 24px 20px;
   display: flex;
   flex-direction: column;
-  gap: 18px;
+  gap: 16px;
 }
 
 .card-title {
@@ -274,6 +280,11 @@
   border-color: var(--md-sys-color-primary);
 }
 
+.m3-chip:disabled {
+  opacity: 0.38;
+  cursor: not-allowed;
+}
+
 .tuning-card-body {
   display: flex;
   flex-direction: column;
@@ -283,10 +294,10 @@
 .slider-unit-box {
   background-color: var(--md-sys-color-surface-container-high);
   border-radius: var(--md-sys-shape-corner-large);
-  padding: 14px 16px;
+  padding: 16px;
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 12px;
 }
 
 .slider-top {
@@ -302,7 +313,7 @@
 }
 
 .axis-val-chip {
-  padding: 2px 10px;
+  padding: 4px 8px;
   border-radius: var(--m3-radius-pill);
   background-color: var(--md-sys-color-primary-container);
   color: var(--md-sys-color-on-primary-container);
@@ -338,7 +349,7 @@ input[type="range"]::-webkit-slider-thumb {
   border-radius: 19px;
   background: var(--md-sys-color-primary);
   cursor: pointer;
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.35);
+  box-shadow: var(--elevation-shadow-thumb);
   transition: transform 180ms var(--m3-easing-spring);
 }
 
@@ -349,11 +360,12 @@ input[type="range"]::-webkit-slider-thumb:active {
 /* 4. Preview & Playground */
 .m3-preview-card {
   background-color: var(--md-sys-color-surface-container);
+  color: var(--md-sys-color-on-surface);
   border-radius: var(--m3-radius-card);
   padding: 24px 20px;
   display: flex;
   flex-direction: column;
-  gap: 18px;
+  gap: 16px;
 }
 
 .card-header-row {
@@ -365,10 +377,10 @@ input[type="range"]::-webkit-slider-thumb:active {
 .preview-specimens-stage {
   background-color: var(--md-sys-color-surface-container-lowest);
   border-radius: var(--md-sys-shape-corner-large-increased);
-  padding: 22px 20px;
+  padding: 24px 20px;
   display: flex;
   flex-direction: column;
-  gap: 14px;
+  gap: 16px;
 }
 
 .specimen-hero {
@@ -422,11 +434,12 @@ input[type="range"]::-webkit-slider-thumb:active {
 /* 5. System Actions View */
 .m3-actions-card {
   background-color: var(--md-sys-color-surface-container);
+  color: var(--md-sys-color-on-surface);
   border-radius: var(--m3-radius-card);
   padding: 24px 20px;
   display: flex;
   flex-direction: column;
-  gap: 14px;
+  gap: 16px;
 }
 
 .m3-action-item-btn {
@@ -470,6 +483,7 @@ input[type="range"]::-webkit-slider-thumb:active {
 .action-btn-title {
   font-size: var(--md-sys-typescale-title-medium-size);
   font-weight: var(--md-sys-typescale-title-medium-weight);
+  white-space: nowrap;
 }
 
 .action-btn-sub {
@@ -484,7 +498,7 @@ input[type="range"]::-webkit-slider-thumb:active {
 }
 
 .m3-action-item-btn.btn-primary .action-btn-icon {
-  background-color: rgba(0, 0, 0, 0.15);
+  background-color: var(--state-active-overlay-primary);
   color: var(--md-sys-color-on-primary);
 }
 
@@ -507,7 +521,7 @@ input[type="range"]::-webkit-slider-thumb:active {
 }
 
 .m3-action-item-btn.btn-tonal .action-btn-icon {
-  background-color: rgba(0, 0, 0, 0.08);
+  background-color: var(--state-active-overlay-tonal);
   color: var(--md-sys-color-on-secondary-container);
 }
 
@@ -530,9 +544,9 @@ input[type="range"]::-webkit-slider-thumb:active {
   right: 0;
   z-index: 60;
   background-color: var(--md-sys-color-surface-container);
-  padding-top: 10px;
+  padding-top: 8px;
   padding-bottom: max(12px, var(--bottom-inset));
-  border-top: 1px solid rgba(255, 255, 255, 0.04);
+  border-top: 1px solid var(--md-sys-color-outline-variant);
 }
 
 .nav-bar-inner {
@@ -554,6 +568,11 @@ input[type="range"]::-webkit-slider-thumb:active {
   color: var(--md-sys-color-on-surface-variant);
   transition: color 200ms var(--m3-easing-standard);
   padding: 0 16px;
+}
+
+.nav-tab:disabled {
+  opacity: 0.38;
+  cursor: not-allowed;
 }
 
 .nav-tab-pill {
@@ -589,9 +608,7 @@ input[type="range"]::-webkit-slider-thumb:active {
 .modal-backdrop {
   position: fixed;
   inset: 0;
-  background-color: rgba(0, 0, 0, 0.65);
-  backdrop-filter: blur(14px);
-  -webkit-backdrop-filter: blur(14px);
+  background-color: var(--modal-scrim);
   z-index: 100;
   display: flex;
   align-items: center;
@@ -609,6 +626,7 @@ input[type="range"]::-webkit-slider-thumb:active {
 
 .m3-dialog {
   background-color: var(--md-sys-color-surface-container-high);
+  color: var(--md-sys-color-on-surface);
   border-radius: var(--m3-radius-dialog);
   padding: 28px 24px;
   max-width: 440px;
@@ -619,7 +637,7 @@ input[type="range"]::-webkit-slider-thumb:active {
   transform: scale(0.86) translateY(24px);
   opacity: 0;
   transition: transform 320ms var(--m3-easing-spring), opacity 240ms var(--m3-easing-standard);
-  box-shadow: 0 24px 48px -12px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(255, 255, 255, 0.05);
+  box-shadow: var(--elevation-shadow-dialog);
 }
 
 .modal-backdrop.open .m3-dialog {
@@ -632,7 +650,7 @@ input[type="range"]::-webkit-slider-thumb:active {
   flex-direction: column;
   align-items: center;
   text-align: center;
-  gap: 14px;
+  gap: 16px;
 }
 
 .dialog-icon-container {
@@ -644,7 +662,7 @@ input[type="range"]::-webkit-slider-thumb:active {
   display: flex;
   align-items: center;
   justify-content: center;
-  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.2);
+  box-shadow: var(--elevation-shadow-1);
   transition: transform 250ms var(--m3-easing-spring);
 }
 
@@ -664,14 +682,14 @@ input[type="range"]::-webkit-slider-thumb:active {
   color: var(--md-sys-color-on-surface-variant);
   line-height: 1.55;
   text-align: center;
-  padding: 0 6px;
+  padding: 0 8px;
 }
 
 .dialog-actions {
   display: flex;
   justify-content: stretch;
   gap: 12px;
-  margin-top: 10px;
+  margin-top: 12px;
 }
 
 .m3-dialog-btn {
@@ -694,6 +712,12 @@ input[type="range"]::-webkit-slider-thumb:active {
   transform: scale(0.94);
 }
 
+.m3-dialog-btn:disabled {
+  opacity: 0.38;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
 .m3-dialog-btn-tonal {
   background-color: var(--md-sys-color-surface-container-highest);
   color: var(--md-sys-color-on-surface);
@@ -706,7 +730,7 @@ input[type="range"]::-webkit-slider-thumb:active {
 .m3-dialog-btn-filled {
   background-color: var(--md-sys-color-primary);
   color: var(--md-sys-color-on-primary);
-  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.25);
+  box-shadow: var(--elevation-shadow-1);
 }
 
 .m3-dialog-btn-filled:hover {
@@ -731,11 +755,11 @@ input[type="range"]::-webkit-slider-thumb:active {
 .toast-item {
   background-color: var(--md-sys-color-on-surface);
   color: var(--md-sys-color-surface);
-  padding: 14px 20px;
+  padding: 16px 20px;
   border-radius: var(--md-sys-shape-corner-large);
   font-size: var(--md-sys-typescale-body-medium-size);
   font-weight: 600;
-  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.35);
+  box-shadow: var(--elevation-shadow-toast);
   display: flex;
   align-items: center;
   justify-content: space-between;

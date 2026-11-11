@@ -28,7 +28,7 @@ export function showToast(message: string, duration = 3000): void {
   setTimeout(() => {
     toast.style.opacity = '0';
     toast.style.transform = 'translateY(16px) scale(0.95)';
-    toast.style.transition = 'all 0.25s var(--m3-easing-standard)';
+    toast.style.transition = 'transform 0.25s var(--m3-easing-standard), opacity 0.25s var(--m3-easing-standard)';
     setTimeout(() => toast.remove(), 250);
   }, duration);
 }

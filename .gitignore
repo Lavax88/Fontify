@@ -18,3 +18,7 @@ coverage/
 device_fonts*.xml
 data/*.ttf
 data/*.json
+
+# Hallmark design audit artifacts
+.hallmark/
+

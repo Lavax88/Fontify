@@ -1,7 +1,4 @@
-/**
- * Fontify - Material 3 Expressive Tokens & Reset
- * External KernelSU Dynamic Theming Imports
- */
+/* Hallmark · checked: 2026-10-25 · genre: modern-minimal · shape: app screen · redesign: polish · built: the project · v2.0.0 */
 
 @import url('https://mui.kernelsu.org/internal/insets.css');
 @import url('https://mui.kernelsu.org/internal/colors.css');
@@ -10,6 +7,16 @@
   /* Edge-to-edge Insets with Desktop/Dev fallbacks */
   --top-inset: var(--window-inset-top, 0px);
   --bottom-inset: var(--window-inset-bottom, 0px);
+
+  /* Elevation Shadows & Surface Overlays */
+  --elevation-shadow-1: 0 1px 3px 1px color-mix(in srgb, var(--md-sys-color-on-surface) 15%, transparent), 0 1px 2px 0 color-mix(in srgb, var(--md-sys-color-on-surface) 30%, transparent);
+  --elevation-shadow-2: 0 2px 6px 2px color-mix(in srgb, var(--md-sys-color-on-surface) 15%, transparent), 0 1px 2px 0 color-mix(in srgb, var(--md-sys-color-on-surface) 30%, transparent);
+  --elevation-shadow-dialog: 0 16px 32px color-mix(in srgb, black 40%, transparent);
+  --elevation-shadow-toast: 0 8px 24px color-mix(in srgb, black 30%, transparent);
+  --elevation-shadow-thumb: 0 2px 8px color-mix(in srgb, black 30%, transparent);
+  --modal-scrim: color-mix(in srgb, black 65%, transparent);
+  --state-active-overlay-primary: color-mix(in srgb, var(--md-sys-color-on-primary) 15%, transparent);
+  --state-active-overlay-tonal: color-mix(in srgb, var(--md-sys-color-on-secondary-container) 10%, transparent);
 
   /* Dynamic Material 3 System Colors (Light Mode Defaults & KernelSU/MMRL Host Variable Mappings) */
   --md-sys-color-primary: var(--primary, #386a20);
@@ -173,6 +180,7 @@ html {
   color-scheme: dark light;
   background-color: var(--md-sys-color-surface);
   height: 100%;
+  overflow-x: clip;
 }
 
 body {
@@ -186,5 +194,5 @@ body {
   font-size: var(--md-sys-typescale-body-large-size);
   letter-spacing: 0.1px;
   transition: background-color 250ms var(--m3-easing-standard), color 250ms var(--m3-easing-standard);
-  overflow-x: hidden;
+  overflow-x: clip;
 }

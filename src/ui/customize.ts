@@ -112,14 +112,15 @@ export function setupCustomizeTab(): void {
       // Update Picker Card State
       if (pickerTitle) pickerTitle.textContent = fontData.fullName;
       if (pickerSubtitle) {
-        pickerSubtitle.textContent = `${fontData.format} • ${fontData.numGlyphs || 0} Glyphs`;
+        pickerSubtitle.textContent = `${fontData.format} (${fontData.numGlyphs || 0} glyphs)`;
       }
 
       // Update Font Info Row
       if (fontInfoRow) fontInfoRow.style.display = 'flex';
       if (fontNameElem) fontNameElem.textContent = fontData.fullName;
       if (fontFormatElem) {
-        fontFormatElem.textContent = `${fontData.format} • ${fontData.version || 'v1.0'}`;
+        const ver = fontData.version ? (fontData.version.toLowerCase().startsWith('v') ? fontData.version : `v${fontData.version}`) : 'v1.0';
+        fontFormatElem.textContent = `${fontData.format} ${ver}`;
       }
 
       if (fontData.isVariable) {
