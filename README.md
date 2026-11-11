@@ -19,9 +19,9 @@ Fontify allows you to apply any custom `.ttf`, `.otf`, or `.ttc` font across Sys
 
 ## Compatibility
 
-- **Tested on:** LineageOS 23.2 (Android 16)
+- **Tested Hardware:** POCO F7 (`25053PC47I`) running Android 17; LineageOS 23.2 (Android 16)
 - **Root Solutions:** KernelSU, KernelSU Next, APatch, Magisk (via MMRL / WebUI host)
-- **Android Versions:** Android 12 through Android 16+
+- **Android Versions:** Android 12 through Android 17+
 
 ---
 
@@ -72,6 +72,25 @@ npm run typecheck
 # Run unit tests
 npm test
 ```
+
+---
+
+## AI Disclosure & Hardware Verification
+
+This project was developed through an AI-assisted "vibe-coding" workflow—conceived, architected, and continuously refined alongside advanced AI agentic pair programmers.
+
+However, because root modules operate directly at the system partition, init script, and font cache layers, **real-world reliability and safety were not left to hallucination**:
+- **Hardware Validated:** Every shell routine, file-streaming bridge, and cache cleanup pipeline has been deployed and thoroughly validated on bare metal (specifically tested and confirmed functional on a physical **POCO F7** running **Android 17** with KernelSU/APatch).
+- **Type-Safe & Tested:** The WebUI and binary OpenType/TTF parser are engineered in strict TypeScript (`strict: true`, `noImplicitAny`) and backed by automated unit tests (`vitest`) for SFNT parsing, shell escaping, and state transitions.
+- **Fail-Safe Recovery:** Revert mechanisms directly scrub overlay directories and clear `/data/fonts` caches, ensuring stock system fonts can always be cleanly restored without bootloop risks.
+
+---
+
+## License
+
+Fontify is open-source software licensed under the **[GNU General Public License v3.0 (GPL-3.0)](LICENSE)**.
+
+You are free to use, inspect, modify, and distribute this software under the terms of the GPL-3.0 license. Any derivative works or distributions must remain open source under the same license terms.
 
 ---
 
