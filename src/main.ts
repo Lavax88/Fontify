@@ -20,6 +20,7 @@ export function switchTab(tabId: 'overview' | 'customize'): void {
   document.querySelectorAll<HTMLButtonElement>('.nav-tab').forEach(tab => {
     tab.classList.remove('active');
     tab.setAttribute('aria-selected', 'false');
+    tab.setAttribute('tabindex', '-1');
   });
 
   const targetView = document.getElementById(`view-${tabId}`);
@@ -32,6 +33,7 @@ export function switchTab(tabId: 'overview' | 'customize'): void {
   if (targetTab) {
     targetTab.classList.add('active');
     targetTab.setAttribute('aria-selected', 'true');
+    targetTab.setAttribute('tabindex', '0');
   }
 
   window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -82,6 +84,37 @@ function init(): void {
       btn.addEventListener('click', () => switchTab(tabName));
     }
   });
+
+  // WAI-ARIA tablist keyboard interactions (Arrow navigation, Home, End)
+  const tablist = document.querySelector<HTMLElement>('[role="tablist"]');
+  if (tablist) {
+    tablist.addEventListener('keydown', (e: KeyboardEvent) => {
+      const tabs = Array.from(tablist.querySelectorAll<HTMLButtonElement>('[role="tab"]'));
+      const activeIdx = tabs.findIndex(tab => tab === document.activeElement);
+      if (activeIdx === -1) return;
+
+      let nextIdx = activeIdx;
+      if (e.key === 'ArrowRight' || e.key === 'ArrowDown') {
+        nextIdx = (activeIdx + 1) % tabs.length;
+      } else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') {
+        nextIdx = (activeIdx - 1 + tabs.length) % tabs.length;
+      } else if (e.key === 'Home') {
+        nextIdx = 0;
+      } else if (e.key === 'End') {
+        nextIdx = tabs.length - 1;
+      } else {
+        return;
+      }
+
+      e.preventDefault();
+      const target = tabs[nextIdx];
+      if (target) {
+        target.focus();
+        const tabName = target.getAttribute('data-tab') as 'overview' | 'customize' | null;
+        if (tabName) switchTab(tabName);
+      }
+    });
+  }
 
   // Reconcile cached state with files on disk in background
   reconcileDiskStatus();

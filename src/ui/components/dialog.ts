@@ -53,13 +53,36 @@ export function showConfirmDialog(options: DialogOptions): Promise<boolean> {
       iconSvg.innerHTML = DIALOG_ICONS[options.iconType];
     }
 
+    const previousActiveElement = document.activeElement as HTMLElement | null;
+
     modalOverlay.classList.add('open');
     modalOverlay.removeAttribute('aria-hidden');
     modalConfirmBtn.focus();
 
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
+        e.preventDefault();
         handleCancel();
+        return;
+      }
+
+      if (e.key === 'Tab') {
+        const focusable = [modalCancelBtn, modalConfirmBtn].filter(Boolean) as HTMLElement[];
+        if (focusable.length === 0) return;
+        const first = focusable[0];
+        const last = focusable[focusable.length - 1];
+
+        if (e.shiftKey) {
+          if (document.activeElement === first) {
+            e.preventDefault();
+            last.focus();
+          }
+        } else {
+          if (document.activeElement === last) {
+            e.preventDefault();
+            first.focus();
+          }
+        }
       }
     };
 
@@ -83,6 +106,7 @@ export function showConfirmDialog(options: DialogOptions): Promise<boolean> {
       modalConfirmBtn.removeEventListener('click', handleConfirm);
       modalCancelBtn.removeEventListener('click', handleCancel);
       document.removeEventListener('keydown', handleKeyDown);
+      previousActiveElement?.focus();
     };
 
     modalConfirmBtn.addEventListener('click', handleConfirm);

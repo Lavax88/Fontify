@@ -38,13 +38,19 @@ Fontify allows you to apply any custom `.ttf`, `.otf`, or `.ttc` font across Sys
 ## Building from Source
 
 ### Prerequisites
-- Linux / macOS / WSL
+- Windows (PowerShell) or Linux / macOS / WSL
 - Node.js (current LTS, v20+ or v22+) & npm
-- `zip` utility
+- `zip` (on Linux) or built-in `tar` / `7z` (on Windows)
 
 ### Build Flashable Module
+
+**On Windows (PowerShell):**
+```powershell
+.\build.ps1
+```
+
+**On Linux / macOS / WSL:**
 ```bash
-# Install dependencies, compile WebUI, and package flashable zip
 chmod +x build.sh
 ./build.sh
 ```

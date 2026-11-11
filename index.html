@@ -9,9 +9,6 @@
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <link rel="stylesheet" href="./src/styles/tokens.css">
-    <link rel="stylesheet" href="./src/styles/motion.css">
-    <link rel="stylesheet" href="./src/styles/style.css">
     <title>Fontify</title>
 </head>
 <body>
@@ -183,8 +180,8 @@
 
     <!-- Bottom Navigation Bar (2 Tabs: Overview & Customize) -->
     <nav class="bottom-nav-bar" aria-label="Main Navigation">
-        <div class="nav-bar-inner" role="tablist">
-            <button class="nav-tab active" id="tab-overview" data-tab="overview" role="tab" aria-selected="true" aria-controls="view-overview" type="button">
+        <div class="nav-bar-inner" role="tablist" aria-label="Sections">
+            <button class="nav-tab active" id="tab-overview" data-tab="overview" role="tab" aria-selected="true" aria-controls="view-overview" tabindex="0" type="button">
                 <div class="nav-tab-pill">
                     <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
                         <path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/>
@@ -193,7 +190,7 @@
                 <span class="nav-tab-label">Overview</span>
             </button>
 
-            <button class="nav-tab" id="tab-customize" data-tab="customize" role="tab" aria-selected="false" aria-controls="view-customize" type="button">
+            <button class="nav-tab" id="tab-customize" data-tab="customize" role="tab" aria-selected="false" aria-controls="view-customize" tabindex="-1" type="button">
                 <div class="nav-tab-pill">
                     <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
                         <path d="M9.93 13.5h4.14L12 7.98zM20 2H4c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm-4.05 16.5l-1.14-3H9.17l-1.12 3H5.96l5.11-13h1.86l5.11 13h-2.09z"/>

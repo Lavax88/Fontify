@@ -119,10 +119,14 @@ find "$MODDIR/system" -type f -exec chmod 644 {} + 2>/dev/null
 chcon -R u:object_r:system_file:s0 "$MODDIR/system" 2>/dev/null
 
 # 7. Clear Android font caches and updatable system font overrides
-rm -rf /data/fonts/files/* 2>/dev/null
-rm -rf /data/fonts/config/* 2>/dev/null
-rm -rf /data/system/font_cache/* 2>/dev/null
-cmd font clear 2>/dev/null || true
+if [ -f "$MODDIR/bin/clear_font_cache.sh" ]; then
+    sh "$MODDIR/bin/clear_font_cache.sh" 2>/dev/null
+else
+    rm -rf /data/fonts/files/* 2>/dev/null
+    rm -rf /data/fonts/config/* 2>/dev/null
+    rm -rf /data/system/font_cache/* 2>/dev/null
+    cmd font clear 2>/dev/null || true
+fi
 
 echo '{"success": true, "message": "Font applied successfully! Please reboot your device to load new fonts."}'
 exit 0

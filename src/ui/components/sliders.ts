@@ -6,6 +6,14 @@ import type { FontInfo } from '../../font/types';
 import { FontEngine } from '../../font/engine';
 import { store } from '../../state/store';
 
+function setActiveChip(chips: NodeListOf<HTMLButtonElement> | HTMLButtonElement[], activeChip: HTMLButtonElement | null): void {
+  chips.forEach(c => {
+    const isActive = c === activeChip;
+    c.classList.toggle('active', isActive);
+    c.setAttribute('aria-pressed', isActive ? 'true' : 'false');
+  });
+}
+
 export function renderVariableControls(
   fontData: FontInfo,
   previewElements: (HTMLElement | null)[]
@@ -20,11 +28,15 @@ export function renderVariableControls(
   slidersContainer.innerHTML = '';
   presetsContainer.innerHTML = '';
 
+  const currentStoreAxes = store.getState().axisValues || {};
   const initialAxisValues: Record<string, number> = {};
   for (const axis of fontData.axes) {
-    initialAxisValues[axis.tag] = axis.default;
+    initialAxisValues[axis.tag] = currentStoreAxes[axis.tag] ?? axis.default;
   }
-  store.setState({ axisValues: initialAxisValues, weightMode: 'auto' });
+  store.setState({
+    axisValues: initialAxisValues,
+    weightMode: store.getState().weightMode || 'auto'
+  });
 
   // 1. Build Presets
   const presets: { name: string; values: Record<string, number | string> }[] = [
@@ -54,12 +66,7 @@ export function renderVariableControls(
     chip.setAttribute('aria-pressed', idx === 0 ? 'true' : 'false');
 
     chip.addEventListener('click', () => {
-      document.querySelectorAll<HTMLButtonElement>('.m3-chip').forEach(c => {
-        c.classList.remove('active');
-        c.setAttribute('aria-pressed', 'false');
-      });
-      chip.classList.add('active');
-      chip.setAttribute('aria-pressed', 'true');
+      setActiveChip(presetsContainer.querySelectorAll<HTMLButtonElement>('.m3-chip'), chip);
 
       const nextAxisValues = { ...store.getState().axisValues };
 
@@ -100,16 +107,17 @@ export function renderVariableControls(
 
   // 2. Build Sliders
   for (const axis of fontData.axes) {
+    const currentVal = initialAxisValues[axis.tag] ?? axis.default;
     const unit = document.createElement('div');
     unit.className = 'slider-unit-box';
     unit.innerHTML = `
       <div class="slider-top">
         <label class="axis-name" for="slider-${axis.tag}">${axis.name} (${axis.tag})</label>
-        <span class="axis-val-chip" id="badge-${axis.tag}" aria-hidden="true">${axis.default}</span>
+        <span class="axis-val-chip" id="badge-${axis.tag}" aria-hidden="true">${currentVal}</span>
       </div>
       <input type="range" id="slider-${axis.tag}" min="${axis.min}" max="${axis.max}" step="${
       axis.max - axis.min > 100 ? 10 : 1
-    }" value="${axis.default}" aria-label="${axis.name} (${axis.tag})" aria-valuemin="${axis.min}" aria-valuemax="${axis.max}" aria-valuenow="${axis.default}">
+    }" value="${currentVal}" aria-label="${axis.name} (${axis.tag})" aria-valuemin="${axis.min}" aria-valuemax="${axis.max}" aria-valuenow="${currentVal}">
     `;
 
     const slider = unit.querySelector('input') as HTMLInputElement | null;
@@ -124,10 +132,7 @@ export function renderVariableControls(
         const currentAxes = { ...store.getState().axisValues, [axis.tag]: val };
         store.setState({ axisValues: currentAxes, weightMode: 'custom', selectedPreset: 'Custom' });
 
-        document.querySelectorAll<HTMLButtonElement>('.m3-chip').forEach(c => {
-          c.classList.remove('active');
-          c.setAttribute('aria-pressed', 'false');
-        });
+        setActiveChip(presetsContainer.querySelectorAll<HTMLButtonElement>('.m3-chip'), null);
         FontEngine.scheduleVariationUpdate(previewElements, currentAxes);
       });
     }

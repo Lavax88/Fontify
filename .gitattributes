@@ -1,0 +1,16 @@
+# Auto detect text files and perform LF normalization on checkin
+* text=auto
+
+# Ensure shell scripts and module files always use LF (critical for Android / Magisk / KernelSU)
+*.sh text eol=lf
+module.prop text eol=lf
+*.prop text eol=lf
+update.json text eol=lf
+
+# Binary files
+*.zip binary
+*.ttf binary
+*.otf binary
+*.png binary
+*.jpg binary
+*.jpeg binary
