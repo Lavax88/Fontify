@@ -5,10 +5,9 @@
  */
 
 import { store } from '../state/store';
-import { saveCachedStatus } from '../state/cache';
 import { FontParser } from '../font/parser';
 import { FontEngine } from '../font/engine';
-import { applyFont, restoreStock, rebootDevice } from '../bridge/scripts';
+import { fontService } from '../bridge/service';
 import { showToast } from './components/toast';
 import { showConfirmDialog } from './components/dialog';
 import { renderVariableControls } from './components/sliders';
@@ -158,11 +157,10 @@ export function setupCustomizeTab(): void {
       if (!confirmed) return;
 
       btnApply.disabled = true;
-      store.setState({ isApplying: true });
       showToast('Preparing font overlay...', 2000);
 
       try {
-        const actionResult = await applyFont({
+        await fontService.applyFont({
           fontBuffer: state.fontBuffer,
           fontFile: state.fontFile,
           fontName: state.fontData.fullName,
@@ -170,26 +168,9 @@ export function setupCustomizeTab(): void {
           weightMode: state.weightMode,
           axisValues: state.axisValues,
           onProgress: (percent, msg) => {
-            store.setState({ applyProgress: percent, applyProgressMessage: msg });
             if (percent > 0 && percent % 25 === 0) {
               showToast(msg, 1200);
             }
-          }
-        });
-
-        if (!actionResult.success) {
-          throw new Error(actionResult.error || actionResult.message || 'Apply script reported failure.');
-        }
-
-        // Cache update
-        saveCachedStatus(true, state.fontData.fullName, state.status.device);
-
-        // State update
-        store.setState({
-          status: {
-            ...state.status,
-            active: true,
-            active_font_name: state.fontData.fullName
           }
         });
 
@@ -198,7 +179,7 @@ export function setupCustomizeTab(): void {
           body: `<strong>${state.fontData.fullName}</strong> overlay staged successfully!<br><br>Reboot your device to activate the new fonts across all applications:`,
           confirmText: 'Reboot Now',
           iconType: 'reboot',
-          onConfirm: () => rebootDevice()
+          onConfirm: () => fontService.reboot()
         });
       } catch (err) {
         const msg = err instanceof Error ? err.message : String(err);
@@ -206,7 +187,6 @@ export function setupCustomizeTab(): void {
         showToast(`Apply failed: ${msg}`);
       } finally {
         btnApply.disabled = false;
-        store.setState({ isApplying: false });
       }
     });
   }
@@ -225,28 +205,14 @@ export function setupCustomizeTab(): void {
 
       showToast('Reverting to stock font...');
       try {
-        const result = await restoreStock();
-        if (!result.success) {
-          throw new Error(result.error || result.message || 'Restore script reported failure.');
-        }
-
-        const state = store.getState();
-        saveCachedStatus(false, 'Roboto / Google Sans', state.status.device);
-
-        store.setState({
-          status: {
-            ...state.status,
-            active: false,
-            active_font_name: 'Roboto / Google Sans'
-          }
-        });
+        await fontService.restoreStock();
 
         await showConfirmDialog({
           title: 'Stock Restored',
           body: 'Stock font configuration restored.<br><br>Reboot device to reload stock fonts:',
           confirmText: 'Reboot Now',
           iconType: 'reboot',
-          onConfirm: () => rebootDevice()
+          onConfirm: () => fontService.reboot()
         });
       } catch (err) {
         const msg = err instanceof Error ? err.message : String(err);
@@ -264,7 +230,7 @@ export function setupCustomizeTab(): void {
         body: 'Restart device to reload system fonts?',
         confirmText: 'Reboot',
         iconType: 'reboot',
-        onConfirm: () => rebootDevice()
+        onConfirm: () => fontService.reboot()
       });
     });
   }

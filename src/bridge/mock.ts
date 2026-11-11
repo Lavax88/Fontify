@@ -92,6 +92,15 @@ export async function mockExec(command: string): Promise<ExecResult> {
     };
   }
 
+  // Handle file size checks (e.g. wc -c or stat)
+  if (command.includes('wc -c') || command.includes('stat -c%s')) {
+    return {
+      errno: 0,
+      stdout: '100000\n',
+      stderr: ''
+    };
+  }
+
   // Default mock success (e.g. file commands, printf, base64)
   return {
     errno: 0,

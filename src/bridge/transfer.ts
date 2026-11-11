@@ -27,20 +27,36 @@ export async function cleanupTempFiles(): Promise<void> {
  * Converts a Blob or ArrayBuffer to a base64 string using native FileReader.
  */
 export async function blobToBase64(blob: Blob): Promise<string> {
-  return new Promise<string>((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => {
-      const result = reader.result;
-      if (typeof result === 'string') {
-        const commaIndex = result.indexOf(',');
-        resolve(commaIndex >= 0 ? result.slice(commaIndex + 1) : result);
-      } else {
-        reject(new Error('FileReader returned unexpected non-string result.'));
-      }
-    };
-    reader.onerror = () => reject(reader.error || new Error('FileReader failed to read Blob.'));
-    reader.readAsDataURL(blob);
-  });
+  if (typeof FileReader !== 'undefined') {
+    return new Promise<string>((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => {
+        const result = reader.result;
+        if (typeof result === 'string') {
+          const commaIndex = result.indexOf(',');
+          resolve(commaIndex >= 0 ? result.slice(commaIndex + 1) : result);
+        } else {
+          reject(new Error('FileReader returned unexpected non-string result.'));
+        }
+      };
+      reader.onerror = () => reject(reader.error || new Error('FileReader failed to read Blob.'));
+      reader.readAsDataURL(blob);
+    });
+  }
+
+  // Universal fallback for Node.js test runners and environments without FileReader
+  const arrayBuffer = await blob.arrayBuffer();
+  const globalObj = typeof globalThis !== 'undefined' ? (globalThis as unknown as { Buffer?: { from: (b: ArrayBuffer) => { toString: (enc: string) => string } } }) : {};
+  if (globalObj.Buffer) {
+    return globalObj.Buffer.from(arrayBuffer).toString('base64');
+  }
+
+  const bytes = new Uint8Array(arrayBuffer);
+  let binary = '';
+  for (let i = 0; i < bytes.byteLength; i++) {
+    binary += String.fromCharCode(bytes[i]);
+  }
+  return btoa(binary);
 }
 
 /**

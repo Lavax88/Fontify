@@ -5,9 +5,8 @@
 import './styles/style.css';
 
 import { store } from './state/store';
-import { saveCachedStatus } from './state/cache';
-import { getSystemStatus } from './bridge/scripts';
-import { setupTheming, setupUserCustomization } from './ui/insets-theme';
+import { fontService } from './bridge/service';
+import { themeManager } from './ui/theme';
 import { setupOverviewTab } from './ui/overview';
 import { setupCustomizeTab } from './ui/customize';
 import { FontEngine } from './font/engine';
@@ -51,29 +50,15 @@ window.switchTab = switchTab;
 
 async function reconcileDiskStatus(): Promise<void> {
   try {
-    store.setState({ statusLoading: true, statusError: null });
-    const diskStatus = await getSystemStatus();
-
-    store.setState({
-      status: diskStatus,
-      statusLoading: false
-    });
-
-    // Update versioned cache with ground-truth status from disk
-    saveCachedStatus(diskStatus.active, diskStatus.active_font_name, diskStatus.device);
+    await fontService.refreshStatus();
   } catch (err) {
     // Graceful fallback: cached state remains rendered on screen
     console.warn('Background status sync error:', err);
-    store.setState({
-      statusLoading: false,
-      statusError: err instanceof Error ? err.message : String(err)
-    });
   }
 }
 
 function init(): void {
-  setupTheming();
-  setupUserCustomization();
+  themeManager.init();
   setupOverviewTab();
   setupCustomizeTab();
 
