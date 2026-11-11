@@ -40,6 +40,13 @@ export function setupCustomizeTab(): void {
       }
     });
 
+    dropzone.addEventListener('keydown', (e: KeyboardEvent) => {
+      if (e.key === 'Enter' || e.key === ' ') {
+        e.preventDefault();
+        fileInput.click();
+      }
+    });
+
     dropzone.addEventListener('dragover', e => {
       e.preventDefault();
       dropzone.classList.add('drag-over');

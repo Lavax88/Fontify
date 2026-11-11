@@ -13,21 +13,25 @@ import { setupCustomizeTab } from './ui/customize';
 import { FontEngine } from './font/engine';
 
 export function switchTab(tabId: 'overview' | 'customize'): void {
-  document.querySelectorAll('.tab-view').forEach(view => {
+  document.querySelectorAll<HTMLElement>('.tab-view').forEach(view => {
     view.classList.remove('active');
+    view.setAttribute('aria-hidden', 'true');
   });
-  document.querySelectorAll('.nav-tab').forEach(tab => {
+  document.querySelectorAll<HTMLButtonElement>('.nav-tab').forEach(tab => {
     tab.classList.remove('active');
+    tab.setAttribute('aria-selected', 'false');
   });
 
   const targetView = document.getElementById(`view-${tabId}`);
   if (targetView) {
     targetView.classList.add('active');
+    targetView.removeAttribute('aria-hidden');
   }
 
-  const targetTab = document.querySelector(`.nav-tab[data-tab="${tabId}"]`);
+  const targetTab = document.querySelector<HTMLButtonElement>(`.nav-tab[data-tab="${tabId}"]`);
   if (targetTab) {
     targetTab.classList.add('active');
+    targetTab.setAttribute('aria-selected', 'true');
   }
 
   window.scrollTo({ top: 0, behavior: 'smooth' });

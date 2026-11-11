@@ -9,8 +9,8 @@
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <title>Fontify</title>
-  <script type="module" crossorigin src="./assets/index-5nelcqAT.js"></script>
-  <link rel="stylesheet" crossorigin href="./assets/index-BQF_KrRa.css">
+  <script type="module" crossorigin src="./assets/index-DLcfot5X.js"></script>
+  <link rel="stylesheet" crossorigin href="./assets/index-81C4FXPu.css">
 </head>
 <body>
     <!-- Top Header (LSPosed / Material 3 Large Title) -->
@@ -23,10 +23,10 @@
     <!-- Main Views Container -->
     <main class="page-container">
         <!-- ================= TAB 1: OVERVIEW (HOME) ================= -->
-        <section class="tab-view active" id="view-overview">
+        <section class="tab-view active" id="view-overview" role="tabpanel" aria-labelledby="tab-overview">
             <!-- 1. Hero Status Card (LSPosed Banner Style) -->
             <div class="m3-banner-card is-stock" id="overview-banner">
-                <div class="banner-icon-container" id="banner-icon-box">
+                <div class="banner-icon-container" id="banner-icon-box" aria-hidden="true">
                     <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor" id="banner-icon">
                         <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
                     </svg>
@@ -68,12 +68,12 @@
         </section>
 
         <!-- ================= TAB 2: CUSTOMIZE ================= -->
-        <section class="tab-view" id="view-customize">
-            <input type="file" id="file-input" accept=".ttf,.otf,.ttc,.woff,.woff2" style="display: none;">
+        <section class="tab-view" id="view-customize" role="tabpanel" aria-labelledby="tab-customize" aria-hidden="true">
+            <input type="file" id="file-input" accept=".ttf,.otf,.ttc,.woff,.woff2" style="display: none;" aria-label="Select font file">
             
             <!-- 1. Hero Font Picker Card -->
-            <div class="m3-hero-picker-card" id="dropzone">
-                <div class="picker-icon-box">
+            <div class="m3-hero-picker-card" id="dropzone" role="button" tabindex="0" aria-label="Import Font File: Tap to select or drop any .ttf or .otf font">
+                <div class="picker-icon-box" aria-hidden="true">
                     <svg width="32" height="32" viewBox="0 0 24 24" fill="currentColor">
                         <path d="M19.35 10.04C18.67 6.59 15.64 4 12 4 9.11 4 6.6 5.64 5.35 8.04 2.34 8.36 0 10.91 0 14c0 3.31 2.69 6 6 6h13c2.76 0 5-2.24 5-5 0-2.64-2.05-4.78-4.65-4.96zM14 13v4h-4v-4H7l5-5 5 5h-3z"/>
                     </svg>
@@ -105,12 +105,12 @@
             <div class="m3-tuning-card" id="variable-controls-group" style="display: none;">
                 <div class="tuning-card-header">
                     <h3 class="card-title">Weight & Style Presets</h3>
-                    <div class="m3-presets-scroll" id="presets-container">
+                    <div class="m3-presets-scroll" id="presets-container" role="group" aria-label="Font variation presets">
                         <!-- Populated dynamically -->
                     </div>
                 </div>
 
-                <div class="tuning-card-body" id="sliders-container">
+                <div class="tuning-card-body" id="sliders-container" role="group" aria-label="Font variation axis sliders">
                     <!-- Populated dynamically -->
                 </div>
             </div>
@@ -122,12 +122,12 @@
                 </div>
 
                 <div class="preview-specimens-stage" id="playground-box">
-                    <div class="specimen-hero preview-text" contenteditable="true" spellcheck="false">Fontify</div>
-                    <div class="specimen-headline preview-text" contenteditable="true" spellcheck="false">The quick brown fox jumps over the lazy dog.</div>
-                    <div class="specimen-body preview-text" contenteditable="true" spellcheck="false">
+                    <div class="specimen-hero preview-text" contenteditable="true" spellcheck="false" aria-label="Hero specimen preview">Fontify</div>
+                    <div class="specimen-headline preview-text" contenteditable="true" spellcheck="false" aria-label="Headline specimen preview">The quick brown fox jumps over the lazy dog.</div>
+                    <div class="specimen-body preview-text" contenteditable="true" spellcheck="false" aria-label="Body specimen preview">
                         Pack my box with five dozen liquor jugs. System UI elements, lock screen clocks, notifications, and settings will dynamically render using your customized font parameters.
                     </div>
-                    <div class="specimen-glyphs preview-text" contenteditable="true" spellcheck="false">0123456789 • &@#%*+-=:;!?</div>
+                    <div class="specimen-glyphs preview-text" contenteditable="true" spellcheck="false" aria-label="Glyphs specimen preview">0123456789 • &@#%*+-=:;!?</div>
                 </div>
             </div>
 
@@ -135,7 +135,7 @@
             <div class="m3-actions-card">
                 <!-- Apply Font -->
                 <button class="m3-action-item-btn btn-primary" id="btn-apply" disabled type="button">
-                    <div class="action-btn-icon">
+                    <div class="action-btn-icon" aria-hidden="true">
                         <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor">
                             <path d="M9 16.2L4.8 12l-1.4 1.4L9 19 21 7l-1.4-1.4L9 16.2z"/>
                         </svg>
@@ -148,7 +148,7 @@
 
                 <!-- Revert to Stock -->
                 <button class="m3-action-item-btn btn-tonal" id="btn-restore" type="button">
-                    <div class="action-btn-icon">
+                    <div class="action-btn-icon" aria-hidden="true">
                         <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor">
                             <path d="M13 3c-4.97 0-9 4.03-9 9H1l3.89 3.89.07.14L9 12H6c0-3.87 3.13-7 7-7s7 3.13 7 7-3.13 7-7 7c-1.93 0-3.68-.79-4.94-2.06l-1.42 1.42C8.27 19.99 10.51 21 13 21c4.97 0 9-4.03 9-9s-4.03-9-9-9zm-1 5v5l4.28 2.54.72-1.21-3.5-2.08V8H12z"/>
                         </svg>
@@ -161,7 +161,7 @@
 
                 <!-- Reboot -->
                 <button class="m3-action-item-btn btn-outlined" id="btn-soft-reboot" type="button">
-                    <div class="action-btn-icon">
+                    <div class="action-btn-icon" aria-hidden="true">
                         <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor">
                             <path d="M17.65 6.35C16.2 4.9 14.21 4 12 4c-4.42 0-7.99 3.58-7.99 8s3.57 8 7.99 8c3.73 0 6.84-2.55 7.73-6h-2.08c-.82 2.33-3.04 4-5.65 4-3.31 0-6-2.69-6-6s2.69-6 6-6c1.66 0 3.14.69 4.22 1.78L13 11h7V4l-2.35 2.35z"/>
                         </svg>
@@ -176,20 +176,20 @@
     </main>
 
     <!-- Bottom Navigation Bar (2 Tabs: Overview & Customize) -->
-    <nav class="bottom-nav-bar">
-        <div class="nav-bar-inner">
-            <button class="nav-tab active" data-tab="overview" type="button">
+    <nav class="bottom-nav-bar" aria-label="Main Navigation">
+        <div class="nav-bar-inner" role="tablist">
+            <button class="nav-tab active" id="tab-overview" data-tab="overview" role="tab" aria-selected="true" aria-controls="view-overview" type="button">
                 <div class="nav-tab-pill">
-                    <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor">
+                    <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
                         <path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/>
                     </svg>
                 </div>
                 <span class="nav-tab-label">Overview</span>
             </button>
 
-            <button class="nav-tab" data-tab="customize" type="button">
+            <button class="nav-tab" id="tab-customize" data-tab="customize" role="tab" aria-selected="false" aria-controls="view-customize" type="button">
                 <div class="nav-tab-pill">
-                    <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor">
+                    <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
                         <path d="M9.93 13.5h4.14L12 7.98zM20 2H4c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm-4.05 16.5l-1.14-3H9.17l-1.12 3H5.96l5.11-13h1.86l5.11 13h-2.09z"/>
                     </svg>
                 </div>
@@ -199,10 +199,10 @@
     </nav>
 
     <!-- Material 3 Expressive Dialog Modal -->
-    <div class="modal-backdrop" id="modal-overlay">
-        <div class="m3-dialog">
+    <div class="modal-backdrop" id="modal-overlay" aria-hidden="true">
+        <div class="m3-dialog" role="dialog" aria-modal="true" aria-labelledby="modal-title" aria-describedby="modal-body">
             <div class="dialog-header-group">
-                <div class="dialog-icon-container" id="dialog-icon-box">
+                <div class="dialog-icon-container" id="dialog-icon-box" aria-hidden="true">
                     <svg width="26" height="26" viewBox="0 0 24 24" fill="currentColor" id="dialog-icon-svg">
                         <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
                     </svg>
@@ -218,7 +218,7 @@
     </div>
 
     <!-- Floating Toast Container -->
-    <div class="toast-stack" id="toast-container"></div>
+    <div class="toast-stack" id="toast-container" role="status" aria-live="polite" aria-atomic="true"></div>
 
     <!-- Application Script Module -->
 </body>

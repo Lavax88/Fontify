@@ -54,10 +54,19 @@ export function showConfirmDialog(options: DialogOptions): Promise<boolean> {
     }
 
     modalOverlay.classList.add('open');
+    modalOverlay.removeAttribute('aria-hidden');
+    modalConfirmBtn.focus();
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        handleCancel();
+      }
+    };
 
     const handleConfirm = () => {
       cleanup();
       modalOverlay.classList.remove('open');
+      modalOverlay.setAttribute('aria-hidden', 'true');
       options.onConfirm?.();
       resolve(true);
     };
@@ -65,6 +74,7 @@ export function showConfirmDialog(options: DialogOptions): Promise<boolean> {
     const handleCancel = () => {
       cleanup();
       modalOverlay.classList.remove('open');
+      modalOverlay.setAttribute('aria-hidden', 'true');
       options.onCancel?.();
       resolve(false);
     };
@@ -72,9 +82,11 @@ export function showConfirmDialog(options: DialogOptions): Promise<boolean> {
     const cleanup = () => {
       modalConfirmBtn.removeEventListener('click', handleConfirm);
       modalCancelBtn.removeEventListener('click', handleCancel);
+      document.removeEventListener('keydown', handleKeyDown);
     };
 
     modalConfirmBtn.addEventListener('click', handleConfirm);
     modalCancelBtn.addEventListener('click', handleCancel);
+    document.addEventListener('keydown', handleKeyDown);
   });
 }

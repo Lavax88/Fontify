@@ -50,10 +50,16 @@ export function renderVariableControls(
     chip.type = 'button';
     chip.className = `m3-chip ${idx === 0 ? 'active' : ''}`;
     chip.textContent = preset.name;
+    chip.setAttribute('role', 'button');
+    chip.setAttribute('aria-pressed', idx === 0 ? 'true' : 'false');
 
     chip.addEventListener('click', () => {
-      document.querySelectorAll('.m3-chip').forEach(c => c.classList.remove('active'));
+      document.querySelectorAll<HTMLButtonElement>('.m3-chip').forEach(c => {
+        c.classList.remove('active');
+        c.setAttribute('aria-pressed', 'false');
+      });
       chip.classList.add('active');
+      chip.setAttribute('aria-pressed', 'true');
 
       const nextAxisValues = { ...store.getState().axisValues };
 
@@ -63,7 +69,10 @@ export function renderVariableControls(
           nextAxisValues[axis.tag] = axis.default;
           const slider = document.getElementById(`slider-${axis.tag}`) as HTMLInputElement | null;
           const badge = document.getElementById(`badge-${axis.tag}`);
-          if (slider) slider.value = String(axis.default);
+          if (slider) {
+            slider.value = String(axis.default);
+            slider.setAttribute('aria-valuenow', String(axis.default));
+          }
           if (badge) badge.textContent = String(axis.default);
         }
       } else {
@@ -73,7 +82,10 @@ export function renderVariableControls(
             nextAxisValues[tag] = val;
             const slider = document.getElementById(`slider-${tag}`) as HTMLInputElement | null;
             const badge = document.getElementById(`badge-${tag}`);
-            if (slider) slider.value = String(val);
+            if (slider) {
+              slider.value = String(val);
+              slider.setAttribute('aria-valuenow', String(val));
+            }
             if (badge) badge.textContent = String(val);
           }
         }
@@ -92,12 +104,12 @@ export function renderVariableControls(
     unit.className = 'slider-unit-box';
     unit.innerHTML = `
       <div class="slider-top">
-        <span class="axis-name">${axis.name} (${axis.tag})</span>
-        <span class="axis-val-chip" id="badge-${axis.tag}">${axis.default}</span>
+        <label class="axis-name" for="slider-${axis.tag}">${axis.name} (${axis.tag})</label>
+        <span class="axis-val-chip" id="badge-${axis.tag}" aria-hidden="true">${axis.default}</span>
       </div>
       <input type="range" id="slider-${axis.tag}" min="${axis.min}" max="${axis.max}" step="${
       axis.max - axis.min > 100 ? 10 : 1
-    }" value="${axis.default}">
+    }" value="${axis.default}" aria-label="${axis.name} (${axis.tag})" aria-valuemin="${axis.min}" aria-valuemax="${axis.max}" aria-valuenow="${axis.default}">
     `;
 
     const slider = unit.querySelector('input') as HTMLInputElement | null;
@@ -107,11 +119,15 @@ export function renderVariableControls(
       slider.addEventListener('input', (e: Event) => {
         const val = parseFloat((e.target as HTMLInputElement).value);
         badge.textContent = String(val);
+        slider.setAttribute('aria-valuenow', String(val));
 
         const currentAxes = { ...store.getState().axisValues, [axis.tag]: val };
         store.setState({ axisValues: currentAxes, weightMode: 'custom', selectedPreset: 'Custom' });
 
-        document.querySelectorAll('.m3-chip').forEach(c => c.classList.remove('active'));
+        document.querySelectorAll<HTMLButtonElement>('.m3-chip').forEach(c => {
+          c.classList.remove('active');
+          c.setAttribute('aria-pressed', 'false');
+        });
         FontEngine.scheduleVariationUpdate(previewElements, currentAxes);
       });
     }
