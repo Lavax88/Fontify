@@ -111,7 +111,7 @@
   text-transform: none;
 }
 
-/* 2. Property Info Card (LSPosed Style) */
+/* 2. Property Info Card & M3 Expressive Split Cards */
 .m3-info-card {
   background-color: var(--md-sys-color-surface-container);
   color: var(--md-sys-color-on-surface);
@@ -121,6 +121,45 @@
   flex-direction: column;
   gap: 16px;
   transition: transform 180ms var(--m3-easing-spring);
+}
+
+.m3-split-group {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  width: 100%;
+}
+
+.m3-card-tile {
+  background-color: var(--md-sys-color-surface-container);
+  color: var(--md-sys-color-on-surface);
+  padding: 16px 20px;
+  display: flex;
+  flex-direction: column;
+  border-radius: var(--md-sys-shape-corner-extra-small);
+  transition: background-color 180ms var(--m3-easing-standard);
+}
+
+.m3-card-tile:hover {
+  background-color: var(--md-sys-color-surface-container-high);
+}
+
+.m3-split-group > .m3-card-tile:first-child {
+  border-top-left-radius: var(--m3-radius-card);
+  border-top-right-radius: var(--m3-radius-card);
+  border-bottom-left-radius: var(--md-sys-shape-corner-extra-small);
+  border-bottom-right-radius: var(--md-sys-shape-corner-extra-small);
+}
+
+.m3-split-group > .m3-card-tile:last-child {
+  border-top-left-radius: var(--md-sys-shape-corner-extra-small);
+  border-top-right-radius: var(--md-sys-shape-corner-extra-small);
+  border-bottom-left-radius: var(--m3-radius-card);
+  border-bottom-right-radius: var(--m3-radius-card);
+}
+
+.m3-split-group > .m3-card-tile:only-child {
+  border-radius: var(--m3-radius-card);
 }
 
 .info-prop-row {

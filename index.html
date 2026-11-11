@@ -40,31 +40,35 @@
                 <div class="banner-badge-chip" id="banner-badge">Stock</div>
             </div>
 
-            <!-- 2. Property Info Card (LSPosed Info Card Style) -->
-            <div class="m3-info-card">
-                <div class="info-prop-row">
+            <!-- 2. Font & Module Configuration (M3 Expressive Split Cards) -->
+            <div class="m3-split-group" role="group" aria-label="Font configuration">
+                <div class="m3-card-tile info-prop-row">
                     <div class="prop-label">Active Font</div>
                     <div class="prop-val" id="info-active-font">Roboto / Google Sans</div>
                 </div>
-                <div class="info-prop-row">
+                <div class="m3-card-tile info-prop-row">
                     <div class="prop-label">Overlay Target</div>
                     <div class="prop-val">/system + /product</div>
                 </div>
-                <div class="info-prop-row">
-                    <div class="prop-label">System version</div>
-                    <div class="prop-val" id="info-system-ver">16 (API 36.1)</div>
+                <div class="m3-card-tile info-prop-row">
+                    <div class="prop-label">Stock Backup</div>
+                    <div class="prop-val" id="info-backup-status">Protected (/data/adb)</div>
                 </div>
-                <div class="info-prop-row">
+            </div>
+
+            <!-- 3. Device & System Environment (M3 Expressive Split Cards) -->
+            <div class="m3-split-group" role="group" aria-label="Device and system environment">
+                <div class="m3-card-tile info-prop-row">
                     <div class="prop-label">Device</div>
                     <div class="prop-val" id="info-device-name">POCO F7 (onyx)</div>
                 </div>
-                <div class="info-prop-row">
+                <div class="m3-card-tile info-prop-row">
+                    <div class="prop-label">System version</div>
+                    <div class="prop-val" id="info-system-ver">16 (API 36.1)</div>
+                </div>
+                <div class="m3-card-tile info-prop-row">
                     <div class="prop-label">System ABI</div>
                     <div class="prop-val" id="info-system-abi">arm64-v8a (4K)</div>
-                </div>
-                <div class="info-prop-row">
-                    <div class="prop-label">Stock Backup</div>
-                    <div class="prop-val" id="info-backup-status">Protected (/data/adb)</div>
                 </div>
             </div>
         </section>
