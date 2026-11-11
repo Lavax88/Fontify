@@ -22,8 +22,11 @@ rm -rf /data/fonts/config/* 2>/dev/null
 rm -rf "$MODDIR/system" 2>/dev/null
 rm -rf "$MODDIR/product" 2>/dev/null
 
-# 3. Clear font caches
+# 3. Clear font caches and updatable font overrides
+rm -rf /data/fonts/files/* 2>/dev/null
+rm -rf /data/fonts/config/* 2>/dev/null
 rm -rf /data/system/font_cache/* 2>/dev/null
+cmd font clear 2>/dev/null || true
 
 echo '{"success": true, "message": "Custom font removed and stock font restored. Please reboot to apply."}'
 exit 0

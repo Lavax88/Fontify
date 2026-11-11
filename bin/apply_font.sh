@@ -74,16 +74,23 @@ cp -af "$DEST_CUSTOM" "$MODDIR/system/fonts/DroidSans.ttf"
 cp -af "$DEST_CUSTOM" "$MODDIR/system/fonts/DroidSans-Bold.ttf"
 
 # Legacy static Roboto and sans fallbacks
-for target in Roboto-Bold.ttf Roboto-Italic.ttf Roboto-BoldItalic.ttf Roboto-Medium.ttf Roboto-MediumItalic.ttf Roboto-Light.ttf Roboto-LightItalic.ttf Roboto-Thin.ttf Roboto-ThinItalic.ttf Roboto-Black.ttf Roboto-BlackItalic.ttf SourceSansPro-Regular.ttf SourceSansPro-Bold.ttf SourceSansPro-SemiBold.ttf; do
+for target in Roboto-Bold.ttf Roboto-Italic.ttf Roboto-BoldItalic.ttf Roboto-Medium.ttf Roboto-MediumItalic.ttf Roboto-Light.ttf Roboto-LightItalic.ttf Roboto-Thin.ttf Roboto-ThinItalic.ttf Roboto-Black.ttf Roboto-BlackItalic.ttf SourceSansPro-Regular.ttf SourceSansPro-Bold.ttf SourceSansPro-SemiBold.ttf SourceSansPro-Italic.ttf SourceSansPro-BoldItalic.ttf SourceSansPro-SemiBoldItalic.ttf; do
     cp -af "$DEST_CUSTOM" "$MODDIR/system/fonts/$target"
 done
 
 # Product partition Google Sans targets (placed under $MODDIR/system/product/fonts)
 # Note: Clock fonts (GoogleSansClock, GoogleSansFlexClock) are preserved to prevent lockscreen clock breakage
 if [ -d /product/fonts ]; then
-    [ -f /product/fonts/GoogleSans-Regular.ttf ] && cp -af "$DEST_CUSTOM" "$MODDIR/system/product/fonts/GoogleSans-Regular.ttf"
-    [ -f /product/fonts/GoogleSansFlex-Regular.ttf ] && cp -af "$DEST_CUSTOM" "$MODDIR/system/product/fonts/GoogleSansFlex-Regular.ttf"
-    [ -f /product/fonts/GoogleSans-Italic.ttf ] && cp -af "$DEST_CUSTOM" "$MODDIR/system/product/fonts/GoogleSans-Italic.ttf"
+    for pf in /product/fonts/GoogleSans*.ttf /product/fonts/GoogleSansFlex*.ttf /product/fonts/GoogleSansText*.ttf; do
+        [ -f "$pf" ] || continue
+        case "$pf" in
+            *Clock*) continue ;; # Preserve lockscreen clock fonts
+            *)
+                base="$(basename "$pf")"
+                cp -af "$DEST_CUSTOM" "$MODDIR/system/product/fonts/$base"
+                ;;
+        esac
+    done
 fi
 
 # 5. Handle font XML configurations
@@ -111,8 +118,11 @@ chmod -R 755 "$MODDIR/system" 2>/dev/null
 find "$MODDIR/system" -type f -exec chmod 644 {} + 2>/dev/null
 chcon -R u:object_r:system_file:s0 "$MODDIR/system" 2>/dev/null
 
-# 7. Clear Android font caches
+# 7. Clear Android font caches and updatable system font overrides
+rm -rf /data/fonts/files/* 2>/dev/null
+rm -rf /data/fonts/config/* 2>/dev/null
 rm -rf /data/system/font_cache/* 2>/dev/null
+cmd font clear 2>/dev/null || true
 
 echo '{"success": true, "message": "Font applied successfully! Please reboot your device to load new fonts."}'
 exit 0

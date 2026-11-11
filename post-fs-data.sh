@@ -18,6 +18,9 @@ if [ -f "$CUSTOM_FONT" ] && [ -s "$CUSTOM_FONT" ]; then
         find "$MODDIR/system" -type f -exec chmod 644 {} + 2>/dev/null
         chcon -R u:object_r:system_file:s0 "$MODDIR/system" 2>/dev/null
     fi
+    # Clean Android updatable font overrides so custom fonts are not bypassed on boot
+    rm -rf /data/fonts/files/* 2>/dev/null
+    rm -rf /data/fonts/config/* 2>/dev/null
 else
     # Stock font mode - clean overlay tree so stock system fonts are used
     rm -rf "$MODDIR/system" 2>/dev/null
