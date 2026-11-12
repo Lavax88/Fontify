@@ -1,7 +1,7 @@
 id=fontify
 name=Fontify
-version=v1.0.0
-versionCode=1000
+version=v2.0.0
+versionCode=2000
 author=Lava
 description=Customize Android's font with a WebUI
 web=true

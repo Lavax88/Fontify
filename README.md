@@ -11,9 +11,10 @@ Fontify allows you to apply any custom `.ttf`, `.otf`, or `.ttc` font across Sys
 
 - **Material 3 Expressive WebUI**: Dynamic wallpaper Monet palette theming, interactive live font playground, and real-time preview built with strict TypeScript and Vite.
 - **Variable Font (`fvar`) Engine**: Zero-dependency binary SFNT/OpenType parser with live tuning of variation axes (`wght`, `wdth`, `opsz`, `slnt`, etc.) and instant presets.
-- **Universal Root Bridge**: Native support for KernelSU, KernelSU Next, APatch, and MMRL WebUI environments with automatic timeout guards.
+- **Curated Emoji Customizer**: Built-in 1-tap emoji replacement featuring top curated styles (iOS 26 Unicode 17, iOS 18, Microsoft Fluent 3D, Samsung One UI, Twemoji, and Google Noto Color), custom `.ttf` emoji importing, and offline IndexedDB binary caching.
+- **Universal Root Bridge & NoMount LKM Sync**: Native support for KernelSU, KernelSU Next, APatch, and MMRL WebUI environments with automatic timeout guards and dynamic rule synchronization for `nomount.ko` kernel drivers.
 - **Optimized Data Pipeline**: 128 KB chunked streaming to `/data/local/tmp` with integrity verification and guaranteed cleanup.
-- **1-Click Revert**: Instantly restore original stock system fonts with clean overlay removal.
+- **1-Click Revert**: Instantly restore original stock system fonts or stock Google emojis with clean overlay removal.
 
 ---
 
@@ -83,6 +84,14 @@ However, because root modules operate directly at the system partition, init scr
 - **Hardware Validated:** Every shell routine, file-streaming bridge, and cache cleanup pipeline has been deployed and thoroughly validated on bare metal (specifically tested and confirmed functional on a physical **POCO F7** running **Android 17** with KernelSU/APatch).
 - **Type-Safe & Tested:** The WebUI and binary OpenType/TTF parser are engineered in strict TypeScript (`strict: true`, `noImplicitAny`) and backed by automated unit tests (`vitest`) for SFNT parsing, shell escaping, and state transitions.
 - **Fail-Safe Recovery:** Revert mechanisms directly scrub overlay directories and clear `/data/fonts` caches, ensuring stock system fonts can always be cleanly restored without bootloop risks.
+
+---
+
+## Credits & Acknowledgments
+
+- **[zFont](https://github.com/zFont/Host)**: Huge thanks to the zFont project and contributors for curating, building, and hosting Android-compatible emoji and font packages.
+- **Emoji Vendors & Creators**: Apple, Microsoft, Samsung, Twemoji (X / Twitter), Google (Noto Color Emoji), and MFFM Emoji for their respective emoji designs and typeface assets.
+- **KernelSU & NoMount**: Thanks to the KernelSU, KernelSU Next, APatch, and NoMount teams for modern root mount and kernel redirection frameworks.
 
 ---
 
