@@ -33,6 +33,20 @@ export class Store {
       applyProgress: 0,
       applyProgressMessage: '',
       lastError: null,
+      emojiFile: null,
+      emojiBuffer: null,
+      emojiName: 'Custom Emoji',
+      emojiSource: null,
+      emojiUrl: null,
+      selectedEmojiPreset: null,
+      isDownloadingEmoji: false,
+      downloadEmojiProgress: 0,
+      downloadEmojiMessage: '',
+      isApplyingEmoji: false,
+      isRestoringEmoji: false,
+      applyEmojiProgress: 0,
+      applyEmojiProgressMessage: '',
+      rebootRequired: false,
       ...initialState
     };
   }

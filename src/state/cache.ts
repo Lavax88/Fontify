@@ -25,6 +25,8 @@ export function getDefaultSystemStatus(): SystemStatus {
   return {
     active: false,
     active_font_name: 'Roboto / Google Sans',
+    emoji_active: false,
+    active_emoji_name: 'Stock (Google)',
     backup_exists: false,
     config: {},
     backup_info: {},
@@ -68,12 +70,20 @@ export function loadCachedData(): CachedData | null {
 /**
  * Saves status metadata into the cache.
  */
-export function saveCachedStatus(isActive: boolean, activeFontName: string, device?: DeviceInfo): void {
+export function saveCachedStatus(
+  isActive: boolean,
+  activeFontName: string,
+  device?: DeviceInfo,
+  isEmojiActive: boolean = false,
+  activeEmojiName: string = 'Stock (Google)'
+): void {
   try {
     const data: CachedData = {
       schemaVersion: SCHEMA_VERSION,
       isActive,
       activeFontName,
+      isEmojiActive,
+      activeEmojiName,
       device,
       timestamp: Date.now()
     };
@@ -98,6 +108,8 @@ export function getInitialSystemStatus(): SystemStatus {
     return {
       active: cached.isActive,
       active_font_name: cached.activeFontName,
+      emoji_active: cached.isEmojiActive ?? false,
+      active_emoji_name: cached.activeEmojiName ?? 'Stock (Google)',
       backup_exists: false,
       config: {},
       backup_info: {},

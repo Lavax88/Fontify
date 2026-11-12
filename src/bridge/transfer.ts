@@ -10,7 +10,8 @@ export const TMP_B64 = '/data/local/tmp/font_tmp.b64';
 export const TMP_TTF = '/data/local/tmp/font_tmp.ttf';
 export const TMP_CFG = '/data/local/tmp/config_tmp.json';
 
-const B64_CHUNK_SIZE = 131072; // 128 KB chunks
+// 96 KB chunks strictly under Linux kernel MAX_ARG_STRLEN (131,072 bytes) and multiple of 4 (divisible by 4 for valid base64 blocks)
+export const B64_CHUNK_SIZE = 98304;
 
 /**
  * Removes all temporary files in /data/local/tmp.
@@ -61,13 +62,16 @@ export async function blobToBase64(blob: Blob): Promise<string> {
 
 /**
  * Streams font data and config into /data/local/tmp with verification.
+ * If a valid direct download URL is available, attempts ultra-fast on-device download (curl/wget),
+ * falling back to robust 48 KB base64 chunked transfer.
  */
 export async function streamFontToDevice(
   buffer: ArrayBuffer,
   file: File | null | undefined,
   configJson: string,
   onProgress?: (percent: number, message: string) => void,
-  signal?: AbortSignal
+  signal?: AbortSignal,
+  directUrl?: string
 ): Promise<{ ttfPath: string; configPath: string }> {
   // Ensure previous artifacts are wiped
   await cleanupTempFiles();
@@ -77,7 +81,36 @@ export async function streamFontToDevice(
       throw new Error('Transfer aborted by user.');
     }
 
-    onProgress?.(5, 'Converting font to transfer payload...');
+    // 1. Ultra-fast direct device download ONLY if buffer is NOT already present in memory and URL is provided
+    const hasBuffer = (buffer && buffer.byteLength >= 1000) || (file && file.size >= 1000);
+    if (!hasBuffer && directUrl && directUrl.startsWith('http')) {
+      onProgress?.(15, 'Downloading font directly to device...');
+      try {
+        const escapedUrl = directUrl.replace(/'/g, "'\\''");
+        const dlRes = await exec(
+          `curl -fkLs '${escapedUrl}' -o ${TMP_TTF} 2>/dev/null || wget -qO ${TMP_TTF} '${escapedUrl}' 2>/dev/null`,
+          { timeoutMs: 60000 }
+        );
+
+        if (dlRes.errno === 0) {
+          const checkRes = await exec(`wc -c < ${TMP_TTF} 2>/dev/null || stat -c%s ${TMP_TTF} 2>/dev/null || echo 0`);
+          const cleanSize = checkRes.stdout.trim().replace(/\D/g, '');
+          const writtenBytes = parseInt(cleanSize, 10);
+          if (!isNaN(writtenBytes) && writtenBytes >= 1000) {
+            onProgress?.(95, 'Writing font configuration...');
+            const escapedConfig = configJson.replace(/'/g, "'\\''");
+            await exec(`printf '%s' '${escapedConfig}' > ${TMP_CFG}`);
+            onProgress?.(100, 'Payload ready on device.');
+            return { ttfPath: TMP_TTF, configPath: TMP_CFG };
+          }
+        }
+      } catch (err) {
+        console.warn('Direct device download notice, falling back to streaming:', err);
+      }
+    }
+
+    // 2. High-speed base64 chunked transfer with on-the-fly streaming decode
+    onProgress?.(5, 'Preparing font payload...');
     const blob = file || new Blob([buffer], { type: 'font/ttf' });
     const base64 = await blobToBase64(blob);
 
@@ -87,7 +120,7 @@ export async function streamFontToDevice(
 
     const totalChunks = Math.max(1, Math.ceil(base64.length / B64_CHUNK_SIZE));
 
-    // Stream base64 chunks
+    // Stream base64 chunks directly piped to base64 -d into TMP_TTF (eliminating disk churn and second pass)
     for (let i = 0, chunkIdx = 0; i < base64.length; i += B64_CHUNK_SIZE, chunkIdx++) {
       if (signal?.aborted) {
         throw new Error('Transfer aborted by user.');
@@ -95,25 +128,22 @@ export async function streamFontToDevice(
 
       const slice = base64.slice(i, i + B64_CHUNK_SIZE);
       const op = i === 0 ? '>' : '>>';
-      const percent = Math.min(90, Math.round(((chunkIdx + 1) / totalChunks) * 80) + 10);
+      const percent = Math.min(92, Math.round(((chunkIdx + 1) / totalChunks) * 85) + 5);
 
-      onProgress?.(percent, `Transferring font payload (${percent}%)...`);
+      onProgress?.(percent, `Streaming font payload (${percent}%)...`);
 
-      // Write chunk using printf to avoid echo escape complications
-      await exec(`printf '%s' "${slice}" ${op} ${TMP_B64}`);
+      // Write chunk using printf piped directly into base64 -d
+      await exec(`printf '%s' "${slice}" | base64 -d ${op} ${TMP_TTF}`, { timeoutMs: 15000 });
     }
 
     if (signal?.aborted) {
       throw new Error('Transfer aborted by user.');
     }
 
-    onProgress?.(92, 'Decoding font file on device...');
-    // Decode base64 to target TTF and clean intermediate base64
-    await exec(`base64 -d ${TMP_B64} > ${TMP_TTF} && rm -f ${TMP_B64}`);
-
     // Verify written file size against original buffer
     const sizeRes = await exec(`wc -c < ${TMP_TTF} 2>/dev/null || stat -c%s ${TMP_TTF} 2>/dev/null || echo 0`);
-    const writtenBytes = parseInt(sizeRes.stdout.trim(), 10);
+    const cleanSize = sizeRes.stdout.trim().replace(/\D/g, '');
+    const writtenBytes = parseInt(cleanSize, 10);
 
     if (isNaN(writtenBytes) || writtenBytes < 1000) {
       throw new Error(`Integrity check failed: written file size (${writtenBytes} B) is invalid.`);

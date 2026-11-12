@@ -5,13 +5,16 @@
 
 import { exec } from './shell';
 import { streamFontToDevice, cleanupTempFiles } from './transfer';
-import type { SystemStatus, ScriptActionResult, ApplyFontParams } from './types';
+import type { SystemStatus, ScriptActionResult, ApplyFontParams, ApplyEmojiParams } from './types';
 
 const STATUS_CMD =
-  'if [ -f /data/adb/modules/fontify/bin/get_status.sh ]; then /data/adb/modules/fontify/bin/get_status.sh; else /data/adb/modules/custom_font_installer/bin/get_status.sh; fi';
+  'if [ -f /data/adb/modules/fontify/bin/get_status.sh ]; then sh /data/adb/modules/fontify/bin/get_status.sh; else sh /data/adb/modules/custom_font_installer/bin/get_status.sh; fi';
 
 const RESTORE_CMD =
-  'if [ -f /data/adb/modules/fontify/bin/restore_stock.sh ]; then /data/adb/modules/fontify/bin/restore_stock.sh; else /data/adb/modules/custom_font_installer/bin/restore_stock.sh; fi';
+  'if [ -f /data/adb/modules/fontify/bin/restore_stock.sh ]; then sh /data/adb/modules/fontify/bin/restore_stock.sh; else sh /data/adb/modules/custom_font_installer/bin/restore_stock.sh; fi';
+
+const EMOJI_RESTORE_CMD =
+  'if [ -f /data/adb/modules/fontify/bin/restore_emoji.sh ]; then sh /data/adb/modules/fontify/bin/restore_emoji.sh; else sh /data/adb/modules/custom_font_installer/bin/restore_emoji.sh; fi';
 
 /**
  * Validates that an object conforms to the SystemStatus schema.
@@ -83,7 +86,7 @@ export async function applyFont(params: ApplyFontParams): Promise<ScriptActionRe
 
   try {
     // 2. Execute apply_font.sh
-    const applyCmd = `if [ -f /data/adb/modules/fontify/bin/apply_font.sh ]; then /data/adb/modules/fontify/bin/apply_font.sh ${ttfPath} ${configPath}; else /data/adb/modules/custom_font_installer/bin/apply_font.sh ${ttfPath} ${configPath}; fi`;
+    const applyCmd = `if [ -f /data/adb/modules/fontify/bin/apply_font.sh ]; then sh /data/adb/modules/fontify/bin/apply_font.sh ${ttfPath} ${configPath}; else sh /data/adb/modules/custom_font_installer/bin/apply_font.sh ${ttfPath} ${configPath}; fi`;
     const res = await exec(applyCmd, { timeoutMs: 30000 });
 
     if (res.errno !== 0 && !res.stdout) {
@@ -114,6 +117,83 @@ export async function applyFont(params: ApplyFontParams): Promise<ScriptActionRe
 }
 
 /**
+ * Applies a custom emoji font overlay to /system/fonts/NotoColorEmoji.ttf.
+ */
+export async function applyEmoji(params: ApplyEmojiParams): Promise<ScriptActionResult> {
+  const configObj = {
+    emoji_name: params.emojiName,
+    source: params.emojiSource,
+    applied_at: Date.now()
+  };
+
+  const configJson = JSON.stringify(configObj);
+
+  // 1. Stream emoji payload in chunks to /data/local/tmp with verification (directUrl fast-path enabled)
+  const { ttfPath, configPath } = await streamFontToDevice(
+    params.emojiBuffer,
+    params.emojiFile,
+    configJson,
+    params.onProgress,
+    params.signal,
+    params.emojiUrl
+  );
+
+  try {
+    // 2. Execute apply_emoji.sh with POSIX sh wrapper
+    const applyCmd = `if [ -f /data/adb/modules/fontify/bin/apply_emoji.sh ]; then sh /data/adb/modules/fontify/bin/apply_emoji.sh ${ttfPath} ${configPath}; else sh /data/adb/modules/custom_font_installer/bin/apply_emoji.sh ${ttfPath} ${configPath}; fi`;
+    const res = await exec(applyCmd, { timeoutMs: 35000 });
+
+    if (res.errno !== 0 && !res.stdout) {
+      throw new Error(`apply_emoji.sh failed (code ${res.errno}): ${res.stderr}`);
+    }
+
+    const trimmed = res.stdout.trim();
+    let actionResult: ScriptActionResult = { success: true };
+
+    try {
+      const parsed = JSON.parse(trimmed);
+      if (typeof parsed.success === 'boolean') {
+        actionResult = parsed as ScriptActionResult;
+      }
+    } catch (_) {
+      actionResult = {
+        success: res.errno === 0,
+        message: trimmed || 'Emoji applied successfully.'
+      };
+    }
+
+    return actionResult;
+  } finally {
+    // 3. Guarantee temporary file removal in /data/local/tmp
+    await cleanupTempFiles();
+  }
+}
+
+/**
+ * Reverts custom emoji overlays and restores stock system emojis.
+ */
+export async function restoreEmojiStock(): Promise<ScriptActionResult> {
+  const res = await exec(EMOJI_RESTORE_CMD, { timeoutMs: 15000 });
+
+  if (res.errno !== 0 && !res.stdout) {
+    throw new Error(`restore_emoji.sh failed (code ${res.errno}): ${res.stderr}`);
+  }
+
+  const trimmed = res.stdout.trim();
+  try {
+    const parsed = JSON.parse(trimmed);
+    if (typeof parsed.success === 'boolean') {
+      return parsed as ScriptActionResult;
+    }
+  } catch (_) {}
+
+  return {
+    success: res.errno === 0,
+    message: trimmed || 'Stock emojis restored.'
+  };
+}
+
+/**
  * Reverts custom font overlays and restores stock system fonts.
  */
 export async function restoreStock(): Promise<ScriptActionResult> {
@@ -138,8 +218,10 @@ export async function restoreStock(): Promise<ScriptActionResult> {
 }
 
 /**
- * Triggers a device reboot via standard Android root commands.
+ * Triggers a device soft reboot by killing system_server.
+ * Matches the official Fontify v1.0.0 implementation on GitHub (https://github.com/Lavax88/Fontify):
+ * restarts Zygote and the Android framework to reload all fonts & emojis without a full reboot.
  */
 export async function rebootDevice(): Promise<void> {
-  await exec('svc power reboot || reboot');
+  await exec('pkill -f system_server || killall system_server');
 }

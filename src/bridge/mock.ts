@@ -32,10 +32,14 @@ export async function mockExec(command: string): Promise<ExecResult> {
   if (command.includes('get_status.sh')) {
     let isActive = false;
     let activeFontName = 'Roboto / Google Sans';
+    let isEmojiActive = false;
+    let activeEmojiName = 'Stock (Google)';
 
     try {
       isActive = localStorage.getItem('fontify_is_active') === 'true';
       activeFontName = localStorage.getItem('fontify_active_font') || activeFontName;
+      isEmojiActive = localStorage.getItem('fontify_is_emoji_active') === 'true';
+      activeEmojiName = localStorage.getItem('fontify_active_emoji') || activeEmojiName;
     } catch (_) {}
 
     return {
@@ -43,6 +47,8 @@ export async function mockExec(command: string): Promise<ExecResult> {
       stdout: JSON.stringify({
         active: isActive,
         active_font_name: activeFontName,
+        emoji_active: isEmojiActive,
+        active_emoji_name: activeEmojiName,
         backup_exists: true,
         config: {},
         backup_info: { backed_up: true },
@@ -54,6 +60,30 @@ export async function mockExec(command: string): Promise<ExecResult> {
           sdk_version: '36',
           rom: 'LineageOS 23.2'
         }
+      }),
+      stderr: ''
+    };
+  }
+
+  // Handle apply_emoji.sh
+  if (command.includes('apply_emoji.sh')) {
+    return {
+      errno: 0,
+      stdout: JSON.stringify({
+        success: true,
+        message: 'Emoji font applied successfully! Please reboot your device to load new emojis.'
+      }),
+      stderr: ''
+    };
+  }
+
+  // Handle restore_emoji.sh
+  if (command.includes('restore_emoji.sh')) {
+    return {
+      errno: 0,
+      stdout: JSON.stringify({
+        success: true,
+        message: 'Custom emoji removed and stock emoji restored. Please reboot to apply.'
       }),
       stderr: ''
     };
@@ -83,8 +113,8 @@ export async function mockExec(command: string): Promise<ExecResult> {
     };
   }
 
-  // Handle reboot
-  if (command.includes('reboot')) {
+  // Handle reboot & soft reboot
+  if (command.includes('reboot') || command.includes('system_server') || command.includes('pkill')) {
     return {
       errno: 0,
       stdout: 'Reboot simulated in desktop browser',

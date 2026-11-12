@@ -6,7 +6,7 @@ import type { FontInfo } from '../font/types';
 import type { DeviceInfo, SystemStatus } from '../bridge/types';
 
 export interface AppState {
-  currentTab: 'overview' | 'customize';
+  currentTab: 'overview' | 'customize' | 'emoji';
 
   // System status from disk
   status: SystemStatus;
@@ -21,18 +21,40 @@ export interface AppState {
   selectedPreset: string;
   weightMode: string;
 
-  // Action status
+  // Font action status
   isApplying: boolean;
   isRestoring: boolean;
   applyProgress: number;
   applyProgressMessage: string;
   lastError: string | null;
+
+  // Selected custom or preset emoji
+  emojiFile: File | null;
+  emojiBuffer: ArrayBuffer | null;
+  emojiName: string;
+  emojiSource: 'custom' | 'preset' | null;
+  emojiUrl: string | null;
+  selectedEmojiPreset: string | null;
+  isDownloadingEmoji: boolean;
+  downloadEmojiProgress: number;
+  downloadEmojiMessage: string;
+
+  // Emoji action status
+  isApplyingEmoji: boolean;
+  isRestoringEmoji: boolean;
+  applyEmojiProgress: number;
+  applyEmojiProgressMessage: string;
+
+  // System restart reminder
+  rebootRequired: boolean;
 }
 
 export interface CachedData {
   schemaVersion: number;
   isActive: boolean;
   activeFontName: string;
+  isEmojiActive?: boolean;
+  activeEmojiName?: string;
   device?: DeviceInfo;
   timestamp: number;
 }

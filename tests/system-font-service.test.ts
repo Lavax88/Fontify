@@ -70,4 +70,9 @@ describe('SystemFontService (Deep Module)', () => {
 
     setMockFailure(false);
   });
+
+  it('triggers device reboot', async () => {
+    // Should resolve without errors under mock bridge
+    await expect(service.reboot()).resolves.toBeUndefined();
+  });
 });
