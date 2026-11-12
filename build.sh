@@ -44,7 +44,7 @@ WEBROOT_SIZE=$(du -sh webroot | cut -f1)
 echo ">> Built WebUI size: ${WEBROOT_SIZE}"
 
 # 2. Ensure script permissions
-chmod +x customize.sh uninstall.sh service.sh post-fs-data.sh 2>/dev/null || true
+chmod +x customize.sh hotinstall.sh uninstall.sh service.sh post-fs-data.sh 2>/dev/null || true
 chmod +x bin/*.sh 2>/dev/null || true
 
 # 3. Clean up previous archives
@@ -55,6 +55,7 @@ echo ">> Packaging flashable module zip..."
 zip -r9 "${OUTPUT_ZIP}" \
     module.prop \
     customize.sh \
+    hotinstall.sh \
     uninstall.sh \
     service.sh \
     post-fs-data.sh \

@@ -52,6 +52,7 @@ Write-Host ">> Packaging flashable module zip..."
 $filesToZip = @(
     "module.prop",
     "customize.sh",
+    "hotinstall.sh",
     "uninstall.sh",
     "service.sh",
     "post-fs-data.sh",

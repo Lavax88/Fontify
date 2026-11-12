@@ -26,15 +26,18 @@ if [ "$FONT_SIZE" -lt 1000 ]; then
     exit 1
 fi
 
-# Clean up legacy paths and prepare module directory structure
-rm -rf "$MODDIR/product" 2>/dev/null
+# Clean up legacy temp files and ensure overlay directories exist
 rm -f /data/local/tmp/fontify_custom_font.ttf 2>/dev/null
+
+# Remove any legacy XML overrides so Android's native FontManagerService uses its stock valid XML schema
+rm -rf "$MODDIR/system/etc" 2>/dev/null
+rm -rf "$MODDIR/system/product/etc" 2>/dev/null
+rm -rf "$MODDIR/product/etc" 2>/dev/null
 
 mkdir -p "$DATA_DIR"
 mkdir -p "$MODDIR/system/fonts"
-mkdir -p "$MODDIR/system/etc"
+mkdir -p "$MODDIR/product/fonts"
 mkdir -p "$MODDIR/system/product/fonts"
-mkdir -p "$MODDIR/system/product/etc"
 
 # 1. Save imported custom font
 DEST_CUSTOM="$DATA_DIR/custom_font.ttf"
@@ -78,7 +81,7 @@ for target in Roboto-Bold.ttf Roboto-Italic.ttf Roboto-BoldItalic.ttf Roboto-Med
     cp -af "$DEST_CUSTOM" "$MODDIR/system/fonts/$target"
 done
 
-# Product partition Google Sans targets (placed under $MODDIR/system/product/fonts)
+# Product partition Google Sans targets (populated in BOTH $MODDIR/product/fonts and $MODDIR/system/product/fonts)
 # Note: Clock fonts (GoogleSansClock, GoogleSansFlexClock) are preserved to prevent lockscreen clock breakage
 if [ -d /product/fonts ]; then
     for pf in /product/fonts/GoogleSans*.ttf /product/fonts/GoogleSansFlex*.ttf /product/fonts/GoogleSansText*.ttf; do
@@ -87,38 +90,37 @@ if [ -d /product/fonts ]; then
             *Clock*) continue ;; # Preserve lockscreen clock fonts
             *)
                 base="$(basename "$pf")"
+                cp -af "$DEST_CUSTOM" "$MODDIR/product/fonts/$base"
                 cp -af "$DEST_CUSTOM" "$MODDIR/system/product/fonts/$base"
                 ;;
         esac
     done
 fi
 
-# 5. Handle font XML configurations
-# For static fonts: Strip all <axis .../> elements to prevent FontManagerService IllegalArgumentException on boot
-# For variable fonts: Strip non-standard proprietary Google axes (GRAD, ROND) from fonts_customization.xml
-if [ -f /system/etc/fonts.xml ]; then
-    cp -af /system/etc/fonts.xml "$MODDIR/system/etc/fonts.xml"
-    if [ "$IS_VARIABLE" = "false" ]; then
-        sed -i '/<axis/d' "$MODDIR/system/etc/fonts.xml" 2>/dev/null
-    fi
+# 5. Preserve custom emoji overlays if custom emoji is active
+if [ -f "$DATA_DIR/custom_emoji.ttf" ] && [ -s "$DATA_DIR/custom_emoji.ttf" ]; then
+    cp -af "$DATA_DIR/custom_emoji.ttf" "$MODDIR/system/fonts/NotoColorEmoji.ttf"
+    cp -af "$DATA_DIR/custom_emoji.ttf" "$MODDIR/system/fonts/NotoColorEmojiFlags.ttf"
+    cp -af "$DATA_DIR/custom_emoji.ttf" "$MODDIR/product/fonts/NotoColorEmoji.ttf"
+    cp -af "$DATA_DIR/custom_emoji.ttf" "$MODDIR/system/product/fonts/NotoColorEmoji.ttf"
 fi
 
-if [ -f /product/etc/fonts_customization.xml ]; then
-    cp -af /product/etc/fonts_customization.xml "$MODDIR/system/product/etc/fonts_customization.xml"
-    if [ "$IS_VARIABLE" = "false" ]; then
-        sed -i '/<axis/d' "$MODDIR/system/product/etc/fonts_customization.xml" 2>/dev/null
-    else
-        sed -i '/tag="GRAD"/d; /tag="ROND"/d' "$MODDIR/system/product/etc/fonts_customization.xml" 2>/dev/null
+# 6. Set permissions and SELinux contexts for both system and product overlay trees
+for dir in "$MODDIR/system" "$MODDIR/product"; do
+    if [ -d "$dir" ]; then
+        chown -R 0:0 "$dir" 2>/dev/null
+        chmod -R 755 "$dir" 2>/dev/null
+        find "$dir" -type f -exec chmod 644 {} + 2>/dev/null
+        chcon -R u:object_r:system_file:s0 "$dir" 2>/dev/null
     fi
+done
+
+# 7. Sync NoMount VFS redirection rules if NoMount metamodule is present
+if [ -f "$MODDIR/bin/nomount_sync.sh" ]; then
+    sh "$MODDIR/bin/nomount_sync.sh" sync 2>/dev/null
 fi
 
-# 6. Set permissions and SELinux contexts
-chown -R 0:0 "$MODDIR/system" 2>/dev/null
-chmod -R 755 "$MODDIR/system" 2>/dev/null
-find "$MODDIR/system" -type f -exec chmod 644 {} + 2>/dev/null
-chcon -R u:object_r:system_file:s0 "$MODDIR/system" 2>/dev/null
-
-# 7. Clear Android font caches and updatable system font overrides
+# 8. Clear Android font caches and updatable system font overrides
 if [ -f "$MODDIR/bin/clear_font_cache.sh" ]; then
     sh "$MODDIR/bin/clear_font_cache.sh" 2>/dev/null
 else

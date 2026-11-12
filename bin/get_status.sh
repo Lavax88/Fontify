@@ -27,6 +27,19 @@ if [ -f "$DATA_DIR/custom_font.ttf" ] && [ -s "$DATA_DIR/custom_font.ttf" ] && [
     fi
 fi
 
+EMOJI_ACTIVE=false
+ACTIVE_EMOJI_NAME="Stock (Google)"
+
+if [ -f "$DATA_DIR/custom_emoji.ttf" ] && [ -s "$DATA_DIR/custom_emoji.ttf" ] && [ -f "$DATA_DIR/current_emoji.json" ]; then
+    EMOJI_ACTIVE=true
+    PARSED_EMOJI=$(grep -o '"emoji_name": *"[^"]*"' "$DATA_DIR/current_emoji.json" 2>/dev/null | head -n 1 | sed 's/.*"emoji_name": *"//;s/"//g')
+    if [ -n "$PARSED_EMOJI" ]; then
+        ACTIVE_EMOJI_NAME="$PARSED_EMOJI"
+    else
+        ACTIVE_EMOJI_NAME="Custom Emoji"
+    fi
+fi
+
 BACKUP_EXISTS=false
 if [ -f "$BACKUP_DIR/backup_info.json" ]; then
     BACKUP_EXISTS=true
@@ -35,6 +48,11 @@ fi
 CURRENT_CONFIG="{}"
 if [ -f "$DATA_DIR/current_font.json" ]; then
     CURRENT_CONFIG=$(cat "$DATA_DIR/current_font.json" 2>/dev/null || echo "{}")
+fi
+
+CURRENT_EMOJI_CONFIG="{}"
+if [ -f "$DATA_DIR/current_emoji.json" ]; then
+    CURRENT_EMOJI_CONFIG=$(cat "$DATA_DIR/current_emoji.json" 2>/dev/null || echo "{}")
 fi
 
 BACKUP_INFO="{}"
@@ -53,8 +71,11 @@ cat <<EOF
 {
   "active": $CUSTOM_ACTIVE,
   "active_font_name": "$ACTIVE_FONT_NAME",
+  "emoji_active": $EMOJI_ACTIVE,
+  "active_emoji_name": "$ACTIVE_EMOJI_NAME",
   "backup_exists": $BACKUP_EXISTS,
   "config": $CURRENT_CONFIG,
+  "emoji_config": $CURRENT_EMOJI_CONFIG,
   "backup_info": $BACKUP_INFO,
   "device": {
     "model": "$DEV_MODEL",
