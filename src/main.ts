@@ -9,9 +9,14 @@ import { fontService } from './bridge/service';
 import { themeManager } from './ui/theme';
 import { setupOverviewTab } from './ui/overview';
 import { setupCustomizeTab } from './ui/customize';
+import { setupEmojiTab } from './ui/emoji';
+import { initFloatingActions } from './ui/floatingActions';
 import { FontEngine } from './font/engine';
+import { initFloatingNav, type FloatingNavController, type FontifyTab } from './ui/components/floatingNav';
 
-export function switchTab(tabId: 'overview' | 'customize'): void {
+let floatingNavController: FloatingNavController | null = null;
+
+export function switchTab(tabId: FontifyTab): void {
   document.querySelectorAll<HTMLElement>('.tab-view').forEach(view => {
     view.classList.remove('active');
     view.setAttribute('aria-hidden', 'true');
@@ -28,7 +33,9 @@ export function switchTab(tabId: 'overview' | 'customize'): void {
     targetView.removeAttribute('aria-hidden');
   }
 
-  const targetTab = document.querySelector<HTMLButtonElement>(`.nav-tab[data-tab="${tabId}"]`);
+  const targetTab = document.querySelector<HTMLButtonElement>(
+    `.nav-tab[data-tab="${tabId}"], .nav-tab[data-target="${tabId}"]`
+  );
   if (targetTab) {
     targetTab.classList.add('active');
     targetTab.setAttribute('aria-selected', 'true');
@@ -37,6 +44,9 @@ export function switchTab(tabId: 'overview' | 'customize'): void {
 
   window.scrollTo({ top: 0, behavior: 'smooth' });
   store.setState({ currentTab: tabId });
+
+  // Update floating highlighter position smoothly
+  floatingNavController?.updatePosition(false);
 
   // Lazy refresh font preview when customize tab becomes visible
   if (tabId === 'customize') {
@@ -61,13 +71,25 @@ function init(): void {
   themeManager.init();
   setupOverviewTab();
   setupCustomizeTab();
+  setupEmojiTab();
+  initFloatingActions();
 
   // Attach nav tab click listeners directly
   document.querySelectorAll<HTMLButtonElement>('.nav-tab').forEach(btn => {
-    const tabName = btn.getAttribute('data-tab') as 'overview' | 'customize' | null;
+    const tabName = (btn.getAttribute('data-tab') || btn.getAttribute('data-target')) as FontifyTab | null;
     if (tabName) {
       btn.addEventListener('click', () => switchTab(tabName));
     }
+  });
+
+  // Initialize floating navigation bar controller
+  floatingNavController = initFloatingNav((target) => {
+    switchTab(target);
+  });
+
+  // Keep floating nav highlighter synchronized with store changes
+  store.subscribe(s => s.currentTab, () => {
+    floatingNavController?.updatePosition(false);
   });
 
   // WAI-ARIA tablist keyboard interactions (Arrow navigation, Home, End)
@@ -95,7 +117,7 @@ function init(): void {
       const target = tabs[nextIdx];
       if (target) {
         target.focus();
-        const tabName = target.getAttribute('data-tab') as 'overview' | 'customize' | null;
+        const tabName = (target.getAttribute('data-tab') || target.getAttribute('data-target')) as FontifyTab | null;
         if (tabName) switchTab(tabName);
       }
     });

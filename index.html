@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" class="nav-floating">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
@@ -37,11 +37,29 @@
                 <div class="banner-badge-chip" id="banner-badge">Stock</div>
             </div>
 
+            <!-- 1b. Reboot Required Notice Banner (M3 Warning Pill) -->
+            <div class="m3-banner-card is-reboot-required" id="reboot-reminder-banner" style="display: none;">
+                <div class="banner-icon-container" aria-hidden="true">
+                    <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M17.65 6.35C16.2 4.9 14.21 4 12 4c-4.42 0-7.99 3.58-7.99 8s3.57 8 7.99 8c3.73 0 6.84-2.55 7.73-6h-2.08c-.82 2.33-3.04 4-5.65 4-3.31 0-6-2.69-6-6s2.69-6 6-6c1.66 0 3.14.69 4.22 1.78L13 11h7V4l-2.35 2.35z"/>
+                    </svg>
+                </div>
+                <div class="banner-text-content">
+                    <div class="banner-title">Restart Required</div>
+                    <div class="banner-subtitle">Restart your device to apply updated font/emoji overlays.</div>
+                </div>
+                <button class="m3-pill-btn" id="btn-banner-reboot" type="button" style="margin-left: auto;">Reboot</button>
+            </div>
+
             <!-- 2. Font & Module Configuration (M3 Expressive Split Cards) -->
             <div class="m3-split-group" role="group" aria-label="Font configuration">
                 <div class="m3-card-tile info-prop-row">
                     <div class="prop-label">Active Font</div>
                     <div class="prop-val" id="info-active-font">Roboto / Google Sans</div>
+                </div>
+                <div class="m3-card-tile info-prop-row">
+                    <div class="prop-label">Active Emoji</div>
+                    <div class="prop-val" id="info-active-emoji">Stock (Google)</div>
                 </div>
                 <div class="m3-card-tile info-prop-row">
                     <div class="prop-label">Overlay Target</div>
@@ -133,73 +151,129 @@
                     <div class="specimen-glyphs preview-text" contenteditable="true" spellcheck="false" aria-label="Glyphs specimen preview">0123456789 • &@#%*+-=:;!?</div>
                 </div>
             </div>
+        </section>
 
-            <!-- 5. Quick Actions -->
-            <div class="m3-actions-card">
-                <!-- Apply Font -->
-                <button class="m3-action-item-btn btn-primary" id="btn-apply" disabled type="button">
-                    <div class="action-btn-icon" aria-hidden="true">
-                        <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor">
-                            <path d="M9 16.2L4.8 12l-1.4 1.4L9 19 21 7l-1.4-1.4L9 16.2z"/>
-                        </svg>
-                    </div>
-                    <div class="action-btn-text">
-                        <div class="action-btn-title">Apply Font</div>
-                        <div class="action-btn-sub">Apply selected font across SystemUI & apps</div>
-                    </div>
-                </button>
+        <!-- ================= TAB 3: EMOJI ================= -->
+        <section class="tab-view" id="view-emoji" role="tabpanel" aria-labelledby="tab-emoji" aria-hidden="true">
+            <input type="file" id="emoji-file-input" accept=".ttf,.otf" style="display: none;" aria-label="Select emoji font file">
 
-                <!-- Revert to Stock -->
-                <button class="m3-action-item-btn btn-tonal" id="btn-restore" type="button">
-                    <div class="action-btn-icon" aria-hidden="true">
-                        <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor">
-                            <path d="M13 3c-4.97 0-9 4.03-9 9H1l3.89 3.89.07.14L9 12H6c0-3.87 3.13-7 7-7s7 3.13 7 7-3.13 7-7 7c-1.93 0-3.68-.79-4.94-2.06l-1.42 1.42C8.27 19.99 10.51 21 13 21c4.97 0 9-4.03 9-9s-4.03-9-9-9zm-1 5v5l4.28 2.54.72-1.21-3.5-2.08V8H12z"/>
-                        </svg>
-                    </div>
-                    <div class="action-btn-text">
-                        <div class="action-btn-title">Revert to Stock</div>
-                        <div class="action-btn-sub">Safely remove custom font overlays</div>
-                    </div>
-                </button>
+            <!-- 1. Hero Emoji Picker Card (at Top) -->
+            <div class="m3-hero-picker-card" id="emoji-dropzone" role="button" tabindex="0" aria-label="Import Emoji Font File: Tap to select or drop any .ttf emoji font">
+                <div class="emoji-picker-icon-box" aria-hidden="true">
+                    <svg width="28" height="28" viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M11.99 2C6.47 2 2 6.48 2 12s4.47 10 9.99 10C17.52 22 22 17.52 22 12S17.52 2 11.99 2zM12 20c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8zm3.5-9c.83 0 1.5-.67 1.5-1.5S16.33 8 15.5 8 14 8.67 14 9.5s.67 1.5 1.5 1.5zm-7 0c.83 0 1.5-.67 1.5-1.5S9.33 8 8.5 8 7 8.67 7 9.5 7.67 11 8.5 11zm3.5 6.5c2.33 0 4.31-1.46 5.11-3.5H6.89c.8 2.04 2.78 3.5 5.11 3.5z"/>
+                    </svg>
+                </div>
+                <div class="picker-text">
+                    <h2 class="picker-title" id="emoji-picker-title">Import Emoji Font</h2>
+                    <p class="picker-subtitle" id="emoji-picker-subtitle">Tap to select or drop any .ttf emoji font</p>
+                </div>
+                <button class="m3-pill-btn" id="btn-select-emoji-file" type="button">Select Emoji Font</button>
+            </div>
 
-                <!-- Reboot -->
-                <button class="m3-action-item-btn btn-outlined" id="btn-soft-reboot" type="button">
-                    <div class="action-btn-icon" aria-hidden="true">
-                        <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor">
-                            <path d="M17.65 6.35C16.2 4.9 14.21 4 12 4c-4.42 0-7.99 3.58-7.99 8s3.57 8 7.99 8c3.73 0 6.84-2.55 7.73-6h-2.08c-.82 2.33-3.04 4-5.65 4-3.31 0-6-2.69-6-6s2.69-6 6-6c1.66 0 3.14.69 4.22 1.78L13 11h7V4l-2.35 2.35z"/>
-                        </svg>
+            <!-- 2. Curated Emoji Packs Section (iOS 26, iOS 18, Fluent, OneUI, Twitter, Google) -->
+            <div class="curated-emoji-section">
+                <h3 class="curated-section-title">Curated Emoji Packs</h3>
+
+                <!-- Download Progress Bar -->
+                <div id="emoji-download-progress-box" style="display: none; margin-top: 8px; margin-bottom: 12px;">
+                    <div style="font-size: 0.8125rem; font-weight: 600; color: var(--md-sys-color-primary); margin-bottom: 6px;" id="emoji-download-progress-text">Downloading...</div>
+                    <div class="download-progress-bar-container">
+                        <div class="download-progress-fill" id="emoji-download-progress-fill"></div>
                     </div>
-                    <div class="action-btn-text">
-                        <div class="action-btn-title">Reboot</div>
-                        <div class="action-btn-sub">Restart device to reload fonts</div>
+                </div>
+
+                <!-- 2-Column Curated Emoji Grid -->
+                <div class="curated-emoji-grid" id="curated-emoji-grid" role="list" aria-label="Curated emoji packs">
+                    <!-- Populated dynamically -->
+                </div>
+            </div>
+
+            <!-- 3. Loaded Emoji Information Card -->
+            <div class="m3-info-card" id="emoji-info-row" style="display: none;">
+                <div class="info-prop-row">
+                    <div class="prop-label">Emoji Family</div>
+                    <div class="prop-val" id="emoji-font-name">Custom Emoji</div>
+                </div>
+                <div class="info-prop-row">
+                    <div class="prop-label">File Size</div>
+                    <div class="prop-val" id="emoji-font-size">--</div>
+                </div>
+                <div class="info-prop-row">
+                    <div class="prop-label">Source</div>
+                    <div class="prop-val"><span class="m3-mini-badge" id="emoji-source-badge">Custom</span></div>
+                </div>
+            </div>
+
+            <!-- 4. Interactive Emoji Preview Stage -->
+            <div class="m3-preview-card">
+                <div class="card-header-row">
+                    <h3 class="card-title">Emoji Preview</h3>
+                </div>
+
+                <div class="emoji-specimen-box">
+                    <div class="emoji-category-bar" id="emoji-category-bar" role="tablist" aria-label="Emoji categories">
+                        <!-- Populated dynamically -->
                     </div>
-                </button>
+
+                    <div class="emoji-showcase-grid" id="emoji-showcase-grid" aria-label="Emoji showcase glyphs">
+                        <!-- Populated dynamically -->
+                    </div>
+
+                    <div class="emoji-specimen-hero" id="emoji-specimen-hero" contenteditable="true" spellcheck="false" aria-label="Interactive emoji specimen preview">😀 🥳 😎 👍 🔥 ❤️ 🚀 ✨ 💯 🐱 🍕 ☕</div>
+                </div>
             </div>
         </section>
     </main>
 
-    <!-- Bottom Navigation Bar (2 Tabs: Overview & Customize) -->
-    <nav class="bottom-nav-bar" aria-label="Main Navigation">
-        <div class="nav-bar-inner" role="tablist" aria-label="Sections">
-            <button class="nav-tab active" id="tab-overview" data-tab="overview" role="tab" aria-selected="true" aria-controls="view-overview" tabindex="0" type="button">
-                <div class="nav-tab-pill">
-                    <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-                        <path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/>
-                    </svg>
-                </div>
-                <span class="nav-tab-label">Overview</span>
-            </button>
+    <!-- Bottom Navigation Bar (Material 3 Expressive Floating Pill) -->
+    <nav class="bottom-nav" role="tablist" aria-label="Main Navigation">
+        <div class="nav-highlighter" id="nav-highlighter" aria-hidden="true"></div>
+        <button class="nav-tab active" id="tab-overview" data-target="overview" data-tab="overview" role="tab" aria-selected="true" aria-controls="view-overview" tabindex="0" type="button">
+            <div class="icon-wrapper">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                    <path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/>
+                </svg>
+            </div>
+            <span class="tab-label">Overview</span>
+        </button>
 
-            <button class="nav-tab" id="tab-customize" data-tab="customize" role="tab" aria-selected="false" aria-controls="view-customize" tabindex="-1" type="button">
-                <div class="nav-tab-pill">
-                    <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-                        <path d="M9.93 13.5h4.14L12 7.98zM20 2H4c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm-4.05 16.5l-1.14-3H9.17l-1.12 3H5.96l5.11-13h1.86l5.11 13h-2.09z"/>
-                    </svg>
-                </div>
-                <span class="nav-tab-label">Customize</span>
-            </button>
-        </div>
+        <button class="nav-tab" id="tab-customize" data-target="customize" data-tab="customize" role="tab" aria-selected="false" aria-controls="view-customize" tabindex="-1" type="button">
+            <div class="icon-wrapper">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                    <path d="M9.93 13.5h4.14L12 7.98zM20 2H4c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm-4.05 16.5l-1.14-3H9.17l-1.12 3H5.96l5.11-13h1.86l5.11 13h-2.09z"/>
+                </svg>
+            </div>
+            <span class="tab-label">Font</span>
+        </button>
+
+        <button class="nav-tab" id="tab-emoji" data-target="emoji" data-tab="emoji" role="tab" aria-selected="false" aria-controls="view-emoji" tabindex="-1" type="button">
+            <div class="icon-wrapper">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                    <path d="M11.99 2C6.47 2 2 6.48 2 12s4.47 10 9.99 10C17.52 22 22 17.52 22 12S17.52 2 11.99 2zM12 20c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8zm3.5-9c.83 0 1.5-.67 1.5-1.5S16.33 8 15.5 8 14 8.67 14 9.5s.67 1.5 1.5 1.5zm-7 0c.83 0 1.5-.67 1.5-1.5S9.33 8 8.5 8 7 8.67 7 9.5 7.67 11 8.5 11zm3.5 6.5c2.33 0 4.31-1.46 5.11-3.5H6.89c.8 2.04 2.78 3.5 5.11 3.5z"/>
+                </svg>
+            </div>
+            <span class="tab-label">Emoji</span>
+        </button>
     </nav>
+
+    <!-- Dual Floating Action Cluster (M3 Expressive: Reset + Apply at Bottom-Right) -->
+    <div class="floating-action-cluster hidden" id="floating-action-cluster" aria-label="Quick Actions">
+        <!-- Reset Button: 48px Tonal Circular FAB -->
+        <button class="fab-circle-btn fab-tonal" id="fab-reset" type="button" aria-label="Revert to Stock" title="Revert to Stock">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                <path d="M13 3c-4.97 0-9 4.03-9 9H1l3.89 3.89.07.14L9 12H6c0-3.87 3.13-7 7-7s7 3.13 7 7-3.13 7-7 7c-1.93 0-3.68-.79-4.94-2.06l-1.42 1.42C8.27 19.99 10.51 21 13 21c4.97 0 9-4.03 9-9s-4.03-9-9-9zm-1 5v5l4.28 2.54.72-1.21-3.5-2.08V8H12z"/>
+            </svg>
+        </button>
+
+        <!-- Apply Button: 56px Primary Extended Pill FAB -->
+        <button class="fab-pill-btn fab-primary" id="fab-apply" type="button" disabled aria-label="Apply">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                <path d="M9 16.2L4.8 12l-1.4 1.4L9 19 21 7l-1.4-1.4L9 16.2z"/>
+            </svg>
+            <span class="fab-pill-label" id="fab-apply-label">Apply</span>
+        </button>
+    </div>
 
     <!-- Material 3 Expressive Dialog Modal -->
     <div class="modal-backdrop" id="modal-overlay" aria-hidden="true">
@@ -212,8 +286,39 @@
                 </div>
                 <h3 class="dialog-title" id="modal-title">Confirmation</h3>
             </div>
+            
+            <!-- Standard text description -->
             <div class="dialog-body" id="modal-body">Description</div>
-            <div class="dialog-actions">
+
+            <!-- Live Circular Progress Stage (morphed during apply) -->
+            <div class="dialog-progress-stage" id="dialog-progress-stage" style="display: none;">
+                <div class="circular-progress-wrap">
+                    <svg class="circular-progress-svg" viewBox="0 0 88 88" width="88" height="88" aria-hidden="true">
+                        <circle class="circular-progress-bg" cx="44" cy="44" r="36" />
+                        <circle class="circular-progress-bar" id="dialog-progress-bar" cx="44" cy="44" r="36" />
+                    </svg>
+                    <div class="circular-progress-center">
+                        <span class="circular-progress-pct" id="dialog-progress-pct">0%</span>
+                    </div>
+                </div>
+                <div class="dialog-progress-msg" id="dialog-progress-msg">Preparing payload...</div>
+            </div>
+
+            <!-- Auto-Reboot Countdown Stage (morphed upon success) -->
+            <div class="dialog-countdown-stage" id="dialog-countdown-stage" style="display: none;">
+                <div class="countdown-timer-wrap">
+                    <svg class="countdown-svg" viewBox="0 0 88 88" width="88" height="88" aria-hidden="true">
+                        <circle class="circular-progress-bg" cx="44" cy="44" r="36" />
+                        <circle class="countdown-progress-bar" id="dialog-countdown-bar" cx="44" cy="44" r="36" />
+                    </svg>
+                    <div class="countdown-center">
+                        <span class="countdown-sec" id="dialog-countdown-sec">5</span>
+                    </div>
+                </div>
+                <div class="dialog-countdown-msg" id="dialog-countdown-msg">Restarting in 5s to reload fonts...</div>
+            </div>
+
+            <div class="dialog-actions" id="dialog-actions">
                 <button class="m3-dialog-btn m3-dialog-btn-tonal" id="modal-cancel-btn" type="button">Cancel</button>
                 <button class="m3-dialog-btn m3-dialog-btn-filled" id="modal-confirm-btn" type="button">Confirm</button>
             </div>

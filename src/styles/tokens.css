@@ -18,6 +18,13 @@
   --state-active-overlay-primary: color-mix(in srgb, var(--md-sys-color-on-primary) 15%, transparent);
   --state-active-overlay-tonal: color-mix(in srgb, var(--md-sys-color-on-secondary-container) 10%, transparent);
 
+  /* Glassmorphism & Floating Nav Tokens */
+  --glass-blur: 16px;
+  --md-corner-full: 9999px;
+  --nav-floating-bg: color-mix(in srgb, var(--md-sys-color-surface) 86%, transparent);
+  --nav-floating-border: var(--md-sys-color-outline-variant);
+  --nav-floating-shadow: 0 4px 16px color-mix(in srgb, black 18%, transparent), 0 1px 3px color-mix(in srgb, black 12%, transparent);
+
   /* Dynamic Material 3 System Colors (Light Mode Defaults & KernelSU/MMRL Host Variable Mappings) */
   --md-sys-color-primary: var(--primary, #386a20);
   --md-sys-color-on-primary: var(--onPrimary, #ffffff);
@@ -165,6 +172,10 @@
     --md-sys-color-on-error: var(--onError, #690005);
     --md-sys-color-error-container: var(--errorContainer, #93000a);
     --md-sys-color-on-error-container: var(--onErrorContainer, #ffdad6);
+
+    --nav-floating-bg: color-mix(in srgb, var(--md-sys-color-surface) 88%, transparent);
+    --nav-floating-border: color-mix(in srgb, var(--md-sys-color-outline-variant) 70%, transparent);
+    --nav-floating-shadow: 0 6px 20px color-mix(in srgb, black 45%, transparent), 0 2px 4px color-mix(in srgb, black 30%, transparent);
   }
 }
 
@@ -189,7 +200,7 @@ body {
   background-color: var(--md-sys-color-surface);
   color: var(--md-sys-color-on-surface);
   min-height: 100vh;
-  padding-bottom: max(96px, calc(var(--bottom-inset) + 80px));
+  padding-bottom: max(100px, calc(var(--bottom-inset) + 90px));
   line-height: var(--md-sys-typescale-body-large-line-height);
   font-size: var(--md-sys-typescale-body-large-size);
   letter-spacing: 0.1px;

@@ -9,8 +9,62 @@ import { FontParser } from '../font/parser';
 import { FontEngine } from '../font/engine';
 import { fontService } from '../bridge/service';
 import { showToast } from './components/toast';
-import { showConfirmDialog } from './components/dialog';
+import { showConfirmDialog, runApplyWorkflow } from './components/dialog';
 import { renderVariableControls } from './components/sliders';
+
+export async function applySelectedFont(): Promise<void> {
+  const state = store.getState();
+  if (!state.fontBuffer || !state.fontData) {
+    showToast('Please select a font file first.');
+    return;
+  }
+
+  await runApplyWorkflow({
+    title: 'Apply Font',
+    body: `Apply <strong>${state.fontData.fullName}</strong> across /system and /product partitions?<br><br>Original stock system fonts remain safely protected.`,
+    confirmText: 'Apply Font',
+    iconType: 'apply',
+    onApply: async (onProgress) => {
+      await fontService.applyFont({
+        fontBuffer: state.fontBuffer!,
+        fontFile: state.fontFile,
+        fontName: state.fontData!.fullName,
+        isVariable: state.fontData!.isVariable,
+        weightMode: state.weightMode,
+        axisValues: state.axisValues,
+        onProgress
+      });
+    },
+    onReboot: async () => {
+      await fontService.reboot();
+    },
+    onCancelReboot: () => {
+      store.setState({ rebootRequired: true });
+      showToast('Reboot postponed. Restart anytime from the Overview tab.');
+    }
+  });
+}
+
+export async function restoreStockFont(): Promise<void> {
+  const confirmed = await showConfirmDialog({
+    title: 'Revert to Stock',
+    body: 'Remove custom font overlays and restore original stock system font?',
+    confirmText: 'Revert',
+    iconType: 'revert'
+  });
+
+  if (!confirmed) return;
+
+  showToast('Reverting to stock font...');
+  try {
+    await fontService.restoreStock();
+    store.setState({ rebootRequired: true });
+    showToast('Stock fonts restored! Restart device to apply.');
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    showToast(`Restore failed: ${msg}`);
+  }
+}
 
 export function setupCustomizeTab(): void {
   const dropzone = document.getElementById('dropzone');
@@ -138,96 +192,18 @@ export function setupCustomizeTab(): void {
     reader.readAsArrayBuffer(file);
   }
 
-  // 3. Apply Font Action
+  // 3. Fallback handlers for legacy buttons if present
   if (btnApply) {
-    btnApply.addEventListener('click', async () => {
-      const state = store.getState();
-      if (!state.fontBuffer || !state.fontData) {
-        showToast('Please select a font file first.');
-        return;
-      }
-
-      const confirmed = await showConfirmDialog({
-        title: 'Apply Font',
-        body: `Apply <strong>${state.fontData.fullName}</strong> across /system and /product partitions?<br><br>Original stock system fonts remain completely intact.`,
-        confirmText: 'Apply Font',
-        iconType: 'apply'
-      });
-
-      if (!confirmed) return;
-
-      btnApply.disabled = true;
-      showToast('Preparing font overlay...', 2000);
-
-      try {
-        await fontService.applyFont({
-          fontBuffer: state.fontBuffer,
-          fontFile: state.fontFile,
-          fontName: state.fontData.fullName,
-          isVariable: state.fontData.isVariable,
-          weightMode: state.weightMode,
-          axisValues: state.axisValues,
-          onProgress: (percent, msg) => {
-            if (percent > 0 && percent % 25 === 0) {
-              showToast(msg, 1200);
-            }
-          }
-        });
-
-        await showConfirmDialog({
-          title: 'Font Applied',
-          body: `<strong>${state.fontData.fullName}</strong> overlay staged successfully!<br><br>Reboot your device to activate the new fonts across all applications:`,
-          confirmText: 'Reboot Now',
-          iconType: 'reboot',
-          onConfirm: () => fontService.reboot()
-        });
-      } catch (err) {
-        const msg = err instanceof Error ? err.message : String(err);
-        console.error('Apply Font Error:', err);
-        showToast(`Apply failed: ${msg}`);
-      } finally {
-        btnApply.disabled = false;
-      }
-    });
+    btnApply.addEventListener('click', applySelectedFont);
   }
-
-  // 4. Revert to Stock Action
   if (btnRestore) {
-    btnRestore.addEventListener('click', async () => {
-      const confirmed = await showConfirmDialog({
-        title: 'Revert to Stock',
-        body: 'Remove custom font overlays and restore original stock system font?',
-        confirmText: 'Revert',
-        iconType: 'revert'
-      });
-
-      if (!confirmed) return;
-
-      showToast('Reverting to stock font...');
-      try {
-        await fontService.restoreStock();
-
-        await showConfirmDialog({
-          title: 'Stock Restored',
-          body: 'Stock font configuration restored.<br><br>Reboot device to reload stock fonts:',
-          confirmText: 'Reboot Now',
-          iconType: 'reboot',
-          onConfirm: () => fontService.reboot()
-        });
-      } catch (err) {
-        const msg = err instanceof Error ? err.message : String(err);
-        console.error('Restore Stock Error:', err);
-        showToast(`Revert failed: ${msg}`);
-      }
-    });
+    btnRestore.addEventListener('click', restoreStockFont);
   }
-
-  // 5. Reboot Action
   if (btnSoftReboot) {
     btnSoftReboot.addEventListener('click', async () => {
       await showConfirmDialog({
-        title: 'Reboot',
-        body: 'Restart device to reload system fonts?',
+        title: 'Reboot Device',
+        body: 'Restart system to load updated fonts?',
         confirmText: 'Reboot',
         iconType: 'reboot',
         onConfirm: () => fontService.reboot()
