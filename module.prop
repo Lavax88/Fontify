@@ -5,4 +5,4 @@ versionCode=2000
 author=Lava
 description=Customize Android's font with a WebUI
 web=true
-updateJson=https://raw.githubusercontent.com/Lavax88/Fontify/master/update.json
+updateJson=https://raw.githubusercontent.com/Lavax88/Fontify/main/update.json
