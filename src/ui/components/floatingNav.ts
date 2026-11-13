@@ -15,21 +15,12 @@ const TAB_ORDER: FontifyTab[] = [
 ];
 
 const TAB_METRICS: Record<FontifyTab, number> = {
-  'overview': 114,
-  'customize': 92,
-  'emoji': 96
+  'overview': 122,
+  'customize': 96,
+  'emoji': 102
 };
 
-function getTabMetrics(bottomNav: HTMLElement | null, tab: FontifyTab): number {
-  if (bottomNav) {
-    const el = bottomNav.querySelector<HTMLElement>(
-      `.nav-tab[data-target="${tab}"], .nav-tab[data-tab="${tab}"]`
-    );
-    if (el && el.classList.contains('active')) {
-      const w = el.getBoundingClientRect().width;
-      if (w > 50) return Math.round(w);
-    }
-  }
+function getTabMetrics(tab: FontifyTab): number {
   return TAB_METRICS[tab] || 100;
 }
 
@@ -127,6 +118,45 @@ export function initFloatingNav(
     }, 160);
   }
 
+  function calculateTabSlots(activeTab: FontifyTab) {
+    const navWidth = bottomNav!.offsetWidth || 320;
+    const activeWidth = getTabMetrics(activeTab);
+    const inactiveCount = Math.max(1, TAB_ORDER.length - 1);
+    const totalTabsWidth = activeWidth + inactiveCount * 48;
+    const innerWidth = Math.max(0, navWidth - 12); // 6px padding on each side
+    const availableSpace = Math.max(0, innerWidth - totalTabsWidth);
+    const space = availableSpace / inactiveCount;
+
+    const slots = {} as Record<FontifyTab, { left: number; width: number; center: number }>;
+
+    let currentX = 6;
+    for (let i = 0; i < TAB_ORDER.length; i++) {
+      const tab = TAB_ORDER[i];
+      if (!tab) continue;
+      const isThisActive = tab === activeTab;
+      const width = isThisActive ? getTabMetrics(tab) : 48;
+
+      let left: number;
+      if (i === 0) {
+        left = 6;
+      } else if (i === TAB_ORDER.length - 1) {
+        left = Math.max(6, navWidth - 6 - width);
+      } else {
+        left = currentX;
+      }
+
+      slots[tab] = {
+        left,
+        width,
+        center: left + width / 2
+      };
+
+      currentX = left + width + space;
+    }
+
+    return { navWidth, slots };
+  }
+
   function setProgress(fromTab: FontifyTab, toTab: FontifyTab, progress: number) {
     if (!isFloatingActive || isDragging) return;
 
@@ -180,46 +210,6 @@ export function initFloatingNav(
     bottomNav.style.transform = `translateX(calc(-50% + ${containerDisp}px)) scaleX(${containerStretch}) scaleY(${containerSquash})`;
   }
 
-  function calculateTabSlots(activeTab: FontifyTab) {
-    const navRect = bottomNav!.getBoundingClientRect();
-    const navWidth = navRect.width > 0 ? navRect.width : (bottomNav!.offsetWidth || 320);
-    const activeWidth = getTabMetrics(bottomNav, activeTab);
-    const inactiveCount = Math.max(1, TAB_ORDER.length - 1);
-    const totalTabsWidth = activeWidth + inactiveCount * 48;
-    const innerWidth = Math.max(0, navWidth - 12); // 6px padding on each side
-    const availableSpace = Math.max(0, innerWidth - totalTabsWidth);
-    const space = availableSpace / inactiveCount;
-
-    const slots = {} as Record<FontifyTab, { left: number; width: number; center: number }>;
-
-    let currentX = 6;
-    for (let i = 0; i < TAB_ORDER.length; i++) {
-      const tab = TAB_ORDER[i];
-      if (!tab) continue;
-      const isThisActive = tab === activeTab;
-      const width = isThisActive ? getTabMetrics(bottomNav, tab) : 48;
-
-      let left: number;
-      if (i === 0) {
-        left = 6;
-      } else if (i === TAB_ORDER.length - 1) {
-        left = Math.max(6, navWidth - 6 - width);
-      } else {
-        left = currentX;
-      }
-
-      slots[tab] = {
-        left,
-        width,
-        center: left + width / 2
-      };
-
-      currentX = left + width + space;
-    }
-
-    return { navWidth, slots };
-  }
-
   function snapToActiveTab(immediate = false) {
     if (!isFloatingActive || isDragging) return;
 
@@ -229,11 +219,19 @@ export function initFloatingNav(
 
     if (immediate) {
       highlighter!.style.transition = 'none';
-    } else {
-      highlighter!.style.transition =
-        'transform 0.38s cubic-bezier(0.28, 1.18, 0.5, 1), width 0.38s cubic-bezier(0.28, 1.18, 0.5, 1)';
+      highlighter!.style.transformOrigin = 'center center';
+      highlighter!.style.width = `${slot.width}px`;
+      highlighter!.style.transform = `translate3d(${slot.left}px, 0, 0) scaleX(1) scaleY(1) skewX(0deg)`;
+      const rAF = typeof requestAnimationFrame === 'function' ? requestAnimationFrame : (cb: () => void) => setTimeout(cb, 16);
+      rAF(() => {
+        if (!isDragging && highlighter) {
+          highlighter.style.transition = '';
+        }
+      });
+      return;
     }
 
+    highlighter!.style.transition = '';
     highlighter!.style.transformOrigin = 'center center';
     highlighter!.style.width = `${slot.width}px`;
     highlighter!.style.transform = `translate3d(${slot.left}px, 0, 0) scaleX(1) scaleY(1) skewX(0deg)`;
@@ -241,16 +239,24 @@ export function initFloatingNav(
 
   function animateToTab(targetTab: FontifyTab) {
     if (!isFloatingActive || isDragging) return;
+
+    currentPreviewTab = targetTab;
+    setPreviewActiveTab(targetTab);
+
     const { slots } = calculateTabSlots(targetTab);
     const slot = slots[targetTab] || slots['overview'];
 
     highlighter!.style.transition =
-      'transform 0.38s cubic-bezier(0.28, 1.18, 0.5, 1), width 0.38s cubic-bezier(0.28, 1.18, 0.5, 1)';
+      'transform 0.35s cubic-bezier(0.28, 1.18, 0.5, 1), width 0.35s cubic-bezier(0.28, 1.18, 0.5, 1)';
     highlighter!.style.transformOrigin = 'center center';
     highlighter!.style.width = `${slot.width}px`;
     highlighter!.style.transform = `translate3d(${slot.left}px, 0, 0) scaleX(1) scaleY(1) skewX(0deg)`;
 
-    setPreviewActiveTab(targetTab);
+    setTimeout(() => {
+      if (!isDragging && highlighter) {
+        highlighter.style.transition = '';
+      }
+    }, 360);
   }
 
   function getClosestTab(touchX: number, activeTabForGeometry: FontifyTab): FontifyTab {
@@ -327,10 +333,10 @@ export function initFloatingNav(
     lastX = e.clientX;
     lastTime = now;
 
-    const navWidth = bottomNav!.offsetWidth || bottomNav!.getBoundingClientRect().width || 320;
+    const navWidth = bottomNav!.offsetWidth || 320;
     const navCenterX = window.innerWidth / 2;
     const navLeft = navCenterX - navWidth / 2;
-    const touchX = e.clientX - (navLeft > 0 ? navLeft : bottomNav!.getBoundingClientRect().left);
+    const touchX = e.clientX - navLeft;
 
     // Elastic jelly stretch & squash based on drag velocity
     const speed = Math.abs(velocity);
@@ -346,7 +352,7 @@ export function initFloatingNav(
     }
 
     // 1. Base highlighter metrics
-    const baseWidth = getTabMetrics(bottomNav, currentPreviewTab || 'overview');
+    const baseWidth = getTabMetrics(currentPreviewTab || 'overview');
     const minLeft = 6;
     const maxLeft = Math.max(minLeft, navWidth - baseWidth - 6);
 
@@ -432,10 +438,10 @@ export function initFloatingNav(
       highlighter!.style.transition = '';
       void highlighter!.offsetWidth;
 
-      const navWidth = bottomNav!.offsetWidth || bottomNav!.getBoundingClientRect().width || 320;
+      const navWidth = bottomNav!.offsetWidth || 320;
       const navCenterX = window.innerWidth / 2;
       const navLeft = navCenterX - navWidth / 2;
-      const touchX = e.clientX - (navLeft > 0 ? navLeft : bottomNav!.getBoundingClientRect().left);
+      const touchX = e.clientX - navLeft;
       const targetTab = getClosestTab(touchX, currentPreviewTab || 'overview');
 
       setPreviewActiveTab(targetTab);

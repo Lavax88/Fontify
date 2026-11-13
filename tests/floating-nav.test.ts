@@ -183,12 +183,12 @@ describe('Floating Navigation Bar (M3 Expressive Pill)', () => {
     // Initial position for 'overview'
     controller.updatePosition(true);
 
-    expect(mockHighlighter.style.width).toBe('114px');
+    expect(mockHighlighter.style.width).toBe('122px');
     expect(mockHighlighter.style.transform).toContain('translate3d(6px, 0, 0)');
 
     // Test animateToTab
     controller.animateToTab('customize');
-    expect(mockHighlighter.style.width).toBe('92px');
+    expect(mockHighlighter.style.width).toBe('96px');
 
     // Test setProgress between overview and customize
     controller.setProgress('overview', 'customize', 0.5);
@@ -211,8 +211,8 @@ describe('Floating Navigation Bar (M3 Expressive Pill)', () => {
     mockTabEmoji.classList.contains.mockImplementation(() => true);
 
     controller.updatePosition(true);
-    expect(mockHighlighter.style.width).toBe('96px');
-    expect(mockHighlighter.style.transform).toContain('translate3d(218px, 0, 0)');
+    expect(mockHighlighter.style.width).toBe('102px');
+    expect(mockHighlighter.style.transform).toContain('translate3d(212px, 0, 0)');
 
     // Test drag interaction selecting customize tab
     const pointerDownHandler = listeners['pointerdown']?.[0];

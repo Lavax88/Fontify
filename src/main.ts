@@ -111,12 +111,6 @@ function init(): void {
   // Ensure ViewPager starts aligned to current active tab
   slideToTab(store.getState().currentTab, true);
 
-  // Keep floating nav highlighter synchronized with store changes
-  store.subscribe(s => s.currentTab, (tab) => {
-    floatingNavController?.updatePosition(false);
-    slideToTab(tab);
-  });
-
   // WAI-ARIA tablist keyboard interactions (Arrow navigation, Home, End)
   const tablist = document.querySelector<HTMLElement>('[role="tablist"]');
   if (tablist) {

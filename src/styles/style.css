@@ -653,7 +653,7 @@ input[type="range"]::-webkit-slider-thumb:active {
   left: 50%;
   transform: translateX(-50%);
   width: calc(100% - 36px);
-  max-width: 320px;
+  max-width: 340px;
   height: 60px;
   padding: 0 6px;
   border-radius: var(--md-corner-full, 9999px);
@@ -873,17 +873,17 @@ input[type="range"]::-webkit-slider-thumb:active {
 .nav-tab[data-target="overview"] .tab-label,
 .nav-tab[data-tab="overview"] .tab-label,
 .nav-tab[data-target="overview"] .nav-tab-label,
-.nav-tab[data-tab="overview"] .nav-tab-label { --tab-max-w: 75px; }
+.nav-tab[data-tab="overview"] .nav-tab-label { --tab-max-w: 64px; }
 
 .nav-tab[data-target="customize"] .tab-label,
 .nav-tab[data-tab="customize"] .tab-label,
 .nav-tab[data-target="customize"] .nav-tab-label,
-.nav-tab[data-tab="customize"] .nav-tab-label { --tab-max-w: 48px; }
+.nav-tab[data-tab="customize"] .nav-tab-label { --tab-max-w: 38px; }
 
 .nav-tab[data-target="emoji"] .tab-label,
 .nav-tab[data-tab="emoji"] .tab-label,
 .nav-tab[data-target="emoji"] .nav-tab-label,
-.nav-tab[data-tab="emoji"] .nav-tab-label { --tab-max-w: 52px; }
+.nav-tab[data-tab="emoji"] .nav-tab-label { --tab-max-w: 44px; }
 
 /* Label: hidden on inactive, smoothly revealed on active */
 .nav-tab:not(.active) .tab-label,
