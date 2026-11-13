@@ -5,9 +5,9 @@ export default defineConfig({
   build: {
     outDir: 'webroot',
     emptyOutDir: true,
-    target: 'es2020',
+    target: 'es2022',
     assetsDir: 'assets',
-    minify: 'esbuild',
+    minify: 'oxc',
     sourcemap: false
   },
   server: {
