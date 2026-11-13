@@ -13,37 +13,39 @@ import { setupEmojiTab } from './ui/emoji';
 import { initFloatingActions } from './ui/floatingActions';
 import { FontEngine } from './font/engine';
 import { initFloatingNav, type FloatingNavController, type FontifyTab } from './ui/components/floatingNav';
+import { initPageSwipe, slideToTab } from './ui/components/pageSwipe';
 
 let floatingNavController: FloatingNavController | null = null;
 
-export function switchTab(tabId: FontifyTab): void {
+export function switchTab(tabId: FontifyTab, skipSlide = false): void {
   document.querySelectorAll<HTMLElement>('.tab-view').forEach(view => {
-    view.classList.remove('active');
-    view.setAttribute('aria-hidden', 'true');
+    const isTarget = view.id === `view-${tabId}`;
+    view.classList.toggle('active', isTarget);
+    if (isTarget) {
+      view.removeAttribute('aria-hidden');
+    } else {
+      view.setAttribute('aria-hidden', 'true');
+    }
   });
+
   document.querySelectorAll<HTMLButtonElement>('.nav-tab').forEach(tab => {
-    tab.classList.remove('active');
-    tab.setAttribute('aria-selected', 'false');
-    tab.setAttribute('tabindex', '-1');
+    const tabName = (tab.getAttribute('data-tab') || tab.getAttribute('data-target')) as FontifyTab | null;
+    const isTarget = tabName === tabId;
+    tab.classList.toggle('active', isTarget);
+    tab.setAttribute('aria-selected', isTarget ? 'true' : 'false');
+    tab.setAttribute('tabindex', isTarget ? '0' : '-1');
   });
 
   const targetView = document.getElementById(`view-${tabId}`);
   if (targetView) {
-    targetView.classList.add('active');
-    targetView.removeAttribute('aria-hidden');
+    targetView.scrollTo({ top: 0, behavior: 'smooth' });
   }
 
-  const targetTab = document.querySelector<HTMLButtonElement>(
-    `.nav-tab[data-tab="${tabId}"], .nav-tab[data-target="${tabId}"]`
-  );
-  if (targetTab) {
-    targetTab.classList.add('active');
-    targetTab.setAttribute('aria-selected', 'true');
-    targetTab.setAttribute('tabindex', '0');
-  }
-
-  window.scrollTo({ top: 0, behavior: 'smooth' });
   store.setState({ currentTab: tabId });
+
+  if (!skipSlide) {
+    slideToTab(tabId);
+  }
 
   // Update floating highlighter position smoothly
   floatingNavController?.updatePosition(false);
@@ -87,9 +89,32 @@ function init(): void {
     switchTab(target);
   });
 
+  // Initialize page swipe ViewPager
+  initPageSwipe({
+    onSettle: (settledTab) => {
+      switchTab(settledTab, true);
+    },
+    onAnimateHighlighter: (targetTab) => {
+      floatingNavController?.animateToTab(targetTab);
+    },
+    onProgress: (fromTab, toTab, progress) => {
+      floatingNavController?.setProgress(fromTab, toTab, progress);
+    },
+    onOverscroll: (overscrollPx) => {
+      floatingNavController?.setOverscroll(overscrollPx);
+    },
+    onResetSprings: () => {
+      floatingNavController?.resetCapsuleSpring();
+    }
+  });
+
+  // Ensure ViewPager starts aligned to current active tab
+  slideToTab(store.getState().currentTab, true);
+
   // Keep floating nav highlighter synchronized with store changes
-  store.subscribe(s => s.currentTab, () => {
+  store.subscribe(s => s.currentTab, (tab) => {
     floatingNavController?.updatePosition(false);
+    slideToTab(tab);
   });
 
   // WAI-ARIA tablist keyboard interactions (Arrow navigation, Home, End)

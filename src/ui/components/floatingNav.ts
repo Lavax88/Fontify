@@ -1,7 +1,7 @@
 /**
  * Fontify - Material 3 Expressive Floating Navigation Bar
  * (SukiSU Pill Style with Sliding Jelly Spring Highlighter)
- * Adapted from SweetClocker for Fontify (2 Tabs: Overview & Customize)
+ * Adapted from SweetClocker for Fontify (3 Tabs: Overview, Customize, Emoji)
  */
 
 import { store } from '../../state/store';
@@ -14,6 +14,12 @@ const TAB_ORDER: FontifyTab[] = [
   'emoji'
 ];
 
+const TAB_METRICS: Record<FontifyTab, number> = {
+  'overview': 114,
+  'customize': 92,
+  'emoji': 96
+};
+
 function getTabMetrics(bottomNav: HTMLElement | null, tab: FontifyTab): number {
   if (bottomNav) {
     const el = bottomNav.querySelector<HTMLElement>(
@@ -24,12 +30,7 @@ function getTabMetrics(bottomNav: HTMLElement | null, tab: FontifyTab): number {
       if (w > 50) return Math.round(w);
     }
   }
-  switch (tab) {
-    case 'overview': return 114;
-    case 'customize': return 92;
-    case 'emoji': return 96;
-    default: return 100;
-  }
+  return TAB_METRICS[tab] || 100;
 }
 
 function computeOverscrollSquash(overscroll: number) {
@@ -45,6 +46,11 @@ function computeOverscrollSquash(overscroll: number) {
 
 export interface FloatingNavController {
   updatePosition: (immediate?: boolean) => void;
+  animateToTab: (targetTab: FontifyTab) => void;
+  triggerStretch: (direction: 'left' | 'right') => void;
+  setProgress: (fromTab: FontifyTab, toTab: FontifyTab, progress: number) => void;
+  setOverscroll: (overscrollPx: number) => void;
+  resetCapsuleSpring: () => void;
   destroy: () => void;
 }
 
@@ -54,6 +60,11 @@ export function initFloatingNav(
   if (typeof document === 'undefined') {
     return {
       updatePosition: () => {},
+      animateToTab: () => {},
+      triggerStretch: () => {},
+      setProgress: () => {},
+      setOverscroll: () => {},
+      resetCapsuleSpring: () => {},
       destroy: () => {}
     };
   }
@@ -64,12 +75,18 @@ export function initFloatingNav(
   if (!bottomNav || !highlighter) {
     return {
       updatePosition: () => {},
+      animateToTab: () => {},
+      triggerStretch: () => {},
+      setProgress: () => {},
+      setOverscroll: () => {},
+      resetCapsuleSpring: () => {},
       destroy: () => {}
     };
   }
 
   let isPointerDown = false;
   let isDragging = false;
+  let swallowClick = false;
   let pointerTarget: HTMLElement | null = null;
   let startX = 0;
   let startY = 0;
@@ -93,9 +110,79 @@ export function initFloatingNav(
     }, 440);
   }
 
+  function triggerStretch(direction: 'left' | 'right') {
+    if (!bottomNav || !isFloatingActive || isDragging) return;
+    const sign = direction === 'left' ? -1 : 1;
+    const containerDisp = sign * 20;
+    const containerStretch = 1.06;
+    const containerSquash = 0.94;
+
+    bottomNav.style.transition = 'transform 0.16s cubic-bezier(0.2, 0, 0, 1)';
+    bottomNav.style.transform = `translateX(calc(-50% + ${containerDisp}px)) scaleX(${containerStretch}) scaleY(${containerSquash})`;
+
+    setTimeout(() => {
+      if (!isDragging) {
+        resetCapsuleSpring();
+      }
+    }, 160);
+  }
+
+  function setProgress(fromTab: FontifyTab, toTab: FontifyTab, progress: number) {
+    if (!isFloatingActive || isDragging) return;
+
+    const p = Math.max(0, Math.min(1, progress));
+
+    const fromSlots = calculateTabSlots(fromTab).slots;
+    const toSlots = calculateTabSlots(toTab).slots;
+
+    const fromSlot = fromSlots[fromTab] || { left: 6, width: 100, center: 56 };
+    const toSlot = toSlots[toTab] || { left: 6, width: 100, center: 56 };
+
+    const currentLeft = fromSlot.left + (toSlot.left - fromSlot.left) * p;
+    const currentWidth = fromSlot.width + (toSlot.width - fromSlot.width) * p;
+
+    highlighter!.style.transition = 'none';
+    highlighter!.style.transformOrigin = 'center center';
+    highlighter!.style.width = `${currentWidth}px`;
+    highlighter!.style.transform = `translate3d(${currentLeft}px, 0, 0)`;
+
+    if (!currentPreviewTab) {
+      currentPreviewTab = fromTab;
+    }
+
+    let targetPreview = currentPreviewTab;
+    if (currentPreviewTab === fromTab && p >= 0.55) {
+      targetPreview = toTab;
+    } else if (currentPreviewTab === toTab && p <= 0.45) {
+      targetPreview = fromTab;
+    }
+
+    if (targetPreview !== currentPreviewTab) {
+      currentPreviewTab = targetPreview;
+      setPreviewActiveTab(targetPreview);
+    }
+  }
+
+  function setOverscroll(overscrollPx: number) {
+    if (!bottomNav || !isFloatingActive || isDragging) return;
+    if (overscrollPx === 0) {
+      bottomNav.style.transition = 'none';
+      bottomNav.style.transform = 'translateX(-50%) scale(1)';
+      return;
+    }
+    const sign = Math.sign(overscrollPx);
+    const absOver = Math.abs(overscrollPx);
+    const containerDisp = sign * Math.min(28, Math.pow(absOver, 0.72) * 1.5);
+    const containerStretch = 1 + Math.min(0.08, Math.abs(containerDisp) / 320);
+    const containerSquash = 1 - Math.min(0.04, Math.abs(containerDisp) / 640);
+
+    bottomNav.style.transition = 'none';
+    bottomNav.style.transform = `translateX(calc(-50% + ${containerDisp}px)) scaleX(${containerStretch}) scaleY(${containerSquash})`;
+  }
+
   function calculateTabSlots(activeTab: FontifyTab) {
     const navRect = bottomNav!.getBoundingClientRect();
-    const navWidth = navRect.width > 0 ? navRect.width : 320;
+    const navWidth = navRect.width > 0 ? navRect.width : (bottomNav!.offsetWidth || 320);
     const activeWidth = getTabMetrics(bottomNav, activeTab);
     const inactiveCount = Math.max(1, TAB_ORDER.length - 1);
     const totalTabsWidth = activeWidth + inactiveCount * 48;
@@ -144,12 +231,26 @@ export function initFloatingNav(
       highlighter!.style.transition = 'none';
     } else {
       highlighter!.style.transition =
-        'transform 0.42s cubic-bezier(0.34, 1.45, 0.64, 1), width 0.42s cubic-bezier(0.34, 1.45, 0.64, 1)';
+        'transform 0.38s cubic-bezier(0.28, 1.18, 0.5, 1), width 0.38s cubic-bezier(0.28, 1.18, 0.5, 1)';
     }
 
     highlighter!.style.transformOrigin = 'center center';
     highlighter!.style.width = `${slot.width}px`;
     highlighter!.style.transform = `translate3d(${slot.left}px, 0, 0) scaleX(1) scaleY(1) skewX(0deg)`;
+  }
+
+  function animateToTab(targetTab: FontifyTab) {
+    if (!isFloatingActive || isDragging) return;
+    const { slots } = calculateTabSlots(targetTab);
+    const slot = slots[targetTab] || slots['overview'];
+
+    highlighter!.style.transition =
+      'transform 0.38s cubic-bezier(0.28, 1.18, 0.5, 1), width 0.38s cubic-bezier(0.28, 1.18, 0.5, 1)';
+    highlighter!.style.transformOrigin = 'center center';
+    highlighter!.style.width = `${slot.width}px`;
+    highlighter!.style.transform = `translate3d(${slot.left}px, 0, 0) scaleX(1) scaleY(1) skewX(0deg)`;
+
+    setPreviewActiveTab(targetTab);
   }
 
   function getClosestTab(touchX: number, activeTabForGeometry: FontifyTab): FontifyTab {
@@ -184,6 +285,7 @@ export function initFloatingNav(
 
     isPointerDown = true;
     isDragging = false;
+    swallowClick = false;
     pointerTarget = e.target as HTMLElement;
     startX = e.clientX;
     startY = e.clientY;
@@ -225,9 +327,10 @@ export function initFloatingNav(
     lastX = e.clientX;
     lastTime = now;
 
-    const navRect = bottomNav!.getBoundingClientRect();
-    const navWidth = navRect.width > 0 ? navRect.width : 320;
-    const touchX = e.clientX - navRect.left;
+    const navWidth = bottomNav!.offsetWidth || bottomNav!.getBoundingClientRect().width || 320;
+    const navCenterX = window.innerWidth / 2;
+    const navLeft = navCenterX - navWidth / 2;
+    const touchX = e.clientX - (navLeft > 0 ? navLeft : bottomNav!.getBoundingClientRect().left);
 
     // Elastic jelly stretch & squash based on drag velocity
     const speed = Math.abs(velocity);
@@ -300,7 +403,6 @@ export function initFloatingNav(
     }
 
     // 4. Apply hardware-accelerated transform to highlighter
-    highlighter!.style.transition = 'none';
     highlighter!.style.transformOrigin = transformOrigin;
     highlighter!.style.width = `${baseWidth}px`;
     highlighter!.style.transform = `translate3d(${targetLeft}px, 0, 0) scaleX(${finalScaleX}) scaleY(${finalScaleY}) skewX(${finalSkew}deg)`;
@@ -315,27 +417,28 @@ export function initFloatingNav(
         pointerTarget.releasePointerCapture(e.pointerId);
       }
     } catch (_) {}
+    pointerTarget = null;
 
     resetCapsuleSpring();
 
     if (isDragging) {
-      // Intercept and swallow the synthetic click event that follows pointer release
-      bottomNav!.addEventListener(
-        'click',
-        (clickEvt) => {
-          clickEvt.preventDefault();
-          clickEvt.stopPropagation();
-        },
-        { capture: true, once: true }
-      );
+      swallowClick = true;
+      setTimeout(() => {
+        swallowClick = false;
+      }, 80);
 
       isDragging = false;
       bottomNav!.classList.remove('nav-dragging');
+      highlighter!.style.transition = '';
+      void highlighter!.offsetWidth;
 
-      const navRect = bottomNav!.getBoundingClientRect();
-      const touchX = e.clientX - navRect.left;
+      const navWidth = bottomNav!.offsetWidth || bottomNav!.getBoundingClientRect().width || 320;
+      const navCenterX = window.innerWidth / 2;
+      const navLeft = navCenterX - navWidth / 2;
+      const touchX = e.clientX - (navLeft > 0 ? navLeft : bottomNav!.getBoundingClientRect().left);
       const targetTab = getClosestTab(touchX, currentPreviewTab || 'overview');
 
+      setPreviewActiveTab(targetTab);
       onSelectTab(targetTab);
       snapToActiveTab(false);
     } else {
@@ -347,11 +450,26 @@ export function initFloatingNav(
     if (!isPointerDown) return;
     isPointerDown = false;
     isDragging = false;
+    pointerTarget = null;
     bottomNav!.classList.remove('nav-dragging');
+    highlighter!.style.transition = '';
+    void highlighter!.offsetWidth;
 
     resetCapsuleSpring();
+    const activeTab = (store.getState().currentTab as FontifyTab) || 'overview';
+    setPreviewActiveTab(activeTab);
     snapToActiveTab(false);
   }
+
+  // Intercept synthetic click after drag release without dangling once listeners
+  const handleClickCapture = (e: MouseEvent) => {
+    if (swallowClick) {
+      e.preventDefault();
+      e.stopPropagation();
+      swallowClick = false;
+    }
+  };
+  bottomNav.addEventListener('click', handleClickCapture, { capture: true });
 
   // Attach event listeners to bottomNav
   bottomNav.addEventListener('pointerdown', handlePointerDown);
@@ -390,7 +508,13 @@ export function initFloatingNav(
 
   return {
     updatePosition: (immediate = false) => snapToActiveTab(immediate),
+    animateToTab,
+    triggerStretch,
+    setProgress,
+    setOverscroll,
+    resetCapsuleSpring,
     destroy: () => {
+      bottomNav.removeEventListener('click', handleClickCapture, { capture: true });
       bottomNav.removeEventListener('pointerdown', handlePointerDown);
       window.removeEventListener('pointermove', handlePointerMove);
       window.removeEventListener('pointerup', handlePointerUp);

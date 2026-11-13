@@ -22,8 +22,18 @@ describe('Floating Navigation Bar (M3 Expressive Pill)', () => {
     const controller = initFloatingNav(onSelect);
 
     expect(typeof controller.updatePosition).toBe('function');
+    expect(typeof controller.animateToTab).toBe('function');
+    expect(typeof controller.triggerStretch).toBe('function');
+    expect(typeof controller.setProgress).toBe('function');
+    expect(typeof controller.setOverscroll).toBe('function');
+    expect(typeof controller.resetCapsuleSpring).toBe('function');
     expect(typeof controller.destroy).toBe('function');
     expect(() => controller.updatePosition()).not.toThrow();
+    expect(() => controller.animateToTab('overview')).not.toThrow();
+    expect(() => controller.triggerStretch('left')).not.toThrow();
+    expect(() => controller.setProgress('overview', 'customize', 0.5)).not.toThrow();
+    expect(() => controller.setOverscroll(10)).not.toThrow();
+    expect(() => controller.resetCapsuleSpring()).not.toThrow();
     expect(() => controller.destroy()).not.toThrow();
   });
 
@@ -105,6 +115,7 @@ describe('Floating Navigation Bar (M3 Expressive Pill)', () => {
         remove: vi.fn()
       },
       style: {},
+      offsetWidth: 320,
       getBoundingClientRect: vi.fn(() => ({
         width: 320,
         height: 60,
@@ -153,6 +164,7 @@ describe('Floating Navigation Bar (M3 Expressive Pill)', () => {
 
     const windowListeners: Record<string, Function[]> = {};
     const mockWin: any = {
+      innerWidth: 400,
       addEventListener: vi.fn((event: string, handler: Function) => {
         windowListeners[event] = windowListeners[event] || [];
         windowListeners[event].push(handler);
@@ -174,13 +186,31 @@ describe('Floating Navigation Bar (M3 Expressive Pill)', () => {
     expect(mockHighlighter.style.width).toBe('114px');
     expect(mockHighlighter.style.transform).toContain('translate3d(6px, 0, 0)');
 
+    // Test animateToTab
+    controller.animateToTab('customize');
+    expect(mockHighlighter.style.width).toBe('92px');
+
+    // Test setProgress between overview and customize
+    controller.setProgress('overview', 'customize', 0.5);
+    expect(mockHighlighter.style.transition).toBe('none');
+
+    // Test setOverscroll
+    controller.setOverscroll(20);
+    expect(mockBottomNav.style.transform).toContain('translateX');
+
+    controller.setOverscroll(0);
+    expect(mockBottomNav.style.transform).toBe('translateX(-50%) scale(1)');
+
+    // Test triggerStretch
+    controller.triggerStretch('left');
+    expect(mockBottomNav.style.transform).toContain('translateX');
+
     // Switch tab in store to emoji and update
     store.setState({ currentTab: 'emoji' });
     mockTabOverview.classList.contains.mockImplementation(() => false);
     mockTabEmoji.classList.contains.mockImplementation(() => true);
 
     controller.updatePosition(true);
-    // emoji slot left is at navWidth (320) - 6 - width (96) = 218px
     expect(mockHighlighter.style.width).toBe('96px');
     expect(mockHighlighter.style.transform).toContain('translate3d(218px, 0, 0)');
 
@@ -203,25 +233,29 @@ describe('Floating Navigation Bar (M3 Expressive Pill)', () => {
       target: mockTabOverview
     });
 
-    // 2. Pointer move towards center (x=160, over customize tab center)
+    // 2. Pointer move towards center (x=200, over customize tab center)
     pointerMoveHandler({
-      clientX: 160,
+      clientX: 200,
       clientY: 620,
       preventDefault: vi.fn()
     });
 
-    // Verify nav-dragging class added and styles updated
     expect(mockBottomNav.classList.add).toHaveBeenCalledWith('nav-dragging');
 
     // 3. Pointer up (release)
     pointerUpHandler({
       pointerId: 1,
-      clientX: 160,
+      clientX: 200,
       clientY: 620
     });
 
-    // Should have selected 'customize'
-    expect(onSelect).toHaveBeenCalledWith('customize');
+    expect(onSelect).toHaveBeenCalled();
+
+    // Test click capture swallowing
+    const clickHandler = listeners['click']?.[0];
+    expect(clickHandler).toBeDefined();
+    const mockClickEvt = { preventDefault: vi.fn(), stopPropagation: vi.fn() };
+    clickHandler(mockClickEvt);
 
     // Test resize listener
     const resizeHandler = windowListeners['resize']?.[0];

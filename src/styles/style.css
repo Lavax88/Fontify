@@ -3,8 +3,20 @@
 @import './tokens.css';
 @import './motion.css';
 
+html,
+body {
+  height: 100vh;
+  height: 100dvh;
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
 /* App Header (LSPosed Big Title) */
 .app-header {
+  flex-shrink: 0;
   background-color: var(--md-sys-color-surface);
   padding-top: max(24px, calc(var(--top-inset) + 20px));
   padding-bottom: 20px;
@@ -28,23 +40,63 @@
   color: var(--md-sys-color-on-surface);
 }
 
-/* Page Container */
+/* Page Container & ViewPager Structure */
 .page-container {
+  flex: 1;
+  min-height: 0;
+  width: 100%;
   max-width: 640px;
   margin: 0 auto;
-  padding: 0 16px;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  overflow: hidden;
 }
 
-/* Tab Views */
+.viewpager-container {
+  flex-grow: 1;
+  width: 100%;
+  height: 0; /* lets flex-grow dictate height inside page-container */
+  overflow: hidden;
+  position: relative;
+  touch-action: pan-y;
+}
+
+.viewpager-track {
+  display: flex;
+  flex-direction: row;
+  width: 300%;
+  height: 100%;
+  transform: translate3d(0, 0, 0);
+  will-change: transform;
+}
+
+/* Tab Views as Independent Scroll Viewports */
 .tab-view {
-  display: none;
-}
-
-.tab-view.active {
+  width: 33.333333%;
+  max-width: 33.333333%;
+  height: 100%;
+  overflow-y: auto;
+  overflow-x: hidden;
+  -webkit-overflow-scrolling: touch;
+  padding: 12px 16px calc(88px + var(--bottom-inset)) 16px;
   display: flex;
   flex-direction: column;
   gap: 16px;
-  animation: tab-enter 280ms var(--m3-easing-decelerate) forwards;
+  box-sizing: border-box;
+  flex-shrink: 0;
+  overscroll-behavior-y: contain;
+}
+
+.tab-view > * {
+  flex-shrink: 0;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .viewpager-track {
+    transition: none !important;
+  }
 }
 
 /* 1. Hero Status Card (LSPosed Banner) */
@@ -607,19 +659,19 @@ input[type="range"]::-webkit-slider-thumb:active {
   border-radius: var(--md-corner-full, 9999px);
   border: 1px solid var(--nav-floating-border);
   box-shadow: var(--nav-floating-shadow);
-  background-color: var(--nav-floating-bg);
-  backdrop-filter: blur(var(--glass-blur));
-  -webkit-backdrop-filter: blur(var(--glass-blur));
+  background-color: var(--nav-floating-bg) !important;
+  -webkit-backdrop-filter: blur(var(--glass-blur, 16px));
+  backdrop-filter: blur(var(--glass-blur, 16px));
   display: flex;
   flex-direction: row;
   justify-content: space-between;
   align-items: center;
   gap: 0;
   touch-action: none;
-  overflow: hidden;
+  overflow: visible;
   isolation: isolate;
-  contain: paint;
-  z-index: 90;
+  contain: none !important;
+  z-index: 100;
   -webkit-tap-highlight-color: transparent;
   -webkit-touch-callout: none;
   user-select: none;
@@ -633,6 +685,10 @@ input[type="range"]::-webkit-slider-thumb:active {
               border-color 0.35s ease,
               background-color 0.35s ease,
               box-shadow 0.42s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+.bottom-nav.nav-swiping .nav-highlighter {
+  transition: none !important;
 }
 
 .bottom-nav.nav-switching,
@@ -678,14 +734,15 @@ input[type="range"]::-webkit-slider-thumb:active {
   z-index: 1;
   transform-origin: center center;
   will-change: transform, width;
-  transition: transform 0.42s cubic-bezier(0.34, 1.45, 0.64, 1),
-              width 0.42s cubic-bezier(0.34, 1.45, 0.64, 1),
+  transition: transform 0.38s cubic-bezier(0.28, 1.18, 0.5, 1),
+              width 0.38s cubic-bezier(0.28, 1.18, 0.5, 1),
               background-color 0.35s ease,
               box-shadow 0.35s ease;
 }
 
 .bottom-nav.nav-dragging .nav-highlighter,
 .bottom-nav-bar.nav-dragging .nav-highlighter {
+  transition: none !important;
   box-shadow: 0 4px 14px rgba(0, 0, 0, 0.28);
 }
 
@@ -762,6 +819,7 @@ input[type="range"]::-webkit-slider-thumb:active {
 /* Icon wrapper in floating mode */
 .icon-wrapper,
 .nav-tab-pill {
+  position: relative;
   width: 28px;
   height: 28px;
   border-radius: 0;
@@ -773,13 +831,42 @@ input[type="range"]::-webkit-slider-thumb:active {
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
+  transition: background-color 0.4s cubic-bezier(0.2, 0.8, 0.2, 1),
+              color 0.4s cubic-bezier(0.2, 0.8, 0.2, 1);
 }
 
-.nav-tab svg {
+.icon-wrapper svg {
+  position: absolute;
+  top: 50%;
+  left: 50%;
   width: 24px;
   height: 24px;
   fill: currentColor;
-  flex-shrink: 0;
+  pointer-events: none;
+  transition: opacity 0.48s cubic-bezier(0.2, 0, 0, 1),
+              transform 0.48s cubic-bezier(0.2, 0, 0, 1);
+  will-change: opacity, transform;
+}
+
+/* Material 3 Expressive: Outline to Filled Smooth Slow Cross-Fade */
+.nav-tab .icon-outline {
+  opacity: 1;
+  transform: translate(-50%, -50%) scale(1);
+}
+
+.nav-tab .icon-filled {
+  opacity: 0;
+  transform: translate(-50%, -50%) scale(0.8);
+}
+
+.nav-tab.active .icon-outline {
+  opacity: 0;
+  transform: translate(-50%, -50%) scale(0.8);
+}
+
+.nav-tab.active .icon-filled {
+  opacity: 1;
+  transform: translate(-50%, -50%) scale(1);
 }
 
 /* Per-tab max-width tokens */

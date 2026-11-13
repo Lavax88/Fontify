@@ -12,6 +12,33 @@
     <title>Fontify</title>
 </head>
 <body>
+    <!-- SVG Symbols for Material 3 Morphing Icons -->
+    <svg style="display: none;" aria-hidden="true">
+        <!-- Overview (Home) -->
+        <symbol id="icon-overview-outline" viewBox="0 0 24 24">
+            <path d="M12 5.69l5 4.5V18h-2v-6H9v6H7v-7.81l5-4.5M12 3L2 12h3v8h6v-6h2v6h6v-8h3L12 3z"/>
+        </symbol>
+        <symbol id="icon-overview-filled" viewBox="0 0 24 24">
+            <path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/>
+        </symbol>
+
+        <!-- Font / Customize -->
+        <symbol id="icon-font-outline" viewBox="0 0 24 24">
+            <path d="M9.93 13.5h4.14L12 7.98zM20 2H4c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm0 18H4V4h16v16zm-4.05-1.5l-1.14-3H9.17l-1.12 3H5.96l5.11-13h1.86l5.11 13h-2.09z"/>
+        </symbol>
+        <symbol id="icon-font-filled" viewBox="0 0 24 24">
+            <path d="M9.93 13.5h4.14L12 7.98zM20 2H4c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm-4.05 16.5l-1.14-3H9.17l-1.12 3H5.96l5.11-13h1.86l5.11 13h-2.09z"/>
+        </symbol>
+
+        <!-- Emoji -->
+        <symbol id="icon-emoji-outline" viewBox="0 0 24 24">
+            <path d="M11.99 2C6.47 2 2 6.48 2 12s4.47 10 9.99 10C17.52 22 22 17.52 22 12S17.52 2 11.99 2zM12 20c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8zm3.5-9c.83 0 1.5-.67 1.5-1.5S16.33 8 15.5 8 14 8.67 14 9.5s.67 1.5 1.5 1.5zm-7 0c.83 0 1.5-.67 1.5-1.5S9.33 8 8.5 8 7 8.67 7 9.5 7.67 11 8.5 11zm3.5 6.5c2.33 0 4.31-1.46 5.11-3.5H6.89c.8 2.04 2.78 3.5 5.11 3.5z"/>
+        </symbol>
+        <symbol id="icon-emoji-filled" viewBox="0 0 24 24">
+            <path d="M11.99 2C6.47 2 2 6.48 2 12s4.47 10 9.99 10C17.52 22 22 17.52 22 12S17.52 2 11.99 2zm-3.49 7c.83 0 1.5.67 1.5 1.5S9.33 12 8.5 12 7 11.33 7 10.5 7.67 9 8.5 9zm7 0c.83 0 1.5.67 1.5 1.5s-.67 1.5-1.5 1.5-1.5-.67-1.5-1.5.67-1.5 1.5-1.5zm-3.5 9.5c-2.33 0-4.31-1.46-5.11-3.5h10.22c-.8 2.04-2.78 3.5-5.11 3.5z"/>
+        </symbol>
+    </svg>
+
     <!-- Top Header (LSPosed / Material 3 Large Title) -->
     <header class="app-header">
         <div class="header-inner">
@@ -19,10 +46,12 @@
         </div>
     </header>
 
-    <!-- Main Views Container -->
+    <!-- Main Views Container (ViewPager) -->
     <main class="page-container">
-        <!-- ================= TAB 1: OVERVIEW (HOME) ================= -->
-        <section class="tab-view active" id="view-overview" role="tabpanel" aria-labelledby="tab-overview">
+        <div class="viewpager-container" id="viewpager-container">
+            <div class="viewpager-track" id="viewpager-track">
+                <!-- ================= TAB 1: OVERVIEW (HOME) ================= -->
+                <section class="tab-view active" id="view-overview" role="tabpanel" aria-labelledby="tab-overview">
             <!-- 1. Hero Status Card (LSPosed Banner Style) -->
             <div class="m3-banner-card is-stock" id="overview-banner">
                 <div class="banner-icon-container" id="banner-icon-box" aria-hidden="true">
@@ -224,6 +253,8 @@
                 </div>
             </div>
         </section>
+            </div>
+        </div>
     </main>
 
     <!-- Bottom Navigation Bar (Material 3 Expressive Floating Pill) -->
@@ -231,27 +262,24 @@
         <div class="nav-highlighter" id="nav-highlighter" aria-hidden="true"></div>
         <button class="nav-tab active" id="tab-overview" data-target="overview" data-tab="overview" role="tab" aria-selected="true" aria-controls="view-overview" tabindex="0" type="button">
             <div class="icon-wrapper">
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-                    <path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/>
-                </svg>
+                <svg class="icon-outline" aria-hidden="true"><use href="#icon-overview-outline"></use></svg>
+                <svg class="icon-filled" aria-hidden="true"><use href="#icon-overview-filled"></use></svg>
             </div>
             <span class="tab-label">Overview</span>
         </button>
 
         <button class="nav-tab" id="tab-customize" data-target="customize" data-tab="customize" role="tab" aria-selected="false" aria-controls="view-customize" tabindex="-1" type="button">
             <div class="icon-wrapper">
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-                    <path d="M9.93 13.5h4.14L12 7.98zM20 2H4c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm-4.05 16.5l-1.14-3H9.17l-1.12 3H5.96l5.11-13h1.86l5.11 13h-2.09z"/>
-                </svg>
+                <svg class="icon-outline" aria-hidden="true"><use href="#icon-font-outline"></use></svg>
+                <svg class="icon-filled" aria-hidden="true"><use href="#icon-font-filled"></use></svg>
             </div>
             <span class="tab-label">Font</span>
         </button>
 
         <button class="nav-tab" id="tab-emoji" data-target="emoji" data-tab="emoji" role="tab" aria-selected="false" aria-controls="view-emoji" tabindex="-1" type="button">
             <div class="icon-wrapper">
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-                    <path d="M11.99 2C6.47 2 2 6.48 2 12s4.47 10 9.99 10C17.52 22 22 17.52 22 12S17.52 2 11.99 2zM12 20c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8zm3.5-9c.83 0 1.5-.67 1.5-1.5S16.33 8 15.5 8 14 8.67 14 9.5s.67 1.5 1.5 1.5zm-7 0c.83 0 1.5-.67 1.5-1.5S9.33 8 8.5 8 7 8.67 7 9.5 7.67 11 8.5 11zm3.5 6.5c2.33 0 4.31-1.46 5.11-3.5H6.89c.8 2.04 2.78 3.5 5.11 3.5z"/>
-                </svg>
+                <svg class="icon-outline" aria-hidden="true"><use href="#icon-emoji-outline"></use></svg>
+                <svg class="icon-filled" aria-hidden="true"><use href="#icon-emoji-filled"></use></svg>
             </div>
             <span class="tab-label">Emoji</span>
         </button>
