@@ -6,7 +6,7 @@ import type { FontInfo } from '../font/types';
 import type { DeviceInfo, SystemStatus } from '../bridge/types';
 
 export interface AppState {
-  currentTab: 'overview' | 'customize' | 'emoji';
+  currentTab: 'overview' | 'browse' | 'customize' | 'emoji';
 
   // System status from disk
   status: SystemStatus;

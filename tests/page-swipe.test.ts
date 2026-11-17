@@ -100,11 +100,14 @@ describe('Page Swipe ViewPager Mechanics', () => {
     expect(containerListeners['touchcancel']).toBeDefined();
 
     // 1. Test slideToTab programmatically
-    slideToTab('customize', true);
+    slideToTab('browse', true);
     expect(mockTrack.style.transform).toBe('translate3d(-360px, 0, 0)');
 
-    slideToTab('emoji', false);
+    slideToTab('customize', true);
     expect(mockTrack.style.transform).toBe('translate3d(-720px, 0, 0)');
+
+    slideToTab('emoji', false);
+    expect(mockTrack.style.transform).toBe('translate3d(-1080px, 0, 0)');
 
     // Reset back to overview
     store.setState({ currentTab: 'overview' });
@@ -145,7 +148,7 @@ describe('Page Swipe ViewPager Mechanics', () => {
     });
     expect(mockBottomNav.classList.add).not.toHaveBeenCalledWith('nav-swiping');
 
-    // 4. Test horizontal swipe from overview towards customize (swipe left, dx < 0)
+    // 4. Test horizontal swipe from overview towards browse (swipe left, dx < 0)
     containerListeners['touchstart']({
       touches: [{ clientX: 300, clientY: 200 }],
       target: mockContentTarget
@@ -160,14 +163,14 @@ describe('Page Swipe ViewPager Mechanics', () => {
 
     expect(mockBottomNav.classList.add).toHaveBeenCalledWith('nav-swiping');
     expect(preventDefaultSpy).toHaveBeenCalled();
-    expect(onProgress).toHaveBeenCalledWith('overview', 'customize', expect.any(Number));
+    expect(onProgress).toHaveBeenCalledWith('overview', 'browse', expect.any(Number));
 
     // Release drag beyond distance threshold (>35% of 360 = 126px; dx is -150px)
     containerListeners['touchend']();
 
     expect(mockBottomNav.classList.remove).toHaveBeenCalledWith('nav-swiping');
-    expect(onAnimateHighlighter).toHaveBeenCalledWith('customize');
-    expect(onSettle).toHaveBeenCalledWith('customize');
+    expect(onAnimateHighlighter).toHaveBeenCalledWith('browse');
+    expect(onSettle).toHaveBeenCalledWith('browse');
     expect(onResetSprings).toHaveBeenCalled();
 
     // 5. Test boundary overscroll (pulling right at overview, dx > 0)

@@ -3,9 +3,16 @@ import type { FontifyTab } from './floatingNav';
 
 export const TAB_ORDER: FontifyTab[] = [
   'overview',
+  'browse',
   'customize',
   'emoji'
 ];
+
+export function getTabOffset(targetTab: FontifyTab, containerWidth: number): number {
+  const targetIndex = TAB_ORDER.indexOf(targetTab);
+  if (targetIndex <= 0) return 0;
+  return -targetIndex * containerWidth;
+}
 
 export interface PageSwipeOptions {
   onSettle: (tab: FontifyTab) => void;
@@ -46,7 +53,7 @@ export function initPageSwipe(options: PageSwipeOptions): () => void {
     if (targetIndex === -1) return;
 
     const width = container.offsetWidth;
-    const targetOffset = -targetIndex * width;
+    const targetOffset = getTabOffset(targetTab, width);
 
     if (immediate) {
       track.style.transition = 'none';
@@ -74,7 +81,7 @@ export function initPageSwipe(options: PageSwipeOptions): () => void {
     // Skip horizontal page gestures on interactive controls, modal sheets/dialogs, sliders, and editable playgrounds
     if (
       target.closest(
-        '.m3-bottom-sheet, .m3-dialog, .m3-sheet-backdrop, .m3-dialog-backdrop, input[type="range"], .m3-slider, [contenteditable="true"], .emoji-category-bar, .emoji-showcase-grid'
+        '.m3-bottom-sheet, .m3-dialog, .m3-sheet-backdrop, .m3-dialog-backdrop, input[type="range"], .m3-slider, [contenteditable="true"], .emoji-category-bar, .emoji-showcase-grid, #browse-search-input, .chip-row, .filter-chip-row, #browse-preview-sheet, .specimen-box'
       )
     ) {
       isPointerDown = false;

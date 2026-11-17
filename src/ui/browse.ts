@@ -1,0 +1,1171 @@
+/**
+ * Fontify - Browse Tab Controller (M3 Expressive)
+ * Handles online font & emoji discovery, search, filtering, infinite scrolling,
+ * dynamic @font-face live specimen preview, direct system font/emoji streaming,
+ * and opening fonts directly in the Customize workspace.
+ */
+
+import { store } from '../state/store';
+import { fontService } from '../bridge/service';
+import { FontParser } from '../font/parser';
+import { FontEngine } from '../font/engine';
+import { showToast } from './components/toast';
+import { runApplyWorkflow } from './components/dialog';
+import {
+  getItems,
+  getItemById,
+  resolveVariant,
+  downloadAndCacheFont,
+  syncOnlineCatalog
+} from '../browse/catalogService';
+import {
+  getAllCachedFontIds,
+  deleteCachedFont
+} from '../browse/fontCache';
+import { removeCachedEmoji } from '../state/emojiCache';
+import type {
+  BrowseItem,
+  BrowseFilterState,
+  FontVariant
+} from '../browse/types';
+import type { FontifyTab } from './components/floatingNav';
+
+const PAGE_SIZE = 24;
+
+interface ExtendedFilterState extends BrowseFilterState {
+  isVariable?: boolean;
+}
+
+interface BrowseState {
+  filters: Partial<ExtendedFilterState>;
+  items: BrowseItem[];
+  cachedIds: Set<string>;
+  displayedCount: number;
+  activeItem: BrowseItem | null;
+  activeVariant: FontVariant | null;
+  isLoading: boolean;
+  isDownloading: boolean;
+}
+
+const state: BrowseState = {
+  filters: {
+    query: '',
+    type: 'font',
+    source: 'all',
+    category: 'all',
+    downloadedOnly: false
+  },
+  items: [],
+  cachedIds: new Set(),
+  displayedCount: PAGE_SIZE,
+  activeItem: null,
+  activeVariant: null,
+  isLoading: false,
+  isDownloading: false
+};
+
+let debounceTimer: ReturnType<typeof setTimeout> | null = null;
+
+function escapeHtml(str: string): string {
+  return str
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;');
+}
+
+function updateDownloadProgress(visible: boolean, percent = 0, message = 'Downloading...') {
+  const box = document.getElementById('browse-download-progress-box');
+  const fill = document.getElementById('browse-download-progress-fill');
+  const text = document.getElementById('browse-download-progress-text');
+  const pct = document.getElementById('browse-download-progress-pct');
+
+  if (!box) return;
+
+  if (!visible) {
+    box.style.display = 'none';
+    return;
+  }
+
+  box.style.display = 'block';
+  if (fill) fill.style.width = `${Math.min(100, Math.max(0, percent))}%`;
+  if (text) text.textContent = message;
+  if (pct) pct.textContent = `${Math.round(percent)}%`;
+}
+
+export function isVariableItem(item: BrowseItem): boolean {
+  return Boolean(
+    item.isVariable ||
+    item.tags?.includes('variable') ||
+    item.variants?.some((v) =>
+      v.name.toLowerCase().includes('variable') ||
+      String(v.weight).includes('100-900') ||
+      String(v.weight).includes('..') ||
+      v.weight === 'variable'
+    )
+  );
+}
+
+export function getVariableVariant(item: BrowseItem): FontVariant | null {
+  if (!isVariableItem(item)) return null;
+  const existing = item.variants?.find((v) =>
+    v.name.toLowerCase().includes('variable') ||
+    String(v.weight).includes('100-900') ||
+    v.weight === 'variable'
+  );
+  return (
+    existing || {
+      name: 'Variable (100–900)',
+      weight: '100-900',
+      style: 'normal',
+      url: item.url || item.variants?.[0]?.url || ''
+    }
+  );
+}
+
+export function getWeightName(weight: number | string, fallbackName?: string): string {
+  const num = typeof weight === 'number' ? weight : parseInt(String(weight), 10);
+  switch (num) {
+    case 100: return 'Thin';
+    case 200: return 'Extra Light';
+    case 300: return 'Light';
+    case 400: return 'Regular';
+    case 500: return 'Medium';
+    case 600: return 'Semi Bold';
+    case 700: return 'Bold';
+    case 800: return 'Extra Bold';
+    case 900: return 'Black';
+    default:
+      if (fallbackName && isNaN(Number(fallbackName))) {
+        return fallbackName.replace(/\s*\d+$/, '');
+      }
+      return num ? `Weight ${num}` : (fallbackName || 'Regular');
+  }
+}
+
+export function getStaticVariants(item: BrowseItem): FontVariant[] {
+  const isVar = isVariableItem(item);
+  let statics = (item.variants || []).filter((v) => {
+    if (v.name.toLowerCase().includes('variable')) return false;
+    if (String(v.weight).includes('100-900') || String(v.weight).includes('..') || v.weight === 'variable') return false;
+    return true;
+  });
+
+  if (isVar && statics.length === 0) {
+    const weights = [100, 300, 400, 500, 700, 900];
+    statics = weights.map((w) => ({
+      name: getWeightName(w),
+      weight: w,
+      style: 'normal',
+      url: item.url || item.variants?.[0]?.url || ''
+    }));
+  }
+
+  return statics;
+}
+
+export const SUBSET_CHARS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789 .,;:!?\'"-/()[]{}@#%&*+=_';
+
+export function buildSubsetText(item: BrowseItem, extraText = ''): string {
+  const combined = `${SUBSET_CHARS}${item.name}${item.previewText || ''}${extraText}`;
+  return Array.from(new Set(combined.split(''))).filter((c) => c !== '\n' && c !== '\r').join('');
+}
+
+export function updateSpecimenWeight(item: BrowseItem, variant: FontVariant): void {
+  const specimen = document.getElementById('preview-specimen-box');
+  if (!specimen) return;
+
+  const isVar = isVariableItem(item);
+  const isVarVariant = variant.weight === '100-900' || variant.name.toLowerCase().includes('variable');
+  const targetWeight = isVarVariant
+    ? 400
+    : typeof variant.weight === 'number'
+    ? variant.weight
+    : parseInt(String(variant.weight), 10) || 400;
+
+  specimen.style.fontWeight = String(targetWeight);
+  if (isVar) {
+    specimen.style.fontVariationSettings = `'wght' ${targetWeight}`;
+  } else {
+    specimen.style.fontVariationSettings = '';
+  }
+}
+
+/**
+ * In-card live preview font loader with viewport IntersectionObserver and multi-family batching
+ */
+const loadedGridFonts = new Set<string>();
+let gridFontObserver: IntersectionObserver | null = null;
+let batchLoadTimer: ReturnType<typeof setTimeout> | null = null;
+const pendingFontFamilies = new Set<string>();
+
+function flushFontBatch(): void {
+  if (typeof document === 'undefined' || !document.head) return;
+  const familiesToLoad = Array.from(pendingFontFamilies);
+  pendingFontFamilies.clear();
+  if (familiesToLoad.length === 0) return;
+
+  // Batch up to 12 families per CSS link to keep URLs performant and concise
+  for (let i = 0; i < familiesToLoad.length; i += 12) {
+    const chunk = familiesToLoad.slice(i, i + 12);
+    const params = chunk
+      .map((f) => `family=${encodeURIComponent(f).replace(/%20/g, '+')}:wght@400`)
+      .join('&');
+    const gfUrl = `https://fonts.googleapis.com/css2?${params}&display=swap`;
+
+    const link = document.createElement('link');
+    link.rel = 'stylesheet';
+    link.href = gfUrl;
+    document.head.appendChild(link);
+  }
+}
+
+function queueFontBatch(family: string): void {
+  if (loadedGridFonts.has(family)) return;
+  loadedGridFonts.add(family);
+  pendingFontFamilies.add(family);
+
+  if (batchLoadTimer) clearTimeout(batchLoadTimer);
+  batchLoadTimer = setTimeout(flushFontBatch, 40);
+}
+
+export function observeCardFonts(): void {
+  if (typeof window === 'undefined' || typeof document === 'undefined') return;
+  if (typeof document.querySelectorAll !== 'function') return;
+
+  if (typeof IntersectionObserver === 'undefined') {
+    return;
+  }
+
+  if (!gridFontObserver) {
+    gridFontObserver = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) {
+            const card = entry.target as HTMLElement;
+            const family = card.getAttribute('data-font-family');
+            if (family) {
+              queueFontBatch(family);
+            }
+            gridFontObserver?.unobserve(card);
+          }
+        });
+      },
+      {
+        rootMargin: '250px 0px',
+        threshold: 0.01
+      }
+    );
+  }
+
+  const cards = document.querySelectorAll<HTMLElement>('.browse-card[data-font-family]');
+  cards.forEach((card) => {
+    const family = card.getAttribute('data-font-family');
+    if (family && !loadedGridFonts.has(family)) {
+      gridFontObserver?.observe(card);
+    }
+  });
+}
+
+export async function refreshCatalogGrid(resetPaging = false): Promise<void> {
+  const grid = document.getElementById('browse-grid');
+  if (!grid) return;
+
+  state.isLoading = true;
+
+  if (resetPaging) {
+    state.displayedCount = PAGE_SIZE;
+  }
+
+  try {
+    let [matchingItems, cachedIdList] = await Promise.all([
+      getItems(state.filters),
+      getAllCachedFontIds()
+    ]);
+
+    // Respect variable font filter
+    if (state.filters.isVariable) {
+      matchingItems = matchingItems.filter((item) => isVariableItem(item));
+    }
+
+    state.items = matchingItems;
+    state.cachedIds = new Set(cachedIdList);
+
+    renderGridItems();
+  } catch (err) {
+    console.error('[Browse] Failed to load catalog items:', err);
+    if (grid) {
+      grid.innerHTML = `
+        <div class="browse-empty-state">
+          <div class="browse-empty-title">Failed to load catalog</div>
+          <div class="browse-empty-desc">An error occurred while loading fonts. Please try again.</div>
+        </div>
+      `;
+    }
+  } finally {
+    state.isLoading = false;
+  }
+}
+
+function renderGridItems(): void {
+  const grid = document.getElementById('browse-grid');
+  if (!grid) return;
+
+  if (state.items.length === 0) {
+    grid.innerHTML = `
+      <div class="browse-empty-state">
+        <svg class="browse-empty-icon" viewBox="0 0 24 24" fill="currentColor">
+          <path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/>
+        </svg>
+        <div class="browse-empty-title">No fonts or emojis found</div>
+        <div class="browse-empty-desc">Try clearing your search query or adjusting your filters.</div>
+      </div>
+    `;
+    return;
+  }
+
+  const itemsToRender = state.items.slice(0, state.displayedCount);
+
+  grid.innerHTML = itemsToRender
+    .map((item) => {
+      const isCached = state.cachedIds.has(item.id);
+      const isGoogle = item.source === 'google';
+      const sourceClass = isGoogle ? 'browse-badge-source-google' : 'browse-badge-source-zfont';
+      const sourceLabel = isGoogle ? 'Google' : 'zFont';
+      const isVar = isVariableItem(item);
+      const variantCount = item.variants?.length || 1;
+      const singleWeightName = item.variants?.[0]?.weight
+        ? getWeightName(item.variants[0].weight, item.variants[0].name)
+        : item.variants?.[0]?.name || 'Regular';
+      const variantLabel =
+        item.type === 'emoji'
+          ? 'Emoji Pack'
+          : isVar
+          ? `Variable (${variantCount} weights)`
+          : variantCount > 1
+          ? `${variantCount} weights`
+          : singleWeightName;
+
+      const previewHtml =
+        item.type === 'emoji'
+          ? (item.thumbnailUrl
+              ? `<img class="browse-specimen-emoji-img" src="${escapeHtml(item.thumbnailUrl)}" alt="${escapeHtml(item.name)}" loading="lazy" decoding="async" onerror="if(this.dataset.fb!=='1'){this.dataset.fb='1';this.src=this.src.replace('cdn.jsdelivr.net/gh/zFont/Host@main','raw.githubusercontent.com/zFont/Host/main');}" />`
+              : `<div class="browse-specimen-emoji">😀 🥳 😎 👍 🔥 ❤️ 🚀 ✨ 💯</div>`)
+          : `<div class="browse-specimen-text" style="font-family: &quot;${escapeHtml(item.name)}&quot;, sans-serif;">${escapeHtml(
+              item.previewText || 'Sphinx of black quartz, judge my vow.'
+            )}</div>`;
+
+      return `
+        <div class="browse-card" data-id="${escapeHtml(item.id)}" ${item.type === 'font' && isGoogle ? `data-font-family="${escapeHtml(item.name)}"` : ''} role="listitem" tabindex="0">
+          <div class="browse-card-header">
+            <div class="browse-card-title-group">
+              <div class="browse-card-title">${escapeHtml(item.name)}</div>
+              <div class="browse-card-meta">${escapeHtml(
+                item.author || (isGoogle ? 'Google Fonts' : 'zFont')
+              )}${item.sizeMb ? ` • ${escapeHtml(item.sizeMb)}` : ''}</div>
+            </div>
+            <div class="browse-card-badges">
+              ${isVar ? '<span class="browse-badge browse-badge-variable">Variable</span>' : ''}
+              <span class="browse-badge ${sourceClass}">${sourceLabel}</span>
+              ${isCached ? '<span class="browse-badge browse-badge-downloaded">Downloaded</span>' : ''}
+            </div>
+          </div>
+          <div class="browse-specimen-box">
+            ${previewHtml}
+          </div>
+          <div class="browse-card-footer">
+            <span style="font-size: 0.75rem; font-weight: 600; color: var(--md-sys-color-on-surface-variant);">${escapeHtml(variantLabel)}</span>
+            <div style="display: flex; gap: 8px; align-items: center;">
+              ${
+                isCached
+                  ? `<button class="browse-action-btn browse-btn-delete" type="button" data-action="delete" data-id="${escapeHtml(item.id)}" title="Delete downloaded font" aria-label="Delete ${escapeHtml(item.name)} download">Delete</button>`
+                  : ''
+              }
+              <button class="browse-action-btn browse-btn-preview" type="button" data-action="preview" data-id="${escapeHtml(item.id)}">Preview</button>
+            </div>
+          </div>
+        </div>
+      `;
+    })
+    .join('');
+
+  // If there are more items to show, append sentinel for infinite scroll
+  if (state.displayedCount < state.items.length) {
+    const sentinel = document.createElement('div');
+    sentinel.id = 'browse-scroll-sentinel';
+    sentinel.style.width = '100%';
+    sentinel.style.height = '40px';
+    sentinel.style.display = 'flex';
+    sentinel.style.alignItems = 'center';
+    sentinel.style.justifyContent = 'center';
+    sentinel.innerHTML = `<span style="font-size: 0.8125rem; color: var(--md-sys-color-outline);">Showing ${itemsToRender.length} of ${state.items.length} items</span>`;
+    grid.appendChild(sentinel);
+  }
+
+  // Observe visible cards to stream live Google Fonts directly into specimen boxes
+  observeCardFonts();
+
+  // Prefetch edge CDN preview thumbnails for initial visible emoji cards
+  if (state.filters.type === 'emoji' && typeof Image !== 'undefined') {
+    itemsToRender.slice(0, 12).forEach((item) => {
+      if (item.thumbnailUrl) {
+        const prefetchImg = new Image();
+        prefetchImg.src = item.thumbnailUrl;
+      }
+    });
+  }
+}
+
+export function openPreviewSheet(item: BrowseItem): void {
+  const backdrop = document.getElementById('browse-preview-backdrop');
+  const sheet = document.getElementById('browse-preview-sheet');
+  const container = document.getElementById('browse-preview-container');
+  if (!container) return;
+
+  state.activeItem = item;
+
+  const isGoogle = item.source === 'google';
+  const sourceClass = isGoogle ? 'browse-badge-source-google' : 'browse-badge-source-zfont';
+  const sourceLabel = isGoogle ? 'Google Fonts' : 'zFont';
+  const isEmoji = item.type === 'emoji';
+  const isVar = isVariableItem(item);
+  const isCached = state.cachedIds.has(item.id);
+
+  const variableVariant = getVariableVariant(item);
+  const staticVariants = getStaticVariants(item);
+
+  // Set default active variant: variable variant if variable, else resolveVariant
+  state.activeVariant = isVar && variableVariant ? variableVariant : resolveVariant(item);
+
+  const defaultSpecimen = isEmoji
+    ? '😀 🥳 😎 👍 🔥 ❤️ 🚀 ✨ 💯 🐱 🍕 ☕ 🌺 🥑 🏝️ ⚡'
+    : 'Sphinx of black quartz, judge my vow. 1234567890\nThe quick brown fox jumps over the lazy dog.';
+
+  // Variants row: prominent [✨ Variable (100–900)] chip alongside static weights [300, 400, 500, 700...]
+  let variantsHtml = '';
+  if (isVar || staticVariants.length > 1) {
+    const varChipHtml = isVar && variableVariant
+      ? `<button class="browse-variant-chip browse-variant-chip-variable selected" type="button" data-variant-type="variable" data-variant-name="${escapeHtml(variableVariant.name)}" data-variant-weight="100-900">Variable (100–900)</button>`
+      : '';
+
+    const staticChipsHtml = staticVariants
+      .map((v) => {
+        const isSelected = !isVar && (v.name === state.activeVariant?.name || v.weight === state.activeVariant?.weight);
+        const weightLabel = getWeightName(v.weight, v.name);
+        return `<button class="browse-variant-chip ${isSelected ? 'selected' : ''}" type="button" data-variant-type="static" data-variant-name="${escapeHtml(v.name)}" data-variant-weight="${v.weight}">${escapeHtml(weightLabel)}</button>`;
+      })
+      .join('');
+
+    variantsHtml = `
+      <div style="display: flex; flex-direction: column; gap: 6px;">
+        <span style="font-size: 0.75rem; font-weight: 700; color: var(--md-sys-color-on-surface-variant);">Weights &amp; Styles</span>
+        <div class="browse-variants-row" id="preview-variant-chips">
+          ${varChipHtml}
+          ${staticChipsHtml}
+        </div>
+      </div>
+    `;
+  }
+
+  container.innerHTML = `
+    <div style="display: flex; align-items: flex-start; justify-content: space-between; gap: 12px;">
+      <div style="display: flex; flex-direction: column; min-width: 0;">
+        <h3 id="browse-preview-title" style="font-size: 1.25rem; font-weight: 700; color: var(--md-sys-color-on-surface); margin: 0;">${escapeHtml(item.name)}</h3>
+        <span style="font-size: 0.8125rem; color: var(--md-sys-color-on-surface-variant); margin-top: 2px;">
+          ${escapeHtml(item.author || sourceLabel)}${item.sizeMb ? ` • ${escapeHtml(item.sizeMb)}` : ''}
+        </span>
+      </div>
+      <div style="display: flex; align-items: center; gap: 8px;">
+        ${isVar ? '<span class="browse-badge browse-badge-variable">Variable</span>' : ''}
+        <span class="browse-badge ${sourceClass}">${sourceLabel}</span>
+        ${isCached ? '<span class="browse-badge browse-badge-downloaded">Downloaded</span>' : ''}
+        <button id="preview-close-btn" class="header-icon-btn" type="button" aria-label="Close preview" style="width: 36px; height: 36px;">✕</button>
+      </div>
+    </div>
+
+    ${variantsHtml}
+
+    <div style="display: flex; flex-direction: column; gap: 6px;">
+      <div style="display: flex; justify-content: space-between; align-items: center;">
+        <span style="font-size: 0.75rem; font-weight: 700; color: var(--md-sys-color-on-surface-variant);">${isEmoji ? 'Emoji Specimen' : 'Live Specimen (Editable)'}</span>
+        <span id="preview-load-status" style="font-size: 0.75rem; color: var(--md-sys-color-primary);">Loading preview...</span>
+      </div>
+      ${
+        isEmoji && item.thumbnailUrl
+          ? `<div class="browse-emoji-specimen-wrap">
+              <div id="preview-emoji-spinner" class="browse-emoji-spinner" style="display: flex; align-items: center; justify-content: center; height: 90px;">
+                <span style="font-size: 0.8125rem; color: var(--md-sys-color-on-surface-variant);">Loading specimen...</span>
+              </div>
+              <img id="preview-emoji-img" class="browse-emoji-specimen-img" src="${escapeHtml(item.thumbnailUrl)}" alt="${escapeHtml(item.name)}" style="display: none;" onerror="if(this.dataset.fb!=='1'){this.dataset.fb='1';this.src=this.src.replace('cdn.jsdelivr.net/gh/zFont/Host@main','raw.githubusercontent.com/zFont/Host/main');}" />
+              <span style="font-size: 0.75rem; color: var(--md-sys-color-on-surface-variant); margin-top: 8px;">Authentic ${escapeHtml(item.name)} glyph rendering</span>
+             </div>`
+          : ''
+      }
+      <div
+        id="preview-specimen-box"
+        class="${isEmoji ? 'browse-specimen-emoji' : 'browse-specimen-text'}"
+        contenteditable="true"
+        spellcheck="false"
+        style="min-height: 80px; max-height: 180px; overflow-y: auto; padding: 14px; background: var(--md-sys-color-surface-container-lowest); border-radius: var(--md-sys-shape-corner-medium); border: 1px solid var(--md-sys-color-outline-variant); font-size: 1.25rem; line-height: 1.4;"
+      >${escapeHtml(defaultSpecimen)}</div>
+    </div>
+
+    <div style="display: flex; gap: 10px; margin-top: 4px; flex-wrap: wrap;">
+      <button class="browse-action-btn browse-btn-apply" id="btn-preview-apply" type="button" style="flex: 1; justify-content: center; min-height: 44px;">
+        Apply Directly
+      </button>
+      ${
+        !isEmoji
+          ? `<button class="browse-action-btn browse-btn-preview" id="btn-preview-customize" type="button" style="flex: 1; justify-content: center; min-height: 44px;">
+              Open in Customize
+            </button>`
+          : ''
+      }
+      ${
+        isCached
+          ? `<button class="browse-action-btn browse-btn-delete" id="btn-preview-delete" type="button" style="flex: 1; justify-content: center; min-height: 44px;">
+              Delete Download
+            </button>`
+          : ''
+      }
+    </div>
+  `;
+
+  if (backdrop) {
+    backdrop.style.display = 'flex';
+    if (typeof requestAnimationFrame === 'function') {
+      requestAnimationFrame(() => {
+        backdrop.classList.add('active');
+        backdrop.classList.add('open');
+        backdrop.removeAttribute('aria-hidden');
+      });
+    } else {
+      backdrop.classList.add('active');
+      backdrop.classList.add('open');
+      backdrop.removeAttribute('aria-hidden');
+    }
+  } else if (sheet) {
+    sheet.style.display = 'block';
+    sheet.removeAttribute('aria-hidden');
+  }
+
+  // Wire close button
+  document.getElementById('preview-close-btn')?.addEventListener('click', closePreviewSheet);
+
+  // Wire authentic emoji preview specimen loading & status
+  if (isEmoji && item.thumbnailUrl) {
+    const emojiImg = document.getElementById('preview-emoji-img') as HTMLImageElement | null;
+    const emojiSpinner = document.getElementById('preview-emoji-spinner');
+    const statusEl = document.getElementById('preview-load-status');
+    if (emojiImg) {
+      const showImage = () => {
+        if (emojiSpinner) emojiSpinner.style.display = 'none';
+        emojiImg.style.display = 'block';
+        if (statusEl && state.activeItem?.id === item.id) {
+          statusEl.textContent = '✓ Specimen ready';
+          statusEl.style.color = 'var(--md-sys-color-primary)';
+        }
+      };
+      if (emojiImg.complete && emojiImg.naturalWidth > 0) {
+        showImage();
+      } else {
+        emojiImg.addEventListener('load', showImage);
+        emojiImg.addEventListener('error', () => {
+          if (emojiImg.dataset.fb !== '1') {
+            emojiImg.dataset.fb = '1';
+            emojiImg.src = emojiImg.src.replace('cdn.jsdelivr.net/gh/zFont/Host@main', 'raw.githubusercontent.com/zFont/Host/main');
+          } else {
+            if (emojiSpinner) emojiSpinner.innerHTML = '<span style="font-size: 0.8125rem; color: var(--md-sys-color-error);">Specimen unavailable offline</span>';
+            if (statusEl && state.activeItem?.id === item.id) {
+              statusEl.textContent = 'Preview offline';
+              statusEl.style.color = 'var(--md-sys-color-outline)';
+            }
+          }
+        });
+      }
+    }
+  }
+
+  // Wire variant selector chips
+  const chips = container.querySelectorAll<HTMLButtonElement>('.browse-variant-chip');
+  chips.forEach((chip) => {
+    chip.addEventListener('click', () => {
+      chips.forEach((c) => c.classList.remove('selected'));
+      chip.classList.add('selected');
+
+      const vType = chip.getAttribute('data-variant-type');
+      const vWeight = chip.getAttribute('data-variant-weight');
+      const vName = chip.getAttribute('data-variant-name');
+
+      if (vType === 'variable' && variableVariant) {
+        state.activeVariant = variableVariant;
+        updateSpecimenWeight(item, variableVariant);
+      } else {
+        const matched = staticVariants.find((v) => String(v.weight) === vWeight || v.name === vName);
+        if (matched) {
+          state.activeVariant = matched;
+          updateSpecimenWeight(item, matched);
+        }
+      }
+    });
+  });
+
+  // Wire specimen text box input listener for dynamic subset updates
+  const specimen = document.getElementById('preview-specimen-box');
+  if (specimen && !isEmoji) {
+    let specimenInputTimer: ReturnType<typeof setTimeout> | null = null;
+    specimen.addEventListener('input', () => {
+      if (specimenInputTimer) clearTimeout(specimenInputTimer);
+      specimenInputTimer = setTimeout(() => {
+        const currentText = specimen.textContent || '';
+        const hasExtraChars = currentText.split('').some((ch) => !SUBSET_CHARS.includes(ch));
+        if (hasExtraChars && state.activeItem?.id === item.id) {
+          loadPreviewFontFace(item, state.activeVariant || undefined);
+        }
+      }, 500);
+    });
+  }
+
+  // Wire actions
+  document.getElementById('btn-preview-apply')?.addEventListener('click', () => {
+    handleApplyDirectly(item, state.activeVariant || undefined);
+  });
+
+  document.getElementById('btn-preview-customize')?.addEventListener('click', () => {
+    handleOpenInCustomize(item, state.activeVariant || undefined);
+  });
+
+  document.getElementById('btn-preview-delete')?.addEventListener('click', () => {
+    handleDeleteCachedFont(item);
+  });
+
+  // Asynchronously load and inject zero-download Google Fonts CSS2 subset
+  loadPreviewFontFace(item, state.activeVariant || undefined);
+}
+
+export function closePreviewSheet(): void {
+  const backdrop = document.getElementById('browse-preview-backdrop');
+  const sheet = document.getElementById('browse-preview-sheet');
+  if (backdrop) {
+    backdrop.classList.remove('active');
+    backdrop.classList.remove('open');
+    backdrop.setAttribute('aria-hidden', 'true');
+    setTimeout(() => {
+      if (!backdrop.classList.contains('active') && !backdrop.classList.contains('open')) {
+        backdrop.style.display = 'none';
+      }
+    }, 280);
+  } else if (sheet) {
+    sheet.style.display = 'none';
+    sheet.setAttribute('aria-hidden', 'true');
+  }
+  state.activeItem = null;
+  state.activeVariant = null;
+}
+
+export async function loadPreviewFontFace(item: BrowseItem, variant?: FontVariant): Promise<void> {
+  const statusEl = document.getElementById('preview-load-status');
+  const specimen = document.getElementById('preview-specimen-box');
+  if (!specimen) return;
+
+  const resolvedVar = variant || state.activeVariant || resolveVariant(item);
+  const isVar = isVariableItem(item);
+  const isVarVariant = resolvedVar.weight === '100-900' || resolvedVar.name.toLowerCase().includes('variable');
+  const targetWeight = isVarVariant
+    ? 400
+    : typeof resolvedVar.weight === 'number'
+    ? resolvedVar.weight
+    : parseInt(String(resolvedVar.weight), 10) || 400;
+
+  specimen.style.fontWeight = String(targetWeight);
+  if (isVar) {
+    specimen.style.fontVariationSettings = `'wght' ${targetWeight}`;
+  } else {
+    specimen.style.fontVariationSettings = '';
+  }
+
+  // Handle emoji packs separately
+  if (item.type === 'emoji') {
+    if (statusEl) {
+      statusEl.textContent = 'Emoji pack preview';
+      statusEl.style.color = 'var(--md-sys-color-primary)';
+    }
+    specimen.style.fontFamily = `'CustomEmojiPreview', "Apple Color Emoji", "Noto Color Emoji", sans-serif`;
+    return;
+  }
+
+  // Zero-Download Google Fonts CSS2 Subsetting API
+  try {
+    if (statusEl) {
+      statusEl.textContent = 'Loading live preview...';
+      statusEl.style.color = 'var(--md-sys-color-primary)';
+    }
+
+    const familyParam = encodeURIComponent(item.name).replace(/%20/g, '+');
+    const subsetText = buildSubsetText(item, specimen.textContent || '');
+
+    // Weight range or weights
+    const availableWeights = (item.availableWeights && item.availableWeights.length > 0)
+      ? item.availableWeights
+      : item.weights && item.weights.length > 0
+      ? item.weights
+      : [400];
+
+    let wghtSpec = '';
+    if (isVar) {
+      const minW = Math.min(...availableWeights);
+      const maxW = Math.max(...availableWeights);
+      wghtSpec = minW < maxW ? `wght@${minW}..${maxW}` : `wght@${minW}`;
+    } else {
+      wghtSpec = `wght@${availableWeights.join(';')}`;
+    }
+
+    const gfUrl = `https://fonts.googleapis.com/css2?family=${familyParam}:${wghtSpec}&display=swap&text=${encodeURIComponent(subsetText)}`;
+    const fallbackUrl = `https://fonts.googleapis.com/css2?family=${familyParam}&display=swap`;
+
+    let linkEl = document.getElementById('browse-gf-preview-css') as HTMLLinkElement | null;
+    if (!linkEl) {
+      linkEl = document.createElement('link');
+      linkEl.id = 'browse-gf-preview-css';
+      linkEl.rel = 'stylesheet';
+      document.head.appendChild(linkEl);
+    }
+
+    linkEl.onload = () => {
+      if (statusEl && state.activeItem?.id === item.id) {
+        statusEl.textContent = '✓ Live preview loaded';
+        statusEl.style.color = 'var(--md-sys-color-primary)';
+      }
+    };
+
+    linkEl.onerror = () => {
+      // Fallback: try family request without weight specification
+      if (linkEl && linkEl.href !== fallbackUrl) {
+        linkEl.href = fallbackUrl;
+      } else if (statusEl && state.activeItem?.id === item.id) {
+        statusEl.textContent = 'Previewing with system fallback';
+        statusEl.style.color = 'var(--md-sys-color-outline)';
+      }
+    };
+
+    linkEl.href = gfUrl;
+
+    // Apply font-family to specimen box smoothly
+    specimen.style.fontFamily = `"${item.name}", sans-serif`;
+
+    // Wait for document.fonts if available
+    if (typeof document !== 'undefined' && 'fonts' in document && typeof (document as any).fonts.load === 'function') {
+      (document as any).fonts.load(`${targetWeight} 16px "${item.name}"`).then(() => {
+        if (statusEl && state.activeItem?.id === item.id) {
+          statusEl.textContent = '✓ Live preview loaded';
+          statusEl.style.color = 'var(--md-sys-color-primary)';
+        }
+      }).catch(() => {});
+    }
+  } catch (err) {
+    console.warn('[Browse] Failed to load zero-download live preview:', err);
+    if (statusEl) {
+      statusEl.textContent = 'Previewing with system fallback';
+      statusEl.style.color = 'var(--md-sys-color-outline)';
+    }
+  }
+}
+
+export async function handleDeleteCachedFont(item: BrowseItem): Promise<void> {
+  try {
+    await deleteCachedFont(item.id);
+    if (item.type === 'emoji') {
+      try {
+        await removeCachedEmoji(item.id.replace(/^emoji-/, ''));
+      } catch (_) {}
+    }
+    state.cachedIds.delete(item.id);
+    showToast(`Deleted ${item.name} from downloads`);
+
+    // If currently previewing this item in the bottom sheet, remove the delete button and downloaded badge
+    if (state.activeItem?.id === item.id) {
+      document.getElementById('btn-preview-delete')?.remove();
+      const sheet = document.getElementById('browse-preview-sheet');
+      sheet?.querySelectorAll('.browse-badge-downloaded').forEach((b) => b.remove());
+    }
+
+    // If currently viewing downloaded fonts only, remove from displayed list
+    if (state.filters.downloadedOnly) {
+      state.items = state.items.filter((i) => i.id !== item.id);
+      if (state.activeItem?.id === item.id) {
+        closePreviewSheet();
+      }
+    }
+
+    renderGridItems();
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    showToast(`Failed to delete downloaded font: ${msg}`);
+  }
+}
+
+async function handleApplyDirectly(item: BrowseItem, variant?: FontVariant): Promise<void> {
+  updateDownloadProgress(true, 10, `Preparing ${item.name}...`);
+  try {
+    const selectedVariant = variant || state.activeVariant || resolveVariant(item);
+    updateDownloadProgress(true, 30, `Downloading ${item.name}...`);
+    const buffer = await downloadAndCacheFont(item, selectedVariant);
+    state.cachedIds.add(item.id);
+    updateDownloadProgress(true, 70, 'Verifying package payload...');
+
+    updateDownloadProgress(false);
+
+    if (item.type === 'emoji') {
+      await runApplyWorkflow({
+        title: 'Apply Emoji Font?',
+        body: `Install <strong>${escapeHtml(item.name)}</strong> across SystemUI and apps?<br><br>A device restart is required to reload system emojis.`,
+        confirmText: 'Apply Emoji',
+        iconType: 'apply',
+        onApply: async (onProgress) => {
+          await fontService.applyEmoji({
+            emojiBuffer: buffer,
+            emojiFile: new File([buffer], `${item.name}.ttf`, { type: 'font/ttf' }),
+            emojiName: item.name,
+            emojiSource: 'preset',
+            emojiUrl: selectedVariant.url || item.url,
+            onProgress
+          });
+        },
+        onReboot: async () => {
+          await fontService.reboot();
+        },
+        onCancelReboot: () => {
+          store.setState({ rebootRequired: true });
+          showToast('Reboot postponed. Restart anytime from the Overview tab.');
+        }
+      });
+    } else {
+      const parsed = FontParser.parse(buffer);
+      const isVariableFont = parsed.isVariable;
+      const isVarSelected = selectedVariant.weight === '100-900' || selectedVariant.name.toLowerCase().includes('variable');
+      const targetWeight = typeof selectedVariant.weight === 'number'
+        ? selectedVariant.weight
+        : parseInt(String(selectedVariant.weight), 10) || 400;
+
+      // Axis values configured based on selected variant
+      const axisValues: Record<string, number> = {};
+      if (isVariableFont && !isVarSelected && targetWeight) {
+        axisValues['wght'] = targetWeight;
+      }
+
+      const variantDisplay = isVarSelected
+        ? 'Variable (100–900)'
+        : (selectedVariant.name || `${targetWeight}`);
+
+      await runApplyWorkflow({
+        title: 'Apply Font',
+        body: `Apply <strong>${escapeHtml(item.name)}</strong> (${escapeHtml(variantDisplay)}) across /system and /product partitions?<br><br>Original stock system fonts remain safely protected.`,
+        confirmText: 'Apply Font',
+        iconType: 'apply',
+        onApply: async (onProgress) => {
+          await fontService.applyFont({
+            fontBuffer: buffer,
+            fontFile: new File([buffer], `${item.name}.ttf`, { type: 'font/ttf' }),
+            fontName: parsed.fullName || `${item.name} ${selectedVariant.name}`,
+            isVariable: isVariableFont,
+            weightMode: 'normal',
+            axisValues,
+            onProgress
+          });
+        },
+        onReboot: async () => {
+          await fontService.reboot();
+        },
+        onCancelReboot: () => {
+          store.setState({ rebootRequired: true });
+          showToast('Reboot postponed. Restart anytime from the Overview tab.');
+        }
+      });
+    }
+  } catch (err) {
+    updateDownloadProgress(false);
+    const msg = err instanceof Error ? err.message : String(err);
+    showToast(`Failed to apply ${item.name}: ${msg}`);
+  }
+}
+
+async function handleOpenInCustomize(item: BrowseItem, variant?: FontVariant): Promise<void> {
+  updateDownloadProgress(true, 25, `Downloading ${item.name} for customization...`);
+  try {
+    const selectedVariant = variant || state.activeVariant || resolveVariant(item);
+    const buffer = await downloadAndCacheFont(item, selectedVariant);
+    state.cachedIds.add(item.id);
+    updateDownloadProgress(true, 85, 'Parsing font tables...');
+
+    const parsed = FontParser.parse(buffer);
+    if (!parsed.valid) {
+      updateDownloadProgress(false);
+      showToast(parsed.error ? `Failed to parse font: ${parsed.error}` : 'Invalid font file.');
+      return;
+    }
+
+    const isVariableFont = parsed.isVariable;
+    const isVarSelected = selectedVariant.weight === '100-900' || selectedVariant.name.toLowerCase().includes('variable');
+    const targetWeight = typeof selectedVariant.weight === 'number'
+      ? selectedVariant.weight
+      : parseInt(String(selectedVariant.weight), 10) || 400;
+
+    const axisValues: Record<string, number> = {};
+    if (isVariableFont && !isVarSelected && targetWeight) {
+      axisValues['wght'] = targetWeight;
+    }
+
+    const file = new File([buffer], `${item.name}.ttf`, { type: 'font/ttf' });
+
+    store.setState({
+      fontFile: file,
+      fontBuffer: buffer,
+      fontData: parsed,
+      axisValues,
+      selectedPreset: '',
+      weightMode: 'normal'
+    });
+
+    try {
+      await FontEngine.loadFontFace('CustomImportedFont', buffer);
+    } catch (_) {}
+
+    updateDownloadProgress(false);
+    closePreviewSheet();
+
+    // Switch to customize tab
+    const navSwitchTab = (window as unknown as { switchTab?: (tab: FontifyTab) => void }).switchTab;
+    if (typeof navSwitchTab === 'function') {
+      navSwitchTab('customize');
+    }
+
+    const variantLabel = isVarSelected ? 'Variable' : `${targetWeight}`;
+    showToast(`Opened "${item.name}" (${variantLabel}) in Customize`);
+  } catch (err) {
+    updateDownloadProgress(false);
+    const msg = err instanceof Error ? err.message : String(err);
+    showToast(`Failed to open in Customize: ${msg}`);
+  }
+}
+
+function setupCreditsDialog(): void {
+  const btnCredits = document.getElementById('btn-credits');
+  const modalOverlay = document.getElementById('credits-modal-overlay');
+  const btnClose = document.getElementById('credits-close-btn');
+
+  if (!btnCredits || !modalOverlay) return;
+
+  const openCredits = () => {
+    modalOverlay.classList.add('active');
+    modalOverlay.removeAttribute('aria-hidden');
+  };
+
+  const closeCredits = () => {
+    modalOverlay.classList.remove('active');
+    modalOverlay.setAttribute('aria-hidden', 'true');
+  };
+
+  btnCredits.addEventListener('click', openCredits);
+  btnClose?.addEventListener('click', closeCredits);
+
+  modalOverlay.addEventListener('click', (e) => {
+    if (e.target === modalOverlay) {
+      closeCredits();
+    }
+  });
+
+  if (typeof window !== 'undefined' && typeof window.addEventListener === 'function') {
+    window.addEventListener('keydown', (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && modalOverlay.classList.contains('active')) {
+        closeCredits();
+      }
+    });
+  }
+}
+
+export function setupBrowseTab(): void {
+  const searchInput = document.getElementById('browse-search-input') as HTMLInputElement | null;
+  const searchClear = document.getElementById('browse-search-clear') as HTMLButtonElement | null;
+  const filterBar = document.getElementById('browse-filter-bar');
+  const previewBackdrop = document.getElementById('browse-preview-backdrop');
+  const gridContainer = document.getElementById('browse-grid');
+  const viewBrowse = document.getElementById('view-browse');
+
+  // 1. Search input with debouncing and clear button
+  if (searchInput) {
+    searchInput.addEventListener('input', () => {
+      const val = searchInput.value.trim();
+      if (searchClear) {
+        searchClear.style.display = val.length > 0 ? 'inline-flex' : 'none';
+      }
+
+      if (debounceTimer) clearTimeout(debounceTimer);
+      debounceTimer = setTimeout(() => {
+        state.filters.query = val;
+        refreshCatalogGrid(true);
+      }, 200);
+    });
+  }
+
+  if (searchClear && searchInput) {
+    searchClear.addEventListener('click', () => {
+      searchInput.value = '';
+      searchClear.style.display = 'none';
+      state.filters.query = '';
+      refreshCatalogGrid(true);
+      searchInput.focus();
+    });
+  }
+
+  // 2. Compact 1-Row Filter Bar ([All Fonts] [Variable] [Emojis] [Downloaded])
+  if (filterBar) {
+    filterBar.addEventListener('click', (e) => {
+      const target = (e.target as HTMLElement).closest<HTMLButtonElement>('.browse-chip');
+      if (!target) return;
+
+      const filterType = target.getAttribute('data-filter');
+      if (filterType === 'downloaded') {
+        const currentlyActive = target.classList.contains('active');
+        const nextState = !currentlyActive;
+        target.classList.toggle('active', nextState);
+        target.setAttribute('aria-pressed', nextState ? 'true' : 'false');
+        state.filters.downloadedOnly = nextState;
+        refreshCatalogGrid(true);
+        return;
+      }
+
+      // Single select among category filters: all-fonts, variable, emoji
+      filterBar.querySelectorAll<HTMLButtonElement>('.browse-chip:not([data-filter="downloaded"])').forEach((c) => {
+        c.classList.remove('active');
+        c.setAttribute('aria-pressed', 'false');
+      });
+
+      target.classList.add('active');
+      target.setAttribute('aria-pressed', 'true');
+
+      if (filterType === 'variable') {
+        state.filters.type = 'font';
+        state.filters.source = 'all';
+        state.filters.category = 'all';
+        state.filters.isVariable = true;
+      } else if (filterType === 'emoji') {
+        state.filters.type = 'emoji';
+        state.filters.source = 'all';
+        state.filters.category = 'all';
+        delete state.filters.isVariable;
+      } else {
+        // 'all-fonts'
+        state.filters.type = 'font';
+        state.filters.source = 'all';
+        state.filters.category = 'all';
+        delete state.filters.isVariable;
+      }
+
+      refreshCatalogGrid(true);
+    });
+  }
+
+  // 3. Modal Backdrop Click and Escape key handlers
+  if (previewBackdrop) {
+    previewBackdrop.addEventListener('click', (e) => {
+      if (e.target === previewBackdrop) {
+        closePreviewSheet();
+      }
+    });
+  }
+
+  if (typeof window !== 'undefined' && typeof window.addEventListener === 'function') {
+    window.addEventListener('keydown', (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && previewBackdrop?.classList.contains('active')) {
+        closePreviewSheet();
+      }
+    });
+  }
+
+  // 5. Card click / tap delegation -> open preview bottom sheet or delete download
+  if (gridContainer) {
+    gridContainer.addEventListener('click', (e) => {
+      const deleteBtn = (e.target as HTMLElement).closest<HTMLButtonElement>('button[data-action="delete"]');
+      if (deleteBtn) {
+        e.stopPropagation();
+        const itemId = deleteBtn.getAttribute('data-id');
+        if (itemId) {
+          const item = getItemById(itemId);
+          if (item) {
+            handleDeleteCachedFont(item);
+          }
+        }
+        return;
+      }
+
+      const card = (e.target as HTMLElement).closest<HTMLElement>('.browse-card');
+      if (!card) return;
+
+      const itemId = card.getAttribute('data-id');
+      if (!itemId) return;
+
+      const item = getItemById(itemId);
+      if (item) {
+        openPreviewSheet(item);
+      }
+    });
+
+    gridContainer.addEventListener('keydown', (e: KeyboardEvent) => {
+      if (e.key === 'Enter' || e.key === ' ') {
+        const deleteBtn = (e.target as HTMLElement).closest<HTMLButtonElement>('button[data-action="delete"]');
+        if (deleteBtn) {
+          e.preventDefault();
+          e.stopPropagation();
+          const itemId = deleteBtn.getAttribute('data-id');
+          if (itemId) {
+            const item = getItemById(itemId);
+            if (item) {
+              handleDeleteCachedFont(item);
+            }
+          }
+          return;
+        }
+
+        const card = (e.target as HTMLElement).closest<HTMLElement>('.browse-card');
+        if (!card) return;
+        const itemId = card.getAttribute('data-id');
+        if (!itemId) return;
+        const item = getItemById(itemId);
+        if (item) {
+          e.preventDefault();
+          openPreviewSheet(item);
+        }
+      }
+    });
+  }
+
+  // 6. Infinite scroll chunking on scroll near bottom
+  if (viewBrowse) {
+    viewBrowse.addEventListener('scroll', () => {
+      if (state.isLoading || state.displayedCount >= state.items.length) return;
+
+      const scrollBottom = viewBrowse.scrollTop + viewBrowse.clientHeight;
+      const scrollHeight = viewBrowse.scrollHeight;
+
+      if (scrollHeight - scrollBottom < 300) {
+        state.displayedCount += PAGE_SIZE;
+        renderGridItems();
+      }
+    });
+  }
+
+  // 7. Credits dialog wiring
+  setupCreditsDialog();
+
+  // 8. Initial catalog render
+  refreshCatalogGrid(true);
+
+  // 9. Background online catalog synchronization (silent)
+  syncOnlineCatalog().then(() => {
+    // If online catalog discovered new items, refresh catalog view silently
+    refreshCatalogGrid(false);
+  }).catch(() => {
+    // Bundled snapshot is always ready offline
+  });
+}

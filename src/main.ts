@@ -8,6 +8,7 @@ import { store } from './state/store';
 import { fontService } from './bridge/service';
 import { themeManager } from './ui/theme';
 import { setupOverviewTab } from './ui/overview';
+import { setupBrowseTab } from './ui/browse';
 import { setupCustomizeTab } from './ui/customize';
 import { setupEmojiTab } from './ui/emoji';
 import { initFloatingActions } from './ui/floatingActions';
@@ -72,6 +73,7 @@ async function reconcileDiskStatus(): Promise<void> {
 function init(): void {
   themeManager.init();
   setupOverviewTab();
+  setupBrowseTab();
   setupCustomizeTab();
   setupEmojiTab();
   initFloatingActions();

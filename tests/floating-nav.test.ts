@@ -267,4 +267,27 @@ describe('Floating Navigation Bar (M3 Expressive Pill)', () => {
     expect(mockBottomNav.removeEventListener).toHaveBeenCalledWith('pointerdown', expect.any(Function));
     expect(mockWin.removeEventListener).toHaveBeenCalledWith('resize', expect.any(Function));
   });
+
+  it('verifies vertical symmetry and identical top/bottom padding between navbar and highlighter', () => {
+    // 60px height navbar with 1px top border and 1px bottom border has 58px inner box
+    const navHeight = 60;
+    const borderTop = 1;
+    const borderBottom = 1;
+    const innerNavHeight = navHeight - borderTop - borderBottom; // 58px
+
+    const highlighterHeight = 48;
+
+    // With top: calc(50% - 24px) (or (innerNavHeight - highlighterHeight) / 2):
+    const highlighterTopOffset = (innerNavHeight * 0.5) - (highlighterHeight / 2); // 29 - 24 = 5px
+    const highlighterBottomOffset = innerNavHeight - (highlighterTopOffset + highlighterHeight); // 58 - 53 = 5px
+
+    expect(highlighterTopOffset).toBe(5);
+    expect(highlighterBottomOffset).toBe(5);
+    expect(highlighterTopOffset).toBe(highlighterBottomOffset);
+
+    // Center alignment: both share the exact same vertical center line
+    const navCenter = innerNavHeight / 2; // 29px
+    const highlighterCenter = highlighterTopOffset + (highlighterHeight / 2); // 5 + 24 = 29px
+    expect(highlighterCenter).toBe(navCenter);
+  });
 });

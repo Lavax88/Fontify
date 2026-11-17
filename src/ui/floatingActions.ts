@@ -22,7 +22,7 @@ export function initFloatingActions(): { destroy: () => void } {
     const state = store.getState();
     const tab = state.currentTab;
 
-    if (tab === 'overview') {
+    if (tab === 'overview' || tab === 'browse') {
       cluster.classList.add('hidden');
       return;
     }

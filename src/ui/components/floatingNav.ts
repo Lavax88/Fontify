@@ -6,22 +6,65 @@
 
 import { store } from '../../state/store';
 
-export type FontifyTab = 'overview' | 'customize' | 'emoji';
+export type FontifyTab = 'overview' | 'browse' | 'customize' | 'emoji';
 
-const TAB_ORDER: FontifyTab[] = [
+export const TAB_ORDER: FontifyTab[] = [
   'overview',
+  'browse',
   'customize',
   'emoji'
 ];
 
-const TAB_METRICS: Record<FontifyTab, number> = {
+export const TAB_METRICS: Record<FontifyTab, number> = {
   'overview': 122,
+  'browse': 106,
   'customize': 96,
   'emoji': 102
 };
 
-function getTabMetrics(tab: FontifyTab): number {
+export function getTabMetrics(tab: FontifyTab): number {
   return TAB_METRICS[tab] || 100;
+}
+
+export function computeTabSlots(
+  activeTab: FontifyTab,
+  navWidth = 320
+): { navWidth: number; slots: Record<FontifyTab, { left: number; width: number; center: number }> } {
+  const activeWidth = getTabMetrics(activeTab);
+  const inactiveCount = Math.max(1, TAB_ORDER.length - 1);
+  const totalTabsWidth = activeWidth + inactiveCount * 48;
+  const innerWidth = Math.max(0, navWidth - 12); // 6px padding on each side
+  const availableSpace = Math.max(0, innerWidth - totalTabsWidth);
+  const space = availableSpace / inactiveCount;
+
+  const slots = {} as Record<FontifyTab, { left: number; width: number; center: number }>;
+
+  let currentX = 6;
+  for (let i = 0; i < TAB_ORDER.length; i++) {
+    const tab = TAB_ORDER[i];
+    if (!tab) continue;
+    const isThisActive = tab === activeTab;
+    const width = isThisActive ? getTabMetrics(tab) : 48;
+
+    let left: number;
+    if (i === 0) {
+      left = 6;
+    } else if (i === TAB_ORDER.length - 1) {
+      left = Math.max(6, navWidth - 6 - width);
+    } else {
+      left = currentX;
+    }
+
+    slots[tab] = {
+      left,
+      width,
+      center: left + width / 2
+    };
+
+    currentX = left + width + space;
+  }
+
+  return { navWidth, slots };
 }
 
 function computeOverscrollSquash(overscroll: number) {
@@ -119,42 +162,7 @@ export function initFloatingNav(
   }
 
   function calculateTabSlots(activeTab: FontifyTab) {
-    const navWidth = bottomNav!.offsetWidth || 320;
-    const activeWidth = getTabMetrics(activeTab);
-    const inactiveCount = Math.max(1, TAB_ORDER.length - 1);
-    const totalTabsWidth = activeWidth + inactiveCount * 48;
-    const innerWidth = Math.max(0, navWidth - 12); // 6px padding on each side
-    const availableSpace = Math.max(0, innerWidth - totalTabsWidth);
-    const space = availableSpace / inactiveCount;
-
-    const slots = {} as Record<FontifyTab, { left: number; width: number; center: number }>;
-
-    let currentX = 6;
-    for (let i = 0; i < TAB_ORDER.length; i++) {
-      const tab = TAB_ORDER[i];
-      if (!tab) continue;
-      const isThisActive = tab === activeTab;
-      const width = isThisActive ? getTabMetrics(tab) : 48;
-
-      let left: number;
-      if (i === 0) {
-        left = 6;
-      } else if (i === TAB_ORDER.length - 1) {
-        left = Math.max(6, navWidth - 6 - width);
-      } else {
-        left = currentX;
-      }
-
-      slots[tab] = {
-        left,
-        width,
-        center: left + width / 2
-      };
-
-      currentX = left + width + space;
-    }
-
-    return { navWidth, slots };
+    return computeTabSlots(activeTab, bottomNav?.offsetWidth || 320);
   }
 
   function setProgress(fromTab: FontifyTab, toTab: FontifyTab, progress: number) {
@@ -210,12 +218,28 @@ export function initFloatingNav(
     bottomNav.style.transform = `translateX(calc(-50% + ${containerDisp}px)) scaleX(${containerStretch}) scaleY(${containerSquash})`;
   }
 
+  function getTabRealSlot(tab: FontifyTab): { left: number; width: number; center: number } | null {
+    if (!bottomNav || typeof bottomNav.querySelector !== 'function') return null;
+    const btn = bottomNav.querySelector<HTMLElement>(
+      `.nav-tab[data-tab="${tab}"], .nav-tab[data-target="${tab}"]`
+    );
+    if (btn && typeof btn.offsetWidth === 'number' && btn.offsetWidth > 0) {
+      return {
+        left: btn.offsetLeft,
+        width: btn.offsetWidth,
+        center: btn.offsetLeft + btn.offsetWidth / 2
+      };
+    }
+    return null;
+  }
+
   function snapToActiveTab(immediate = false) {
     if (!isFloatingActive || isDragging) return;
 
     const activeTab = (store.getState().currentTab as FontifyTab) || 'overview';
+    const realSlot = getTabRealSlot(activeTab);
     const { slots } = calculateTabSlots(activeTab);
-    const slot = slots[activeTab] || slots['overview'];
+    const slot = realSlot || slots[activeTab] || slots['overview'];
 
     if (immediate) {
       highlighter!.style.transition = 'none';
@@ -244,7 +268,8 @@ export function initFloatingNav(
     setPreviewActiveTab(targetTab);
 
     const { slots } = calculateTabSlots(targetTab);
-    const slot = slots[targetTab] || slots['overview'];
+    const realSlot = getTabRealSlot(targetTab);
+    const slot = realSlot || slots[targetTab] || slots['overview'];
 
     highlighter!.style.transition =
       'transform 0.35s cubic-bezier(0.28, 1.18, 0.5, 1), width 0.35s cubic-bezier(0.28, 1.18, 0.5, 1)';
@@ -255,6 +280,11 @@ export function initFloatingNav(
     setTimeout(() => {
       if (!isDragging && highlighter) {
         highlighter.style.transition = '';
+        const settledSlot = getTabRealSlot(targetTab);
+        if (settledSlot) {
+          highlighter.style.width = `${settledSlot.width}px`;
+          highlighter.style.transform = `translate3d(${settledSlot.left}px, 0, 0)`;
+        }
       }
     }, 360);
   }

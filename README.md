@@ -10,6 +10,7 @@ Fontify allows you to apply any custom `.ttf`, `.otf`, or `.ttc` font across Sys
 ## Features
 
 - **Material 3 Expressive WebUI**: Dynamic wallpaper Monet palette theming, interactive live font playground, and real-time preview built with strict TypeScript and Vite.
+- **Online Font & Emoji Catalog (Browse)**: Discover, search, and 1-tap download curated fonts and emojis powered by zFont, Google Fonts, and Fontsource. Filter across content types (Fonts & Emojis), sources, and typeface categories (Sans Serif, Serif, Display, Handwriting, Monospace, Stylish, Color) with instant specimen preview, variant selection, and offline IndexedDB binary caching.
 - **Variable Font (`fvar`) Engine**: Zero-dependency binary SFNT/OpenType parser with live tuning of variation axes (`wght`, `wdth`, `opsz`, `slnt`, etc.) and instant presets.
 - **Curated Emoji Customizer**: Built-in 1-tap emoji replacement featuring top curated styles (iOS 26 Unicode 17, iOS 18, Microsoft Fluent 3D, Samsung One UI, Twemoji, and Google Noto Color), custom `.ttf` emoji importing, and offline IndexedDB binary caching.
 - **Universal Root Bridge & NoMount LKM Sync**: Native support for KernelSU, KernelSU Next, APatch, and MMRL WebUI environments with automatic timeout guards and dynamic rule synchronization for `nomount.ko` kernel drivers.
@@ -89,8 +90,12 @@ However, because root modules operate directly at the system partition, init scr
 
 ## Credits & Acknowledgments
 
-- **[zFont](https://github.com/zFont/Host)**: Huge thanks to the zFont project and contributors for curating, building, and hosting Android-compatible emoji and font packages.
-- **Emoji Vendors & Creators**: Apple, Microsoft, Samsung, Twemoji (X / Twitter), Google (Noto Color Emoji), and MFFM Emoji for their respective emoji designs and typeface assets.
+- **[zFont](https://github.com/zFont/Host)** & **[Khun Htetz Naing](https://zfont.app)**: Huge thanks to Khun Htetz Naing and the zFont project ([zFont GitHub](https://github.com/zFont), [zFont App](https://zfont.app), [zFont Host](https://github.com/zFont/Host)) for pioneering Android font and emoji packages, hosting, and curation.
+- **[MFFM Emoji](https://t.me/mffmemojis)** (`@mffmemojis`): For custom iOS, Samsung, and stylish vendor emoji packages and porting.
+- **RickyBush_** (`@EmojiReplacer`): Creator of Emoji Replacer and maintainer of curated Unicode emoji packages.
+- **[Fontsource](https://fontsource.org)**: For providing open-source font packages and distributions.
+- **[Google Fonts](https://fonts.google.com)**: For the extensive library of high-quality open-source typefaces (Roboto, Google Sans, Inter, Poppins, Montserrat, JetBrains Mono, etc.).
+- **Vendor Font & Emoji Creators**: Apple, Microsoft, Samsung, Twemoji (X / Twitter), Google (Noto Color Emoji), and independent type designers for their respective font and emoji designs.
 - **KernelSU & NoMount**: Thanks to the KernelSU, KernelSU Next, APatch, and NoMount teams for modern root mount and kernel redirection frameworks.
 
 ---
