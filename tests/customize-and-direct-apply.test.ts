@@ -235,7 +235,7 @@ describe('Customize Reactive UI & Direct Apply Fixes', () => {
     expect(inter).toBeDefined();
     expect(inter?.isVariable).toBe(true);
     expect(inter?.variableUrl).toBeDefined();
-    expect(inter?.variableUrl).toContain('raw.githubusercontent.com/google/fonts/main/ofl/inter/Inter');
+    expect(inter?.variableUrl).toContain('cdn.jsdelivr.net/gh/google/fonts@main/ofl/inter/Inter');
     expect(inter?.url).toBe(inter?.variableUrl);
 
     const varVariant = inter?.variants.find(v => v.name === 'Variable (100–900)');
@@ -265,5 +265,56 @@ describe('Customize Reactive UI & Direct Apply Fixes', () => {
     view.setUint8(14, 97);  // 'a'
     view.setUint8(15, 114); // 'r'
     expect(hasFvarTable(sfntBuf)).toBe(true);
+  });
+
+  it('displays download progress directly inside the preview modal during direct apply', async () => {
+    const { handleApplyDirectly } = await import('../src/ui/browse');
+
+    const mockModalBox: any = { style: { display: 'none' } };
+    const mockModalFill: any = { style: { width: '0%' } };
+    const mockModalText: any = { textContent: '' };
+    const mockModalPct: any = { textContent: '' };
+    const mockApplyBtn: any = { disabled: false, innerHTML: 'Apply Directly' };
+    const mockBackdrop: any = { style: { display: 'flex' }, classList: { remove: vi.fn() }, setAttribute: vi.fn() };
+
+    const domMap: Record<string, any> = {
+      'modal-download-progress-box': mockModalBox,
+      'modal-download-progress-fill': mockModalFill,
+      'modal-download-progress-text': mockModalText,
+      'modal-download-progress-pct': mockModalPct,
+      'btn-preview-apply': mockApplyBtn,
+      'browse-preview-backdrop': mockBackdrop
+    };
+
+    globalThis.document = {
+      getElementById: (id: string) => domMap[id] || null,
+      querySelectorAll: () => []
+    } as any;
+
+    const dummyEmojiItem: any = {
+      id: 'emoji-ios-26',
+      name: 'iOS 26.4 (Unicode 17)',
+      type: 'emoji',
+      source: 'zfont',
+      url: 'https://example.com/ios26.ttf',
+      variants: [{ name: 'Default', weight: 400, url: 'https://example.com/ios26.ttf' }]
+    };
+
+    // Spy on downloadAndCacheFont to simulate streaming progress
+    vi.spyOn(await import('../src/browse/catalogService'), 'downloadAndCacheFont').mockImplementation(async (_item, _variant, onProgress) => {
+      onProgress?.(45, 'Downloading iOS 26.4... 45% (15.2/33.7 MB)');
+      return new Uint8Array([1, 2, 3, 4]).buffer;
+    });
+
+    // Mock dialog runApplyWorkflow so it resolves cleanly
+    vi.spyOn(await import('../src/ui/components/dialog'), 'runApplyWorkflow').mockResolvedValue(true as any);
+
+    // Run direct apply
+    await handleApplyDirectly(dummyEmojiItem);
+
+    // Verify progress elements inside modal were updated during streaming
+    expect(mockModalFill.style.width).toBe('100%');
+    expect(mockModalText.textContent).toBe('Verifying package payload...');
+    expect(mockModalPct.textContent).toBe('100%');
   });
 });

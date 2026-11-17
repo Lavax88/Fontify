@@ -57,6 +57,7 @@ export interface ApplyEmojiParams {
   emojiName: string;
   emojiSource: 'custom' | 'preset';
   emojiUrl?: string;
+  localFilePath?: string;
   onProgress?: (percent: number, message: string) => void;
   signal?: AbortSignal;
 }

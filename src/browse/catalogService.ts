@@ -631,10 +631,12 @@ export async function syncOnlineCatalog(syncUrl = DEFAULT_SYNC_URL): Promise<Bro
 
 /**
  * Downloads a font or emoji binary, checks the cache first, and saves to IndexedDB upon fetch.
+ * Supports streaming progress callbacks for real-time modal progress reporting.
  */
 export async function downloadAndCacheFont(
   item: BrowseItem,
-  variant?: FontVariant
+  variant?: FontVariant,
+  onProgress?: (percent: number, message: string) => void
 ): Promise<ArrayBuffer> {
   const wantsVariable = Boolean(
     item.isVariable ||
@@ -648,6 +650,7 @@ export async function downloadAndCacheFont(
   if (cached && cached.buffer && cached.buffer.byteLength > 0) {
     const isRealFontFile = cached.buffer.byteLength >= 1000;
     if (!wantsVariable || !isRealFontFile || hasFvarTable(cached.buffer)) {
+      onProgress?.(100, `Loaded ${item.name} from cache`);
       return cached.buffer;
     }
     console.info(`[CatalogService] Cached font ${item.id} lacks 'fvar' table; invalidating stale cache to download authentic variable font.`);
@@ -662,23 +665,35 @@ export async function downloadAndCacheFont(
     throw new Error(`Item ${item.name} (${item.id}) does not have a valid download URL.`);
   }
 
+  // Derive high-speed CDN edge mirror URL and reliable authoritative fallback URL
+  let primaryUrl = downloadUrl;
+  let fallbackUrl = downloadUrl;
+
+  if (downloadUrl.startsWith('https://raw.githubusercontent.com/')) {
+    primaryUrl = `https://ghfast.top/${downloadUrl}`;
+    fallbackUrl = downloadUrl;
+  } else if (downloadUrl.includes('cdn.jsdelivr.net/gh/google/fonts@main/')) {
+    primaryUrl = downloadUrl;
+    fallbackUrl = downloadUrl.replace('cdn.jsdelivr.net/gh/google/fonts@main/', 'raw.githubusercontent.com/google/fonts/main/');
+  }
+
+  onProgress?.(5, `Connecting to ${item.name}...`);
+
   let response: Response;
   try {
-    response = await fetch(downloadUrl);
+    response = await fetch(primaryUrl);
   } catch (err) {
-    if (downloadUrl.includes('cdn.jsdelivr.net/gh/google/fonts@main/')) {
-      const fallback = downloadUrl.replace('cdn.jsdelivr.net/gh/google/fonts@main/', 'raw.githubusercontent.com/google/fonts/main/');
-      response = await fetch(fallback);
+    if (fallbackUrl && fallbackUrl !== primaryUrl) {
+      response = await fetch(fallbackUrl);
     } else {
       throw err;
     }
   }
 
-  // Handle CDN error codes (e.g. jsDelivr 403 on >50MB packages like Raleway)
-  if (!response.ok && downloadUrl.includes('cdn.jsdelivr.net/gh/google/fonts@main/')) {
-    const fallback = downloadUrl.replace('cdn.jsdelivr.net/gh/google/fonts@main/', 'raw.githubusercontent.com/google/fonts/main/');
+  // Handle CDN error codes (e.g. mirror 403/404 or >50MB packages) by failing over to fallback
+  if (!response.ok && fallbackUrl && fallbackUrl !== primaryUrl) {
     try {
-      const fbResponse = await fetch(fallback);
+      const fbResponse = await fetch(fallbackUrl);
       if (fbResponse.ok) {
         response = fbResponse;
       }
@@ -689,7 +704,59 @@ export async function downloadAndCacheFont(
     throw new Error(`Failed to download ${item.name}: HTTP ${response.status} ${response.statusText}`);
   }
 
-  const buffer = await response.arrayBuffer();
+  const contentLength = response.headers?.get ? response.headers.get('content-length') : null;
+  const totalBytes = contentLength ? parseInt(contentLength, 10) : 0;
+
+  let buffer: ArrayBuffer;
+  if (!response.body || typeof response.body.getReader !== 'function' || totalBytes === 0) {
+    onProgress?.(45, `Downloading ${item.name}...`);
+    buffer = await response.arrayBuffer();
+    onProgress?.(95, `Processing ${item.name}...`);
+  } else {
+    const reader = response.body.getReader();
+    let receivedBytes = 0;
+    const chunks: Uint8Array[] = [];
+    const startTime = typeof performance !== 'undefined' ? performance.now() : Date.now();
+    let lastProgressTime = startTime;
+
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+
+      chunks.push(value);
+      receivedBytes += value.length;
+
+      const now = typeof performance !== 'undefined' ? performance.now() : Date.now();
+      if (now - lastProgressTime >= 80 || receivedBytes === totalBytes) {
+        lastProgressTime = now;
+        const percent = totalBytes > 0 ? Math.min(99, Math.round((receivedBytes / totalBytes) * 100)) : 50;
+        const mbNow = (receivedBytes / (1024 * 1024)).toFixed(1);
+        const mbTotal = totalBytes > 0 ? (totalBytes / (1024 * 1024)).toFixed(1) : '?';
+        const elapsedSec = (now - startTime) / 1000;
+        const speedMBs = elapsedSec > 0 ? (receivedBytes / (1024 * 1024)) / elapsedSec : 0;
+        const speedStr = speedMBs >= 1 ? `${speedMBs.toFixed(1)} MB/s` : `${Math.round(speedMBs * 1024)} KB/s`;
+
+        let etaStr = '';
+        if (totalBytes > 0 && speedMBs > 0) {
+          const remainingMB = (totalBytes - receivedBytes) / (1024 * 1024);
+          const etaSec = Math.round(remainingMB / speedMBs);
+          etaStr = etaSec > 0 ? ` • ETA: ${etaSec}s` : ' • Finishing...';
+        }
+
+        onProgress?.(percent, `Downloading ${item.name}... ${percent}% (${mbNow}/${mbTotal} MB • ${speedStr}${etaStr})`);
+      }
+    }
+
+    const combined = new Uint8Array(receivedBytes);
+    let offset = 0;
+    for (const chunk of chunks) {
+      combined.set(chunk, offset);
+      offset += chunk.length;
+    }
+    buffer = combined.buffer;
+    onProgress?.(100, `Downloaded ${item.name}!`);
+  }
+
   await saveCachedFont(item.id, item, buffer);
 
   return buffer;

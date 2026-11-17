@@ -76,22 +76,42 @@ function escapeHtml(str: string): string {
 }
 
 function updateDownloadProgress(visible: boolean, percent = 0, message = 'Downloading...') {
+  const clamped = Math.min(100, Math.max(0, percent));
+  const rounded = Math.round(clamped);
+
+  // 1. In-modal progress elements (visible directly inside the active preview bottom sheet)
+  const modalBox = document.getElementById('modal-download-progress-box');
+  const modalFill = document.getElementById('modal-download-progress-fill');
+  const modalText = document.getElementById('modal-download-progress-text');
+  const modalPct = document.getElementById('modal-download-progress-pct');
+
+  if (modalBox) {
+    if (!visible) {
+      modalBox.style.display = 'none';
+    } else {
+      modalBox.style.display = 'block';
+      if (modalFill) modalFill.style.width = `${clamped}%`;
+      if (modalText) modalText.textContent = message;
+      if (modalPct) modalPct.textContent = `${rounded}%`;
+    }
+  }
+
+  // 2. Background Browse UI progress elements (visible in view-browse behind modal or when closed)
   const box = document.getElementById('browse-download-progress-box');
   const fill = document.getElementById('browse-download-progress-fill');
   const text = document.getElementById('browse-download-progress-text');
   const pct = document.getElementById('browse-download-progress-pct');
 
-  if (!box) return;
-
-  if (!visible) {
-    box.style.display = 'none';
-    return;
+  if (box) {
+    if (!visible) {
+      box.style.display = 'none';
+    } else {
+      box.style.display = 'block';
+      if (fill) fill.style.width = `${clamped}%`;
+      if (text) text.textContent = message;
+      if (pct) pct.textContent = `${rounded}%`;
+    }
   }
-
-  box.style.display = 'block';
-  if (fill) fill.style.width = `${Math.min(100, Math.max(0, percent))}%`;
-  if (text) text.textContent = message;
-  if (pct) pct.textContent = `${Math.round(percent)}%`;
 }
 
 export function isVariableItem(item: BrowseItem): boolean {
@@ -515,6 +535,17 @@ export function openPreviewSheet(item: BrowseItem): void {
       >${escapeHtml(defaultSpecimen)}</div>
     </div>
 
+    <!-- In-Modal Download Progress Bar (shown prominently inside the sheet when downloading) -->
+    <div id="modal-download-progress-box" class="download-progress-box" style="display: none; margin-top: 6px; margin-bottom: 2px; width: 100%;">
+      <div style="display: flex; justify-content: space-between; align-items: center; font-size: 0.8125rem; font-weight: 600; color: var(--md-sys-color-primary); margin-bottom: 6px;">
+        <span id="modal-download-progress-text">Downloading...</span>
+        <span id="modal-download-progress-pct">0%</span>
+      </div>
+      <div class="download-progress-bar-container" style="height: 6px; background: var(--md-sys-color-surface-container-high); border-radius: 9999px; overflow: hidden;">
+        <div id="modal-download-progress-fill" class="download-progress-fill" style="width: 0%; height: 100%; background: var(--md-sys-color-primary); transition: width 0.15s ease;"></div>
+      </div>
+    </div>
+
     <div style="display: flex; gap: 10px; margin-top: 4px; flex-wrap: wrap;">
       <button class="browse-action-btn browse-btn-apply" id="btn-preview-apply" type="button" style="flex: 1; justify-content: center; min-height: 44px;">
         Apply Directly
@@ -810,14 +841,80 @@ export async function handleDeleteCachedFont(item: BrowseItem): Promise<void> {
 }
 
 export async function handleApplyDirectly(item: BrowseItem, variant?: FontVariant): Promise<void> {
-  updateDownloadProgress(true, 10, `Preparing ${item.name}...`);
-  try {
-    const selectedVariant = variant || state.activeVariant || resolveVariant(item);
-    updateDownloadProgress(true, 30, `Downloading ${item.name}...`);
-    const buffer = await downloadAndCacheFont(item, selectedVariant);
-    state.cachedIds.add(item.id);
-    updateDownloadProgress(true, 70, 'Verifying package payload...');
+  const applyBtn = document.getElementById('btn-preview-apply') as HTMLButtonElement | null;
+  const customizeBtn = document.getElementById('btn-preview-customize') as HTMLButtonElement | null;
+  const deleteBtn = document.getElementById('btn-preview-delete') as HTMLButtonElement | null;
+  const originalApplyHtml = applyBtn ? applyBtn.innerHTML : 'Apply Directly';
 
+  try {
+    state.isDownloading = true;
+    if (applyBtn) {
+      applyBtn.disabled = true;
+      applyBtn.innerHTML = `
+        <span class="btn-spinner" aria-hidden="true"></span>
+        <span>Downloading...</span>
+      `;
+    }
+    if (customizeBtn) customizeBtn.disabled = true;
+    if (deleteBtn) deleteBtn.disabled = true;
+
+    updateDownloadProgress(true, 5, `Preparing ${item.name}...`);
+
+    // Fully-automatic check for local copy in /sdcard/Download
+    if (item.type === 'emoji') {
+      const cleanName = item.name.replace(/[^a-zA-Z0-9]/g, '*');
+      const patterns = [`*${cleanName}*.ttf`, `*${cleanName}*.otf`, `${item.id.replace(/^emoji-/, '')}*.ttf`];
+      const localPath = await fontService.checkLocalDownload(patterns);
+      if (localPath) {
+        updateDownloadProgress(true, 100, `Found local file: ${localPath.split('/').pop()}`);
+        showToast('Using local offline copy from Downloads');
+        await new Promise((r) => setTimeout(r, 200));
+        updateDownloadProgress(false);
+        closePreviewSheet();
+
+        await runApplyWorkflow({
+          title: 'Apply Emoji Font?',
+          body: `Install <strong>${escapeHtml(item.name)}</strong> (from local Downloads) across SystemUI and apps?<br><br>A device restart is required to reload system emojis.`,
+          confirmText: 'Apply Emoji',
+          iconType: 'apply',
+          onApply: async (onProgress) => {
+            await fontService.applyEmoji({
+              emojiBuffer: new ArrayBuffer(0),
+              emojiFile: null,
+              emojiName: item.name,
+              emojiSource: 'preset',
+              localFilePath: localPath,
+              onProgress
+            });
+          },
+          onReboot: async () => {
+            await fontService.reboot();
+          },
+          onCancelReboot: () => {
+            store.setState({ rebootRequired: true });
+            showToast('Reboot postponed. Restart anytime from the Overview tab.');
+          }
+        });
+        return;
+      }
+    }
+
+    const selectedVariant = variant || state.activeVariant || resolveVariant(item);
+    const varVariant = getVariableVariant(item);
+    const isVarSelected = selectedVariant.weight === '100-900' || selectedVariant.name.toLowerCase().includes('variable');
+    const downloadTarget = (isVariableItem(item) && (isVarSelected || !selectedVariant.url.includes('google/fonts'))) && varVariant
+      ? varVariant
+      : selectedVariant;
+
+    const buffer = await downloadAndCacheFont(item, downloadTarget, (pct, msg) => {
+      updateDownloadProgress(true, pct, msg);
+    });
+
+    state.cachedIds.add(item.id);
+    updateDownloadProgress(true, 100, 'Verifying package payload...');
+
+    // Small delay so user sees 100% completion inside modal before transition
+    await new Promise((r) => setTimeout(r, 220));
     updateDownloadProgress(false);
 
     // Dismiss preview bottom sheet modal so the apply confirmation dialog is fully unobscured
@@ -850,7 +947,6 @@ export async function handleApplyDirectly(item: BrowseItem, variant?: FontVarian
     } else {
       const parsed = FontParser.parse(buffer);
       const isVariableFont = parsed.isVariable;
-      const isVarSelected = selectedVariant.weight === '100-900' || selectedVariant.name.toLowerCase().includes('variable');
       const targetWeight = typeof selectedVariant.weight === 'number'
         ? selectedVariant.weight
         : parseInt(String(selectedVariant.weight), 10) || 400;
@@ -892,24 +988,57 @@ export async function handleApplyDirectly(item: BrowseItem, variant?: FontVarian
     }
   } catch (err) {
     updateDownloadProgress(false);
+    if (applyBtn) {
+      applyBtn.disabled = false;
+      applyBtn.innerHTML = originalApplyHtml;
+    }
+    if (customizeBtn) customizeBtn.disabled = false;
+    if (deleteBtn) deleteBtn.disabled = false;
     const msg = err instanceof Error ? err.message : String(err);
     showToast(`Failed to apply ${item.name}: ${msg}`);
+  } finally {
+    state.isDownloading = false;
   }
 }
 
 export async function handleOpenInCustomize(item: BrowseItem, variant?: FontVariant): Promise<void> {
-  updateDownloadProgress(true, 25, `Downloading ${item.name} for customization...`);
+  const applyBtn = document.getElementById('btn-preview-apply') as HTMLButtonElement | null;
+  const customizeBtn = document.getElementById('btn-preview-customize') as HTMLButtonElement | null;
+  const deleteBtn = document.getElementById('btn-preview-delete') as HTMLButtonElement | null;
+  const originalCustomizeHtml = customizeBtn ? customizeBtn.innerHTML : 'Open in Customize';
+
   try {
+    state.isDownloading = true;
+    if (customizeBtn) {
+      customizeBtn.disabled = true;
+      customizeBtn.innerHTML = `
+        <span class="btn-spinner" aria-hidden="true"></span>
+        <span>Downloading...</span>
+      `;
+    }
+    if (applyBtn) applyBtn.disabled = true;
+    if (deleteBtn) deleteBtn.disabled = true;
+
+    updateDownloadProgress(true, 5, `Preparing ${item.name}...`);
+
     const selectedVariant = variant || state.activeVariant || resolveVariant(item);
     const varVariant = getVariableVariant(item);
     const downloadTarget = (isVariableItem(item) && varVariant) ? varVariant : selectedVariant;
-    const buffer = await downloadAndCacheFont(item, downloadTarget);
+    const buffer = await downloadAndCacheFont(item, downloadTarget, (pct, msg) => {
+      updateDownloadProgress(true, pct, msg);
+    });
     state.cachedIds.add(item.id);
-    updateDownloadProgress(true, 85, 'Parsing font tables...');
+    updateDownloadProgress(true, 100, 'Parsing font tables...');
 
     const parsed = FontParser.parse(buffer);
     if (!parsed.valid) {
       updateDownloadProgress(false);
+      if (customizeBtn) {
+        customizeBtn.disabled = false;
+        customizeBtn.innerHTML = originalCustomizeHtml;
+      }
+      if (applyBtn) applyBtn.disabled = false;
+      if (deleteBtn) deleteBtn.disabled = false;
       showToast(parsed.error ? `Failed to parse font: ${parsed.error}` : 'Invalid font file.');
       return;
     }
@@ -974,8 +1103,16 @@ export async function handleOpenInCustomize(item: BrowseItem, variant?: FontVari
     showToast(`Opened "${item.name}" (${variantLabel}) in Customize`);
   } catch (err) {
     updateDownloadProgress(false);
+    if (customizeBtn) {
+      customizeBtn.disabled = false;
+      customizeBtn.innerHTML = originalCustomizeHtml;
+    }
+    if (applyBtn) applyBtn.disabled = false;
+    if (deleteBtn) deleteBtn.disabled = false;
     const msg = err instanceof Error ? err.message : String(err);
     showToast(`Failed to open in Customize: ${msg}`);
+  } finally {
+    state.isDownloading = false;
   }
 }
 

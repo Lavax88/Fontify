@@ -10,7 +10,8 @@ import {
   restoreStock as runRestoreStock,
   applyEmoji as runApplyEmoji,
   restoreEmojiStock as runRestoreEmojiStock,
-  rebootDevice as runRebootDevice
+  rebootDevice as runRebootDevice,
+  findLocalDownload
 } from './scripts';
 import type { SystemStatus, ScriptActionResult } from './types';
 import { store, Store } from '../state/store';
@@ -33,6 +34,7 @@ export interface EmojiApplyOptions {
   emojiName: string;
   emojiSource: 'custom' | 'preset';
   emojiUrl?: string;
+  localFilePath?: string;
   onProgress?: (percent: number, message: string) => void;
   signal?: AbortSignal;
 }
@@ -81,6 +83,7 @@ export class SystemFontService {
         emojiName: options.emojiName,
         emojiSource: options.emojiSource,
         emojiUrl: options.emojiUrl,
+        localFilePath: options.localFilePath,
         onProgress: (percent, msg) => {
           this.appStore.setState({ applyEmojiProgress: percent, applyEmojiProgressMessage: msg });
           options.onProgress?.(percent, msg);
@@ -245,6 +248,13 @@ export class SystemFontService {
    */
   public async reboot(): Promise<void> {
     await runRebootDevice();
+  }
+
+  /**
+   * Automatically inspects local phone storage (/sdcard/Download) for sideloaded fonts/emojis.
+   */
+  public async checkLocalDownload(patterns: string[]): Promise<string | null> {
+    return findLocalDownload(patterns);
   }
 }
 

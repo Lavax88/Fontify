@@ -386,6 +386,28 @@ export function setupEmojiTab(): void {
       return;
     }
 
+    // Fully-automatic check for local copy in /sdcard/Download
+    const localPatterns = [
+      `*${pack.id}*.ttf`,
+      `*${pack.title.replace(/[^a-zA-Z0-9]/g, '*')}*.ttf`,
+      `*${pack.name.replace(/[^a-zA-Z0-9]/g, '*')}*.ttf`
+    ];
+    const localPath = await fontService.checkLocalDownload(localPatterns);
+    if (localPath) {
+      store.setState({
+        emojiFile: null,
+        emojiBuffer: new ArrayBuffer(0),
+        emojiName: pack.name,
+        emojiSource: 'preset',
+        emojiUrl: pack.url,
+        selectedEmojiPreset: pack.id
+      });
+      if (emojiSourceBadge) emojiSourceBadge.textContent = 'Local';
+      renderCuratedGrid();
+      showToast(`Selected ${pack.title} (from local Downloads)`);
+      return;
+    }
+
     // Stream download with progress
     store.setState({
       isDownloadingEmoji: true,
@@ -397,15 +419,33 @@ export function setupEmojiTab(): void {
     renderCuratedGrid();
 
     if (downloadProgressContainer) downloadProgressContainer.style.display = 'block';
-    if (downloadProgressText) downloadProgressText.textContent = `Downloading ${pack.title}...`;
+    if (downloadProgressText) downloadProgressText.textContent = `Connecting to ${pack.title}...`;
 
     try {
-      const response = await fetch(pack.url);
+      const primaryUrl = pack.url.startsWith('https://raw.githubusercontent.com/')
+        ? `https://ghfast.top/${pack.url}`
+        : pack.url;
+      const fallbackUrl = pack.url;
+
+      let response: Response;
+      try {
+        response = await fetch(primaryUrl);
+      } catch (_) {
+        response = await fetch(fallbackUrl);
+      }
+
+      if (!response.ok && fallbackUrl !== primaryUrl) {
+        try {
+          const fb = await fetch(fallbackUrl);
+          if (fb.ok) response = fb;
+        } catch (_) {}
+      }
+
       if (!response.ok) {
         throw new Error(`HTTP error ${response.status}: ${response.statusText}`);
       }
 
-      const contentLength = response.headers.get('content-length');
+      const contentLength = response.headers?.get ? response.headers.get('content-length') : null;
       const totalBytes = contentLength ? parseInt(contentLength, 10) : 0;
 
       let combinedBuffer: ArrayBuffer;
@@ -416,6 +456,8 @@ export function setupEmojiTab(): void {
         const reader = response.body.getReader();
         let receivedBytes = 0;
         const chunks: Uint8Array[] = [];
+        const startTime = typeof performance !== 'undefined' ? performance.now() : Date.now();
+        let lastTick = startTime;
 
         while (true) {
           const { done, value } = await reader.read();
@@ -424,13 +466,26 @@ export function setupEmojiTab(): void {
           chunks.push(value);
           receivedBytes += value.length;
 
-          if (totalBytes > 0) {
-            const percent = Math.min(100, Math.round((receivedBytes / totalBytes) * 100));
-            if (downloadProgressFill) downloadProgressFill.style.width = `${percent}%`;
-            if (downloadProgressText) {
-              const mbNow = (receivedBytes / (1024 * 1024)).toFixed(1);
-              const mbTotal = (totalBytes / (1024 * 1024)).toFixed(1);
-              downloadProgressText.textContent = `Downloading ${pack.title}: ${percent}% (${mbNow}/${mbTotal} MB)`;
+          const now = typeof performance !== 'undefined' ? performance.now() : Date.now();
+          if (now - lastTick >= 80 || receivedBytes === totalBytes) {
+            lastTick = now;
+            if (totalBytes > 0) {
+              const percent = Math.min(100, Math.round((receivedBytes / totalBytes) * 100));
+              if (downloadProgressFill) downloadProgressFill.style.width = `${percent}%`;
+              if (downloadProgressText) {
+                const mbNow = (receivedBytes / (1024 * 1024)).toFixed(1);
+                const mbTotal = (totalBytes / (1024 * 1024)).toFixed(1);
+                const elapsedSec = (now - startTime) / 1000;
+                const speedMBs = elapsedSec > 0 ? (receivedBytes / (1024 * 1024)) / elapsedSec : 0;
+                const speedStr = speedMBs >= 1 ? `${speedMBs.toFixed(1)} MB/s` : `${Math.round(speedMBs * 1024)} KB/s`;
+                let etaStr = '';
+                if (speedMBs > 0) {
+                  const rem = (totalBytes - receivedBytes) / (1024 * 1024);
+                  const eta = Math.round(rem / speedMBs);
+                  etaStr = eta > 0 ? ` • ETA: ${eta}s` : ' • Finishing...';
+                }
+                downloadProgressText.textContent = `Downloading ${pack.title}: ${percent}% (${mbNow}/${mbTotal} MB • ${speedStr}${etaStr})`;
+              }
             }
           }
         }

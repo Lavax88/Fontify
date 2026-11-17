@@ -28,4 +28,44 @@ describe('Data Pipeline & Transfer Safety (Deep Module)', () => {
     expect(progressUpdates.length).toBeGreaterThan(0);
     expect(progressUpdates[progressUpdates.length - 1]).toBe(100);
   });
+
+  it('streamFontToDevice uses localFilePath fast-path when provided', async () => {
+    const dummyConfig = JSON.stringify({ emoji_name: 'Local Test Emoji', source: 'preset' });
+    let progressUpdates: number[] = [];
+
+    const { ttfPath, configPath } = await streamFontToDevice(
+      new ArrayBuffer(0),
+      null,
+      dummyConfig,
+      (pct) => progressUpdates.push(pct),
+      undefined,
+      undefined,
+      '/sdcard/Download/apple_ios18.ttf'
+    );
+
+    expect(ttfPath).toBe('/data/local/tmp/font_tmp.ttf');
+    expect(configPath).toBe('/data/local/tmp/config_tmp.json');
+    expect(progressUpdates).toContain(30);
+    expect(progressUpdates).toContain(100);
+  });
+
+  it('streamFontToDevice accelerates directUrl downloads through mirror proxies', async () => {
+    const dummyConfig = JSON.stringify({ emoji_name: 'Mirror Test Emoji', source: 'preset' });
+    let progressUpdates: number[] = [];
+
+    const { ttfPath, configPath } = await streamFontToDevice(
+      new ArrayBuffer(0),
+      null,
+      dummyConfig,
+      (pct) => progressUpdates.push(pct),
+      undefined,
+      'https://raw.githubusercontent.com/zFont/Host/master/ios18.ttf',
+      undefined
+    );
+
+    expect(ttfPath).toBe('/data/local/tmp/font_tmp.ttf');
+    expect(configPath).toBe('/data/local/tmp/config_tmp.json');
+    expect(progressUpdates).toContain(15);
+    expect(progressUpdates).toContain(100);
+  });
 });

@@ -71,7 +71,8 @@ export async function streamFontToDevice(
   configJson: string,
   onProgress?: (percent: number, message: string) => void,
   signal?: AbortSignal,
-  directUrl?: string
+  directUrl?: string,
+  localFilePath?: string
 ): Promise<{ ttfPath: string; configPath: string }> {
   // Ensure previous artifacts are wiped
   await cleanupTempFiles();
@@ -81,14 +82,32 @@ export async function streamFontToDevice(
       throw new Error('Transfer aborted by user.');
     }
 
+    // 0. Instant local sideload fast-path: copy directly from device storage (/sdcard/Download) in 0ms
+    if (localFilePath) {
+      onProgress?.(30, 'Using local device font file...');
+      const escapedLocal = localFilePath.replace(/'/g, "'\\''");
+      const cpRes = await exec(`cp -af '${escapedLocal}' ${TMP_TTF} 2>/dev/null && chmod 644 ${TMP_TTF}`);
+      if (cpRes.errno === 0) {
+        onProgress?.(85, 'Writing font configuration...');
+        const escapedConfig = configJson.replace(/'/g, "'\\''");
+        await exec(`printf '%s' '${escapedConfig}' > ${TMP_CFG}`);
+        onProgress?.(100, 'Payload ready on device.');
+        return { ttfPath: TMP_TTF, configPath: TMP_CFG };
+      }
+    }
+
     // 1. Ultra-fast direct device download ONLY if buffer is NOT already present in memory and URL is provided
     const hasBuffer = (buffer && buffer.byteLength >= 1000) || (file && file.size >= 1000);
     if (!hasBuffer && directUrl && directUrl.startsWith('http')) {
       onProgress?.(15, 'Downloading font directly to device...');
       try {
+        const acceleratedUrl = directUrl.startsWith('https://raw.githubusercontent.com/')
+          ? `https://ghfast.top/${directUrl}`
+          : directUrl;
+        const escapedAccel = acceleratedUrl.replace(/'/g, "'\\''");
         const escapedUrl = directUrl.replace(/'/g, "'\\''");
         const dlRes = await exec(
-          `curl -fkLs '${escapedUrl}' -o ${TMP_TTF} 2>/dev/null || wget -qO ${TMP_TTF} '${escapedUrl}' 2>/dev/null`,
+          `curl -fkLs '${escapedAccel}' -o ${TMP_TTF} 2>/dev/null || curl -fkLs '${escapedUrl}' -o ${TMP_TTF} 2>/dev/null || wget -qO ${TMP_TTF} '${escapedUrl}' 2>/dev/null`,
           { timeoutMs: 60000 }
         );
 

@@ -128,14 +128,15 @@ export async function applyEmoji(params: ApplyEmojiParams): Promise<ScriptAction
 
   const configJson = JSON.stringify(configObj);
 
-  // 1. Stream emoji payload in chunks to /data/local/tmp with verification (directUrl fast-path enabled)
+  // 1. Stream emoji payload in chunks to /data/local/tmp with verification (directUrl & localFilePath fast-paths enabled)
   const { ttfPath, configPath } = await streamFontToDevice(
     params.emojiBuffer,
     params.emojiFile,
     configJson,
     params.onProgress,
     params.signal,
-    params.emojiUrl
+    params.emojiUrl,
+    params.localFilePath
   );
 
   try {
@@ -224,4 +225,30 @@ export async function restoreStock(): Promise<ScriptActionResult> {
  */
 export async function rebootDevice(): Promise<void> {
   await exec('pkill -f system_server || killall system_server');
+}
+
+/**
+ * Automatically inspects local phone storage (/sdcard/Download) for sideloaded fonts or emojis.
+ */
+export async function findLocalDownload(patterns: string[]): Promise<string | null> {
+  if (!patterns || patterns.length === 0) return null;
+  const searchCandidates = patterns.map(p => `/sdcard/Download/${p} /sdcard/Download/*/${p}`).join(' ');
+  const cmd = `for f in ${searchCandidates}; do
+    if [ -f "$f" ]; then
+      sz=$(wc -c < "$f" 2>/dev/null || echo 0)
+      if [ "$sz" -gt 1000000 ]; then
+        echo "$f"
+        exit 0
+      fi
+    fi
+  done; exit 1`;
+
+  try {
+    const res = await exec(cmd, { timeoutMs: 2500 });
+    const path = res.stdout.trim().split('\n')[0];
+    if (res.errno === 0 && path && path.startsWith('/sdcard/')) {
+      return path;
+    }
+  } catch (_) {}
+  return null;
 }

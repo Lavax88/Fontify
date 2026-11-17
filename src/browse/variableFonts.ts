@@ -63,7 +63,7 @@ export const GOOGLE_VARIABLE_FONT_PATHS: Record<string, string> = {
 };
 
 /**
- * Returns the raw.githubusercontent authentic TTF URL for a Google variable font family.
+ * Returns the high-speed jsDelivr CDN URL for a Google variable font family (with raw GitHub fallback).
  */
 export function getGoogleVariableFontUrl(slug: string): string | undefined {
   const normalizedSlug = slug.toLowerCase().trim();
@@ -72,7 +72,7 @@ export function getGoogleVariableFontUrl(slug: string): string | undefined {
 
   if (!relPath) return undefined;
   const encodedPath = relPath.replace(/\[/g, '%5B').replace(/\]/g, '%5D').replace(/,/g, '%2C');
-  return `https://raw.githubusercontent.com/google/fonts/main/${encodedPath}`;
+  return `https://cdn.jsdelivr.net/gh/google/fonts@main/${encodedPath}`;
 }
 
 /**
