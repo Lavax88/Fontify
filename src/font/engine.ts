@@ -18,6 +18,10 @@ export class FontEngine {
   ): Promise<FontFace> {
     this.unloadActiveFont();
 
+    if (typeof FontFace === 'undefined' || typeof document === 'undefined' || !document.fonts) {
+      return {} as FontFace;
+    }
+
     const blob = new Blob([buffer], { type: 'font/ttf' });
     this.activeBlobUrl = URL.createObjectURL(blob);
 
@@ -69,11 +73,11 @@ export class FontEngine {
     axisValues: Record<string, number>,
     fontFamily = "'CustomImportedFont', sans-serif"
   ): void {
-    if (this.pendingRaf !== null) {
+    if (this.pendingRaf !== null && typeof cancelAnimationFrame === 'function') {
       cancelAnimationFrame(this.pendingRaf);
     }
 
-    this.pendingRaf = requestAnimationFrame(() => {
+    const applyUpdate = () => {
       this.pendingRaf = null;
       const settings = this.formatVariationSettings(axisValues);
 
@@ -82,6 +86,12 @@ export class FontEngine {
         el.style.fontFamily = fontFamily;
         el.style.fontVariationSettings = settings;
       }
-    });
+    };
+
+    if (typeof requestAnimationFrame === 'function') {
+      this.pendingRaf = requestAnimationFrame(applyUpdate);
+    } else {
+      applyUpdate();
+    }
   }
 }

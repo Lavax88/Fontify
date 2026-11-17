@@ -57,13 +57,27 @@ export function renderVariableControls(
     }
   }
 
+  // Determine active preset chip based on store selectedPreset or matching wght value
+  const selectedPresetFromStore = store.getState().selectedPreset;
+  let matchedPresetIndex = -1;
+  if (selectedPresetFromStore) {
+    matchedPresetIndex = presets.findIndex(p => p.name.toLowerCase() === selectedPresetFromStore.toLowerCase());
+  }
+  if (matchedPresetIndex === -1 && initialAxisValues['wght'] !== undefined) {
+    matchedPresetIndex = presets.findIndex(p => p.values.wght === initialAxisValues['wght']);
+  }
+  if (matchedPresetIndex === -1) {
+    matchedPresetIndex = 0; // Fallback to Auto (Stock)
+  }
+
   presets.forEach((preset, idx) => {
+    const isInitialActive = idx === matchedPresetIndex;
     const chip = document.createElement('button');
     chip.type = 'button';
-    chip.className = `m3-chip ${idx === 0 ? 'active' : ''}`;
+    chip.className = `m3-chip ${isInitialActive ? 'active' : ''}`;
     chip.textContent = preset.name;
     chip.setAttribute('role', 'button');
-    chip.setAttribute('aria-pressed', idx === 0 ? 'true' : 'false');
+    chip.setAttribute('aria-pressed', isInitialActive ? 'true' : 'false');
 
     chip.addEventListener('click', () => {
       setActiveChip(presetsContainer.querySelectorAll<HTMLButtonElement>('.m3-chip'), chip);
@@ -139,4 +153,7 @@ export function renderVariableControls(
 
     slidersContainer.appendChild(unit);
   }
+
+  // Schedule immediate variation update for preview elements
+  FontEngine.scheduleVariationUpdate(previewElements, initialAxisValues);
 }

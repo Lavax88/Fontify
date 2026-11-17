@@ -27,21 +27,11 @@ if [ ! -f "$DATA_DIR/custom_font.ttf" ] || [ ! -s "$DATA_DIR/custom_font.ttf" ];
     rm -rf "$MODDIR/product" 2>/dev/null
 fi
 
-# 3. Clean NoMount VFS redirection rules for emojis
-if [ -f "$MODDIR/bin/nomount_sync.sh" ]; then
-    sh "$MODDIR/bin/nomount_sync.sh" del_emoji 2>/dev/null
-    sh "$MODDIR/bin/nomount_sync.sh" sync 2>/dev/null
-fi
-
-# 4. Clear font caches and updatable font overrides
-if [ -f "$MODDIR/bin/clear_font_cache.sh" ]; then
-    sh "$MODDIR/bin/clear_font_cache.sh" 2>/dev/null
-else
-    rm -rf /data/fonts/files/* 2>/dev/null
-    rm -rf /data/fonts/config/* 2>/dev/null
-    rm -rf /data/system/font_cache/* 2>/dev/null
-    cmd font clear 2>/dev/null || true
-fi
+# 3. Clean font caches and updatable font overrides from storage.
+# NoMount VFS rules are safely synchronized on next boot by post-fs-data.sh.
+rm -rf /data/fonts/files/* 2>/dev/null
+rm -rf /data/fonts/config/* 2>/dev/null
+rm -rf /data/system/font_cache/* 2>/dev/null
 
 echo '{"success": true, "message": "Custom emoji removed and stock emoji restored. Please reboot to apply."}'
 exit 0

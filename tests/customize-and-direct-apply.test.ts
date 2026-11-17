@@ -1,0 +1,269 @@
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
+import { store } from '../src/state/store';
+import { setupCustomizeTab } from '../src/ui/customize';
+import type { FontInfo } from '../src/font/types';
+
+describe('Customize Reactive UI & Direct Apply Fixes', () => {
+  let originalDocument: any;
+  let originalWindow: any;
+
+  beforeEach(() => {
+    originalDocument = globalThis.document;
+    originalWindow = globalThis.window;
+    store.setState({
+      fontFile: null,
+      fontBuffer: null,
+      fontData: null,
+      axisValues: {},
+      selectedPreset: '',
+      weightMode: 'auto',
+      currentTab: 'overview'
+    });
+  });
+
+  afterEach(() => {
+    globalThis.document = originalDocument;
+    globalThis.window = originalWindow;
+    vi.restoreAllMocks();
+  });
+
+  it('automatically opens variable controls, presets, and sliders when fontData is set in store', async () => {
+    // DOM mocks
+    const mockDropzone: any = { addEventListener: vi.fn(), classList: { add: vi.fn(), remove: vi.fn() } };
+    const mockFileInput: any = { addEventListener: vi.fn(), click: vi.fn() };
+    const mockBtnSelectFile: any = { addEventListener: vi.fn() };
+    const mockPickerTitle: any = { textContent: 'Import Font File' };
+    const mockPickerSubtitle: any = { textContent: 'Tap to select or drop any .ttf or .otf font' };
+
+    const mockFontInfoRow: any = { style: { display: 'none' } };
+    const mockFontName: any = { textContent: '' };
+    const mockFontFormat: any = { textContent: '' };
+    const mockFontTypeBadge: any = { textContent: '' };
+    const mockVariableControlsGroup: any = { style: { display: 'none' } };
+    const mockSlidersContainer: any = { innerHTML: '', appendChild: vi.fn((el) => mockSlidersContainer.children.push(el)), children: [] };
+    const mockPresetsContainer: any = {
+      innerHTML: '',
+      appendChild: vi.fn((el) => mockPresetsContainer.children.push(el)),
+      children: [],
+      querySelectorAll: vi.fn(() => mockPresetsContainer.children)
+    };
+
+    const mockBtnApply: any = { disabled: true, addEventListener: vi.fn() };
+    const mockBtnRestore: any = { addEventListener: vi.fn() };
+    const mockBtnSoftReboot: any = { addEventListener: vi.fn() };
+    const mockPreviewText: any = { style: {} };
+
+    const elements: Record<string, any> = {
+      'dropzone': mockDropzone,
+      'file-input': mockFileInput,
+      'btn-select-file': mockBtnSelectFile,
+      'picker-title': mockPickerTitle,
+      'picker-subtitle': mockPickerSubtitle,
+      'font-info-row': mockFontInfoRow,
+      'font-name': mockFontName,
+      'font-format': mockFontFormat,
+      'font-type-badge': mockFontTypeBadge,
+      'variable-controls-group': mockVariableControlsGroup,
+      'sliders-container': mockSlidersContainer,
+      'presets-container': mockPresetsContainer,
+      'btn-apply': mockBtnApply,
+      'btn-restore': mockBtnRestore,
+      'btn-soft-reboot': mockBtnSoftReboot
+    };
+
+    globalThis.document = {
+      createElement: vi.fn((tag: string) => {
+        const el: any = {
+          tagName: tag.toUpperCase(),
+          className: '',
+          textContent: '',
+          style: {},
+          children: [],
+          classList: {
+            add: vi.fn((c: string) => { el.className += ` ${c}`; }),
+            remove: vi.fn((c: string) => { el.className = el.className.replace(c, '').trim(); }),
+            toggle: vi.fn((c: string, force?: boolean) => {
+              if (force) el.className += ` ${c}`;
+            })
+          },
+          setAttribute: vi.fn(),
+          getAttribute: vi.fn(),
+          addEventListener: vi.fn(),
+          querySelector: vi.fn(() => ({
+            addEventListener: vi.fn(),
+            setAttribute: vi.fn()
+          })),
+          appendChild: vi.fn()
+        };
+        return el;
+      }),
+      getElementById: (id: string) => elements[id] || null,
+      querySelectorAll: (sel: string) => {
+        if (sel === '.preview-text') return [mockPreviewText];
+        return [];
+      }
+    } as any;
+
+    globalThis.window = {
+      addEventListener: vi.fn(),
+      removeEventListener: vi.fn()
+    } as any;
+
+    // Initialize customize tab
+    setupCustomizeTab();
+
+    // Verify initial idle state
+    expect(mockFontInfoRow.style.display).toBe('none');
+    expect(mockVariableControlsGroup.style.display).toBe('none');
+    expect(mockPickerTitle.textContent).toBe('Import Font File');
+
+    // Simulate "Open in Customize" from Browse tab:
+    // A variable font with target weight 700 is set into store
+    const sampleVariableFont: FontInfo = {
+      valid: true,
+      format: 'TrueType Variable Font',
+      fullName: 'Roboto Flex',
+      familyName: 'Roboto Flex',
+      subfamilyName: 'Regular',
+      postscriptName: 'RobotoFlex-Regular',
+      isVariable: true,
+      isCollection: false,
+      numGlyphs: 1200,
+      unitsPerEm: 1000,
+      version: 'v2.0',
+      axes: [
+        { tag: 'wght', name: 'Weight', min: 100, max: 900, default: 400, current: 400 }
+      ],
+      instances: []
+    };
+
+    store.setState({
+      fontData: sampleVariableFont,
+      fontBuffer: new Uint8Array([1, 2, 3, 4]).buffer,
+      axisValues: { wght: 700 },
+      selectedPreset: 'Bold (700)',
+      weightMode: 'custom',
+      currentTab: 'customize'
+    });
+
+    // Reactive subscription should automatically populate UI:
+    expect(mockPickerTitle.textContent).toBe('Roboto Flex');
+    expect(mockPickerSubtitle.textContent).toContain('1200 glyphs');
+    expect(mockFontInfoRow.style.display).toBe('flex');
+    expect(mockFontName.textContent).toBe('Roboto Flex');
+    expect(mockFontTypeBadge.textContent).toBe('Variable');
+
+    // Variable controls group must automatically open
+    expect(mockVariableControlsGroup.style.display).toBe('flex');
+    expect(mockBtnApply.disabled).toBe(false);
+
+    // Presets must have the Bold (700) chip active
+    const boldChip = mockPresetsContainer.children.find((c: any) => c.textContent === 'Bold (700)');
+    expect(boldChip).toBeDefined();
+    expect(boldChip.className).toContain('active');
+  });
+
+  it('handleOpenInCustomize configures matching variant preset and switches tab', async () => {
+    const { handleOpenInCustomize } = await import('../src/ui/browse');
+    const { FontParser } = await import('../src/font/parser');
+    const catalogService = await import('../src/browse/catalogService');
+
+    // Mock download and cache
+    vi.spyOn(catalogService, 'downloadAndCacheFont').mockResolvedValue(new Uint8Array([1, 2, 3, 4]).buffer);
+
+    // Mock FontParser
+    const mockFontInfo: FontInfo = {
+      valid: true,
+      format: 'TrueType Variable Font',
+      fullName: 'Inter Variable',
+      familyName: 'Inter',
+      subfamilyName: 'Regular',
+      postscriptName: 'Inter-Variable',
+      isVariable: true,
+      isCollection: false,
+      numGlyphs: 1500,
+      unitsPerEm: 1000,
+      version: 'v1.0',
+      axes: [{ tag: 'wght', name: 'Weight', min: 100, max: 900, default: 400, current: 400 }],
+      instances: []
+    };
+    vi.spyOn(FontParser, 'parse').mockReturnValue(mockFontInfo);
+
+    // Mock window switchTab and document
+    let switchedTo: string | null = null;
+    globalThis.window = {
+      switchTab: vi.fn((tab: string) => {
+        switchedTo = tab;
+      })
+    } as any;
+
+    globalThis.document = {
+      body: { appendChild: vi.fn(), removeChild: vi.fn() },
+      getElementById: vi.fn(() => null),
+      createElement: vi.fn(() => ({ appendChild: vi.fn(), classList: { add: vi.fn(), remove: vi.fn() } })),
+      querySelectorAll: vi.fn(() => [])
+    } as any;
+
+    const sampleItem: any = {
+      id: 'google-inter',
+      name: 'Inter',
+      type: 'font',
+      source: 'google',
+      isVariable: true,
+      url: 'https://fonts.gstatic.com/s/inter/inter.ttf',
+      variants: [
+        { name: 'Regular 400', weight: 400, url: 'https://fonts.gstatic.com/s/inter/inter-400.ttf' },
+        { name: 'Bold 700', weight: 700, url: 'https://fonts.gstatic.com/s/inter/inter-700.ttf' }
+      ]
+    };
+
+    const boldVariant = sampleItem.variants[1];
+    await handleOpenInCustomize(sampleItem, boldVariant);
+
+    const state = store.getState();
+    expect(state.fontData).toBeDefined();
+    expect(state.fontData?.fullName).toBe('Inter Variable');
+    expect(state.axisValues['wght']).toBe(700);
+    expect(state.selectedPreset).toBe('Bold (700)');
+    expect(state.weightMode).toBe('custom');
+    expect(switchedTo).toBe('customize');
+  });
+
+  it('guarantees bundled Google variable fonts have authentic variableUrl and Variable variant', async () => {
+    const { BUNDLED_GOOGLE_FONTS } = await import('../src/browse/bundledCatalog');
+    const inter = BUNDLED_GOOGLE_FONTS.find(f => f.name === 'Inter');
+    expect(inter).toBeDefined();
+    expect(inter?.isVariable).toBe(true);
+    expect(inter?.variableUrl).toBeDefined();
+    expect(inter?.variableUrl).toContain('raw.githubusercontent.com/google/fonts/main/ofl/inter/Inter');
+    expect(inter?.url).toBe(inter?.variableUrl);
+
+    const varVariant = inter?.variants.find(v => v.name === 'Variable (100–900)');
+    expect(varVariant).toBeDefined();
+    expect(varVariant?.isVariable).toBe(true);
+    expect(varVariant?.url).toBe(inter?.variableUrl);
+  });
+
+  it('detects fvar table accurately in binary buffers and invalidates stale static caches', async () => {
+    const { hasFvarTable, getGoogleVariableFontUrl } = await import('../src/browse/variableFonts');
+    expect(getGoogleVariableFontUrl('inter')).toContain('Inter%5Bopsz%2Cwght%5D.ttf');
+    expect(getGoogleVariableFontUrl('montserrat')).toContain('Montserrat%5Bwght%5D.ttf');
+    expect(getGoogleVariableFontUrl('non-existent-font-slug-xyz')).toBeUndefined();
+
+    // Buffer without fvar
+    const emptyBuf = new ArrayBuffer(50);
+    expect(hasFvarTable(emptyBuf)).toBe(false);
+
+    // Synthesize minimal OpenType header with fvar table entry
+    const sfntBuf = new ArrayBuffer(64);
+    const view = new DataView(sfntBuf);
+    view.setUint32(0, 0x00010000); // sfntVersion
+    view.setUint16(4, 1); // numTables = 1
+    // Write tag 'fvar' at offset 12
+    view.setUint8(12, 102); // 'f'
+    view.setUint8(13, 118); // 'v'
+    view.setUint8(14, 97);  // 'a'
+    view.setUint8(15, 114); // 'r'
+    expect(hasFvarTable(sfntBuf)).toBe(true);
+  });
+});

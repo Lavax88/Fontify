@@ -134,7 +134,70 @@ export function setupCustomizeTab(): void {
     });
   }
 
-  // 2. Process Imported Font File
+  // 2. Sync Customize UI from Store State (Single Source of Truth)
+  function syncCustomizeUIFromStore(): void {
+    const state = store.getState();
+    const fontData = state.fontData;
+
+    if (!fontData || !fontData.valid) {
+      if (fontInfoRow) fontInfoRow.style.display = 'none';
+      if (variableControlsGroup) variableControlsGroup.style.display = 'none';
+      if (pickerTitle) pickerTitle.textContent = 'Import Font File';
+      if (pickerSubtitle) pickerSubtitle.textContent = 'Tap to select or drop any .ttf or .otf font';
+      if (btnApply) btnApply.disabled = true;
+      return;
+    }
+
+    // Update Picker Card State
+    if (pickerTitle) pickerTitle.textContent = fontData.fullName;
+    if (pickerSubtitle) {
+      pickerSubtitle.textContent = `${fontData.format} (${fontData.numGlyphs || 0} glyphs)`;
+    }
+
+    // Update Font Info Row
+    if (fontInfoRow) fontInfoRow.style.display = 'flex';
+    if (fontNameElem) fontNameElem.textContent = fontData.fullName;
+    if (fontFormatElem) {
+      const ver = fontData.version ? (fontData.version.toLowerCase().startsWith('v') ? fontData.version : `v${fontData.version}`) : 'v1.0';
+      fontFormatElem.textContent = `${fontData.format} ${ver}`;
+    }
+
+    // Render variable sliders and preset chips if font is variable
+    if (fontData.isVariable) {
+      if (fontTypeBadge) fontTypeBadge.textContent = 'Variable';
+      if (variableControlsGroup) variableControlsGroup.style.display = 'flex';
+      renderVariableControls(fontData, previewElements);
+    } else {
+      if (fontTypeBadge) fontTypeBadge.textContent = 'Static';
+      if (variableControlsGroup) variableControlsGroup.style.display = 'none';
+      FontEngine.scheduleVariationUpdate(previewElements, {});
+    }
+
+    if (btnApply) btnApply.disabled = false;
+
+    // Load font face asynchronously for live preview specimen rendering
+    if (state.fontBuffer) {
+      FontEngine.loadFontFace('CustomImportedFont', state.fontBuffer).catch((err) => {
+        console.error('FontFace registration error:', err);
+      });
+    }
+  }
+
+  // Subscribe to store updates for fontData and tab changes
+  store.subscribe(s => s.fontData, () => {
+    syncCustomizeUIFromStore();
+  });
+
+  store.subscribe(s => s.currentTab, (tab) => {
+    if (tab === 'customize') {
+      syncCustomizeUIFromStore();
+    }
+  });
+
+  // Initial check on startup
+  syncCustomizeUIFromStore();
+
+  // 3. Process Imported Font File
   function processSelectedFile(file: File): void {
     const reader = new FileReader();
 
@@ -151,48 +214,19 @@ export function setupCustomizeTab(): void {
       store.setState({
         fontFile: file,
         fontBuffer: buffer,
-        fontData
+        fontData,
+        selectedPreset: '',
+        weightMode: 'normal'
       });
 
-      try {
-        await FontEngine.loadFontFace('CustomImportedFont', buffer);
-        FontEngine.scheduleVariationUpdate(previewElements, store.getState().axisValues);
-        showToast(`Loaded "${fontData.fullName}"`);
-      } catch (err) {
-        console.error('FontFace registration error:', err);
-      }
-
-      // Update Picker Card State
-      if (pickerTitle) pickerTitle.textContent = fontData.fullName;
-      if (pickerSubtitle) {
-        pickerSubtitle.textContent = `${fontData.format} (${fontData.numGlyphs || 0} glyphs)`;
-      }
-
-      // Update Font Info Row
-      if (fontInfoRow) fontInfoRow.style.display = 'flex';
-      if (fontNameElem) fontNameElem.textContent = fontData.fullName;
-      if (fontFormatElem) {
-        const ver = fontData.version ? (fontData.version.toLowerCase().startsWith('v') ? fontData.version : `v${fontData.version}`) : 'v1.0';
-        fontFormatElem.textContent = `${fontData.format} ${ver}`;
-      }
-
-      if (fontData.isVariable) {
-        if (fontTypeBadge) fontTypeBadge.textContent = 'Variable';
-        renderVariableControls(fontData, previewElements);
-      } else {
-        if (fontTypeBadge) fontTypeBadge.textContent = 'Static';
-        if (variableControlsGroup) variableControlsGroup.style.display = 'none';
-        store.setState({ axisValues: {}, weightMode: 'auto' });
-        FontEngine.scheduleVariationUpdate(previewElements, {});
-      }
-
-      if (btnApply) btnApply.disabled = false;
+      showToast(`Loaded "${fontData.fullName}"`);
+      await syncCustomizeUIFromStore();
     };
 
     reader.readAsArrayBuffer(file);
   }
 
-  // 3. Fallback handlers for legacy buttons if present
+  // 4. Fallback handlers for legacy buttons if present
   if (btnApply) {
     btnApply.addEventListener('click', applySelectedFont);
   }

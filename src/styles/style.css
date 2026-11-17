@@ -44,8 +44,10 @@ body {
   width: 42px;
   height: 42px;
   border-radius: var(--md-corner-full, 9999px);
-  border: none;
-  background-color: var(--md-sys-color-surface-container);
+  border: 1px solid color-mix(in srgb, var(--md-sys-color-outline-variant) 35%, transparent);
+  background-color: color-mix(in srgb, var(--md-sys-color-surface-container) 80%, transparent);
+  -webkit-backdrop-filter: blur(12px);
+  backdrop-filter: blur(12px);
   color: var(--md-sys-color-on-surface-variant);
   display: flex;
   align-items: center;
@@ -990,7 +992,7 @@ input[type="range"]::-webkit-slider-thumb:active {
   position: fixed;
   inset: 0;
   background-color: var(--modal-scrim);
-  z-index: 100;
+  z-index: 2000;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -998,6 +1000,8 @@ input[type="range"]::-webkit-slider-thumb:active {
   opacity: 0;
   pointer-events: none;
   transition: opacity 280ms var(--m3-easing-standard);
+  -webkit-backdrop-filter: blur(16px);
+  backdrop-filter: blur(16px);
 }
 
 .modal-backdrop.open {
@@ -1006,10 +1010,10 @@ input[type="range"]::-webkit-slider-thumb:active {
 }
 
 .m3-dialog {
-  background-color: var(--nav-floating-bg);
-  backdrop-filter: blur(var(--glass-blur));
-  -webkit-backdrop-filter: blur(var(--glass-blur));
-  border: 1px solid var(--nav-floating-border);
+  background-color: color-mix(in srgb, var(--md-sys-color-surface-container-high) 85%, transparent);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  border: 1px solid color-mix(in srgb, var(--md-sys-color-outline-variant) 50%, transparent);
   box-shadow: var(--nav-floating-shadow);
   color: var(--md-sys-color-on-surface);
   border-radius: var(--m3-radius-dialog);
@@ -1231,13 +1235,15 @@ input[type="range"]::-webkit-slider-thumb:active {
   width: 48px;
   height: 48px;
   border-radius: var(--md-corner-full, 9999px);
-  border: 1px solid var(--md-sys-color-outline-variant);
+  border: 1px solid color-mix(in srgb, var(--md-sys-color-outline-variant) 60%, transparent);
   display: flex;
   align-items: center;
   justify-content: center;
   box-shadow: var(--elevation-shadow-1);
   cursor: pointer;
-  background-color: var(--md-sys-color-secondary-container);
+  background-color: color-mix(in srgb, var(--md-sys-color-secondary-container) 85%, transparent);
+  -webkit-backdrop-filter: blur(16px);
+  backdrop-filter: blur(16px);
   color: var(--md-sys-color-on-secondary-container);
   transition: transform 160ms var(--m3-easing-spring), background-color 180ms ease, box-shadow 160ms ease;
 }
@@ -1250,13 +1256,15 @@ input[type="range"]::-webkit-slider-thumb:active {
   height: 56px;
   padding: 0 24px 0 20px;
   border-radius: var(--md-corner-full, 9999px);
-  border: none;
+  border: 1px solid color-mix(in srgb, var(--md-sys-color-outline-variant) 40%, transparent);
   display: flex;
   align-items: center;
   gap: 10px;
   box-shadow: var(--elevation-shadow-2);
   cursor: pointer;
-  background-color: var(--md-sys-color-primary);
+  background-color: color-mix(in srgb, var(--md-sys-color-primary) 90%, transparent);
+  -webkit-backdrop-filter: blur(16px);
+  backdrop-filter: blur(16px);
   color: var(--md-sys-color-on-primary);
   font-size: var(--md-sys-typescale-label-large-size);
   font-weight: 700;
@@ -1265,7 +1273,9 @@ input[type="range"]::-webkit-slider-thumb:active {
 }
 
 .fab-pill-btn:disabled {
-  background-color: var(--md-sys-color-surface-container-high);
+  background-color: color-mix(in srgb, var(--md-sys-color-surface-container-high) 85%, transparent);
+  -webkit-backdrop-filter: blur(16px);
+  backdrop-filter: blur(16px);
   color: var(--md-sys-color-on-surface-variant);
   opacity: 0.6;
   cursor: not-allowed;
@@ -1283,7 +1293,7 @@ input[type="range"]::-webkit-slider-thumb:active {
   bottom: calc(var(--bottom-inset) + 76px);
   left: 50%;
   transform: translateX(-50%);
-  z-index: 110;
+  z-index: 2100;
   display: flex;
   flex-direction: column;
   gap: 8px;
@@ -1293,7 +1303,10 @@ input[type="range"]::-webkit-slider-thumb:active {
 }
 
 .toast-item {
-  background-color: var(--md-sys-color-on-surface);
+  background-color: color-mix(in srgb, var(--md-sys-color-on-surface) 88%, transparent);
+  -webkit-backdrop-filter: blur(16px);
+  backdrop-filter: blur(16px);
+  border: 1px solid color-mix(in srgb, var(--md-sys-color-outline-variant) 40%, transparent);
   color: var(--md-sys-color-surface);
   padding: 16px 20px;
   border-radius: var(--md-sys-shape-corner-large);
@@ -2304,11 +2317,15 @@ input[type="range"]::-webkit-slider-thumb:active {
   max-width: 640px;
   max-height: 85vh;
   overflow-y: auto;
-  background-color: var(--md-sys-color-surface-container);
+  background-color: color-mix(in srgb, var(--md-sys-color-surface-container) 85%, transparent);
+  -webkit-backdrop-filter: blur(24px);
+  backdrop-filter: blur(24px);
   border-radius: 28px 28px 0 0;
   padding: 24px 20px calc(24px + var(--bottom-inset)) 20px;
   box-shadow: 0 -8px 36px rgba(0, 0, 0, 0.45);
-  border-top: 1px solid var(--md-sys-color-outline-variant);
+  border-top: 1px solid color-mix(in srgb, var(--md-sys-color-outline-variant) 60%, transparent);
+  border-left: 1px solid color-mix(in srgb, var(--md-sys-color-outline-variant) 40%, transparent);
+  border-right: 1px solid color-mix(in srgb, var(--md-sys-color-outline-variant) 40%, transparent);
   transition: transform 320ms cubic-bezier(0.2, 0.9, 0.3, 1);
   z-index: 1002;
   box-sizing: border-box;
@@ -2320,6 +2337,8 @@ input[type="range"]::-webkit-slider-thumb:active {
   align-items: flex-end;
   justify-content: center;
   padding: 0;
+  -webkit-backdrop-filter: blur(16px);
+  backdrop-filter: blur(16px);
 }
 
 #browse-preview-backdrop.active,

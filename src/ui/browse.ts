@@ -114,14 +114,18 @@ export function getVariableVariant(item: BrowseItem): FontVariant | null {
     String(v.weight).includes('100-900') ||
     v.weight === 'variable'
   );
-  return (
-    existing || {
-      name: 'Variable (100–900)',
-      weight: '100-900',
-      style: 'normal',
-      url: item.url || item.variants?.[0]?.url || ''
-    }
-  );
+  if (existing && existing.url) {
+    return existing;
+  }
+  const varUrl = item.variableUrl || (item.isVariable ? item.url : '') || (item.variants?.[0]?.url || '');
+  return {
+    name: 'Variable (100–900)',
+    weight: '100-900',
+    style: 'normal',
+    url: varUrl,
+    sizeMb: '0.8 MB',
+    isVariable: true
+  };
 }
 
 export function getWeightName(weight: number | string, fallbackName?: string): string {
@@ -805,7 +809,7 @@ export async function handleDeleteCachedFont(item: BrowseItem): Promise<void> {
   }
 }
 
-async function handleApplyDirectly(item: BrowseItem, variant?: FontVariant): Promise<void> {
+export async function handleApplyDirectly(item: BrowseItem, variant?: FontVariant): Promise<void> {
   updateDownloadProgress(true, 10, `Preparing ${item.name}...`);
   try {
     const selectedVariant = variant || state.activeVariant || resolveVariant(item);
@@ -815,6 +819,9 @@ async function handleApplyDirectly(item: BrowseItem, variant?: FontVariant): Pro
     updateDownloadProgress(true, 70, 'Verifying package payload...');
 
     updateDownloadProgress(false);
+
+    // Dismiss preview bottom sheet modal so the apply confirmation dialog is fully unobscured
+    closePreviewSheet();
 
     if (item.type === 'emoji') {
       await runApplyWorkflow({
@@ -890,11 +897,13 @@ async function handleApplyDirectly(item: BrowseItem, variant?: FontVariant): Pro
   }
 }
 
-async function handleOpenInCustomize(item: BrowseItem, variant?: FontVariant): Promise<void> {
+export async function handleOpenInCustomize(item: BrowseItem, variant?: FontVariant): Promise<void> {
   updateDownloadProgress(true, 25, `Downloading ${item.name} for customization...`);
   try {
     const selectedVariant = variant || state.activeVariant || resolveVariant(item);
-    const buffer = await downloadAndCacheFont(item, selectedVariant);
+    const varVariant = getVariableVariant(item);
+    const downloadTarget = (isVariableItem(item) && varVariant) ? varVariant : selectedVariant;
+    const buffer = await downloadAndCacheFont(item, downloadTarget);
     state.cachedIds.add(item.id);
     updateDownloadProgress(true, 85, 'Parsing font tables...');
 
@@ -912,8 +921,29 @@ async function handleOpenInCustomize(item: BrowseItem, variant?: FontVariant): P
       : parseInt(String(selectedVariant.weight), 10) || 400;
 
     const axisValues: Record<string, number> = {};
-    if (isVariableFont && !isVarSelected && targetWeight) {
-      axisValues['wght'] = targetWeight;
+    let presetName = 'Auto (Stock)';
+    let weightMode: 'auto' | 'custom' | 'normal' = 'auto';
+
+    if (isVariableFont) {
+      if (!isVarSelected && targetWeight) {
+        axisValues['wght'] = targetWeight;
+        weightMode = 'custom';
+        const weightMap: Record<number, string> = {
+          100: 'Thin (100)',
+          300: 'Light (300)',
+          400: 'Regular (400)',
+          500: 'Medium (500)',
+          600: 'SemiBold (600)',
+          700: 'Bold (700)',
+          800: 'ExtraBold (800)',
+          900: 'Black (900)'
+        };
+        presetName = weightMap[targetWeight] || `${targetWeight}`;
+      } else {
+        axisValues['wght'] = 400;
+        presetName = 'Auto (Stock)';
+        weightMode = 'auto';
+      }
     }
 
     const file = new File([buffer], `${item.name}.ttf`, { type: 'font/ttf' });
@@ -923,8 +953,8 @@ async function handleOpenInCustomize(item: BrowseItem, variant?: FontVariant): P
       fontBuffer: buffer,
       fontData: parsed,
       axisValues,
-      selectedPreset: '',
-      weightMode: 'normal'
+      selectedPreset: presetName,
+      weightMode
     });
 
     try {

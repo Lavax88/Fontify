@@ -9,6 +9,7 @@
 
 import type { BrowseItem, FontVariant } from './types';
 import { EMOJI_CATALOG } from '../ui/emojiCatalog';
+import { getGoogleVariableFontUrl } from './variableFonts';
 
 // Helper to construct Fontsource CDN URL for Google Fonts
 function fontsourceUrl(familySlug: string, weight: number): string {
@@ -46,6 +47,7 @@ export interface GoogleFontDefinition {
   author: string;
   isVariable: boolean;
   variableAxes?: string[];
+  variableUrl?: string;
   weights: number[];
   previewText: string;
   description: string;
@@ -2603,18 +2605,34 @@ export const BUNDLED_GOOGLE_FONTS: BrowseItem[] = GOOGLE_FONT_DEFINITIONS.map((d
   const isVar = def.isVariable;
   const axes = def.variableAxes || (isVar ? ['wght'] : []);
   const defaultWeight = def.weights.includes(400) ? 400 : def.weights[0];
-  const url = fontsourceUrl(def.slug, defaultWeight);
-  const sizeMb = def.sizeMb || (isVar ? '0.3 MB' : '0.2 MB');
+  const variableUrl = isVar ? (def.variableUrl || getGoogleVariableFontUrl(def.slug)) : undefined;
+  const staticDefaultUrl = fontsourceUrl(def.slug, defaultWeight);
+  const url = (isVar && variableUrl) ? variableUrl : staticDefaultUrl;
+  const sizeMb = def.sizeMb || (isVar ? '0.8 MB' : '0.2 MB');
 
-  const variants: FontVariant[] = def.weights.map((w) => ({
-    name: weightName(w),
-    weight: w,
-    style: 'normal' as const,
-    url: fontsourceUrl(def.slug, w),
-    sizeMb,
-    isVariable: isVar,
-    ...(isVar ? { axisValues: { wght: w } } : {})
-  }));
+  const variants: FontVariant[] = [];
+  if (isVar && variableUrl) {
+    variants.push({
+      name: 'Variable (100–900)',
+      weight: '100-900',
+      style: 'normal',
+      url: variableUrl,
+      sizeMb,
+      isVariable: true
+    });
+  }
+
+  for (const w of def.weights) {
+    variants.push({
+      name: weightName(w),
+      weight: w,
+      style: 'normal' as const,
+      url: fontsourceUrl(def.slug, w),
+      sizeMb: isVar ? '0.8 MB' : '0.2 MB',
+      isVariable: isVar,
+      ...(isVar ? { axisValues: { wght: w } } : {})
+    });
+  }
 
   return {
     id: `gf-${def.slug}`,
@@ -2628,6 +2646,7 @@ export const BUNDLED_GOOGLE_FONTS: BrowseItem[] = GOOGLE_FONT_DEFINITIONS.map((d
     thumbnailUrl: svgThumbnail(def.name, def.category),
     isVariable: isVar,
     variableAxes: axes,
+    variableUrl,
     availableWeights: def.weights,
     weights: def.weights,
     sizeMb,

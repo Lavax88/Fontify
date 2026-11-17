@@ -28,6 +28,7 @@ export interface BrowseItem {
   thumbnailUrl?: string;
   isVariable?: boolean;
   variableAxes?: string[];
+  variableUrl?: string;
   availableWeights?: number[];
   weights?: number[];
   variants: FontVariant[];

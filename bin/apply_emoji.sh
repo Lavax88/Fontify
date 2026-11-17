@@ -81,20 +81,12 @@ for dir in "$MODDIR/system" "$MODDIR/product"; do
     fi
 done
 
-# 5. Sync NoMount VFS redirection rules if NoMount metamodule is present
-if [ -f "$MODDIR/bin/nomount_sync.sh" ]; then
-    sh "$MODDIR/bin/nomount_sync.sh" sync 2>/dev/null
-fi
-
-# 6. Clear Android font caches and GMS updatable font overrides
-if [ -f "$MODDIR/bin/clear_font_cache.sh" ]; then
-    sh "$MODDIR/bin/clear_font_cache.sh" 2>/dev/null
-else
-    rm -rf /data/fonts/files/* 2>/dev/null
-    rm -rf /data/fonts/config/* 2>/dev/null
-    rm -rf /data/system/font_cache/* 2>/dev/null
-    cmd font clear 2>/dev/null || true
-fi
+# 5. Staging complete: NoMount VFS redirection rules are safely synchronized
+# at boot by post-fs-data.sh. Live kernel VFS hot-swapping and live font clearing must NOT
+# run while booted to prevent WebUI/Zygote crashes from swapped font inodes.
+rm -rf /data/fonts/files/* 2>/dev/null
+rm -rf /data/fonts/config/* 2>/dev/null
+rm -rf /data/system/font_cache/* 2>/dev/null
 
 echo '{"success": true, "message": "Emoji font applied successfully! Please reboot your device to load new emojis."}'
 exit 0

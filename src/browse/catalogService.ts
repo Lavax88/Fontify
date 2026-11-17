@@ -18,6 +18,7 @@ import {
   saveCachedFont,
   getAllCachedFontIds
 } from './fontCache';
+import { getGoogleVariableFontUrl, hasFvarTable } from './variableFonts';
 
 export const GOOGLE_FONTS_DIRECTORY_API = 'https://api.fontsource.org/v1/fonts';
 const DEFAULT_SYNC_URL = 'https://raw.githubusercontent.com/zFont/Host/main/data.json';
@@ -307,17 +308,34 @@ export function normalizeGoogleFontDirectoryItem(raw: {
   };
 
   const defaultWeight = weights.includes(400) ? 400 : weights[0];
-  const defaultUrl = `https://cdn.jsdelivr.net/fontsource/fonts/${slug}@latest/latin-${defaultWeight}-normal.ttf`;
+  const variableUrl = isVariable ? getGoogleVariableFontUrl(slug) : undefined;
+  const defaultUrl = (isVariable && variableUrl)
+    ? variableUrl
+    : `https://cdn.jsdelivr.net/fontsource/fonts/${slug}@latest/latin-${defaultWeight}-normal.ttf`;
 
-  const variants: FontVariant[] = weights.map((w) => ({
-    name: `${weightLabels[w] || 'Weight'} ${w}`,
-    weight: w,
-    style: 'normal',
-    url: `https://cdn.jsdelivr.net/fontsource/fonts/${slug}@latest/latin-${w}-normal.ttf`,
-    sizeMb: isVariable ? '0.3 MB' : '0.2 MB',
-    isVariable,
-    ...(isVariable ? { axisValues: { wght: w } } : {})
-  }));
+  const variants: FontVariant[] = [];
+  if (isVariable && variableUrl) {
+    variants.push({
+      name: 'Variable (100–900)',
+      weight: '100-900',
+      style: 'normal',
+      url: variableUrl,
+      sizeMb: '0.8 MB',
+      isVariable: true
+    });
+  }
+
+  for (const w of weights) {
+    variants.push({
+      name: `${weightLabels[w] || 'Weight'} ${w}`,
+      weight: w,
+      style: 'normal',
+      url: `https://cdn.jsdelivr.net/fontsource/fonts/${slug}@latest/latin-${w}-normal.ttf`,
+      sizeMb: isVariable ? '0.8 MB' : '0.2 MB',
+      isVariable,
+      ...(isVariable ? { axisValues: { wght: w } } : {})
+    });
+  }
 
   const safeFamily = raw.family.replace(/'/g, "\\'");
   const svgThumb = `data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="300" height="70" viewBox="0 0 300 70"><rect width="100%" height="100%" fill="%231e1f22" rx="8"/><text x="16" y="42" fill="%23e3e3e3" font-family="'${safeFamily}', sans-serif" font-size="22" font-weight="500">${safeFamily}</text><text x="16" y="58" fill="%238e9196" font-family="sans-serif" font-size="10">${cleanCategory}</text></svg>`;
@@ -332,10 +350,11 @@ export function normalizeGoogleFontDirectoryItem(raw: {
     description: `${raw.family} open-source typeface family from the Google Fonts directory.`,
     previewText: 'Sphinx of black quartz, judge my vow.',
     thumbnailUrl: svgThumb,
-    sizeMb: isVariable ? '0.3 MB' : '0.2 MB',
+    sizeMb: isVariable ? '0.8 MB' : '0.2 MB',
     url: defaultUrl,
     isVariable,
     variableAxes: isVariable ? ['wght'] : [],
+    variableUrl,
     availableWeights: weights,
     weights,
     variants,
@@ -617,18 +636,55 @@ export async function downloadAndCacheFont(
   item: BrowseItem,
   variant?: FontVariant
 ): Promise<ArrayBuffer> {
+  const wantsVariable = Boolean(
+    item.isVariable ||
+    item.variableUrl ||
+    variant?.isVariable ||
+    variant?.weight === '100-900' ||
+    variant?.name?.toLowerCase().includes('variable')
+  );
+
   const cached = await getCachedFont(item.id);
   if (cached && cached.buffer && cached.buffer.byteLength > 0) {
-    return cached.buffer;
+    const isRealFontFile = cached.buffer.byteLength >= 1000;
+    if (!wantsVariable || !isRealFontFile || hasFvarTable(cached.buffer)) {
+      return cached.buffer;
+    }
+    console.info(`[CatalogService] Cached font ${item.id} lacks 'fvar' table; invalidating stale cache to download authentic variable font.`);
   }
 
   const selectedVariant = variant || resolveVariant(item);
-  const downloadUrl = selectedVariant.url || item.url;
+  let downloadUrl = selectedVariant.url || item.variableUrl || item.url || '';
+  if (wantsVariable && !downloadUrl.includes('google/fonts') && item.variableUrl) {
+    downloadUrl = item.variableUrl;
+  }
   if (!downloadUrl) {
     throw new Error(`Item ${item.name} (${item.id}) does not have a valid download URL.`);
   }
 
-  const response = await fetch(downloadUrl);
+  let response: Response;
+  try {
+    response = await fetch(downloadUrl);
+  } catch (err) {
+    if (downloadUrl.includes('cdn.jsdelivr.net/gh/google/fonts@main/')) {
+      const fallback = downloadUrl.replace('cdn.jsdelivr.net/gh/google/fonts@main/', 'raw.githubusercontent.com/google/fonts/main/');
+      response = await fetch(fallback);
+    } else {
+      throw err;
+    }
+  }
+
+  // Handle CDN error codes (e.g. jsDelivr 403 on >50MB packages like Raleway)
+  if (!response.ok && downloadUrl.includes('cdn.jsdelivr.net/gh/google/fonts@main/')) {
+    const fallback = downloadUrl.replace('cdn.jsdelivr.net/gh/google/fonts@main/', 'raw.githubusercontent.com/google/fonts/main/');
+    try {
+      const fbResponse = await fetch(fallback);
+      if (fbResponse.ok) {
+        response = fbResponse;
+      }
+    } catch (_) {}
+  }
+
   if (!response.ok) {
     throw new Error(`Failed to download ${item.name}: HTTP ${response.status} ${response.statusText}`);
   }
