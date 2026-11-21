@@ -1,5 +1,16 @@
 # Fontify Changelog
 
+## v3.1.0 (versionCode 2002)
+
+* **Instant 3-Second Soft Reboot**: Restored fast soft rebooting via system_server restart with a dedicated pre-reboot deployment hook (deploy_pending.sh) that populates overlays and clears font caches right before Zygote restarts.
+* **Eliminated Live VFS SIGBUS Crashes**: Staged font and emoji overlays to data storage while booted to prevent memory-mapped inode mutation faults in Chromium WebUI and SystemUI.
+* **Static Weight Variant Selection**: Fixed variable font families (e.g. Outfit, Inter) downloading variable binaries when a static weight variant (such as Regular 400) was chosen, which previously resulted in Android rendering Thin 100.
+* **IndexedDB Cache Isolation**: Distinct cache keys for static weights and variable fonts to prevent variant cross-contamination.
+* **Bootloop Guard on Stock Restore**: Reverting to stock fonts/emojis now prompts for a full device reboot to cleanly unmount kernel VFS overlays. Includes an automated safeguard in deploy_pending.sh that detects stock restoration and upgrades soft reboots to a full hardware reboot.
+* **Module Update Stock Backup Protection**: Prevented module updates from overwriting stock font backups when a custom font is active; original stock fonts are now strictly preserved.
+* **Country Flag Emoji Preservation**: Prevented custom emoji fonts from overwriting stock NotoColorEmojiFlags.ttf, ensuring national flag emojis render correctly across apps and notifications.
+* **NoMount VFS Redirection Cleanup**: Fixed dangling deleted inodes by cleanly unmounting and synchronizing NoMount rules upon font/emoji removal.
+
 ## v3.0.0 (versionCode 2001)
 
 * **Browse Tab & Google Fonts Catalog**: Introducing the new 4th Browse tab with fluid M3 Expressive morphing navigation and ViewPager swipe mechanics.
