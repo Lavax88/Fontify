@@ -56,6 +56,15 @@ export async function exec(command: string, opts: ExecOptions = {}): Promise<Exe
     return mockExec(command);
   }
 
+  // If root manager interface is not immediately ready (e.g. SukiSU / KernelSU async interface injection),
+  // briefly poll up to 300ms before falling back.
+  if (!isRootManagerPresent() && typeof window !== 'undefined') {
+    const startTime = Date.now();
+    while (!isRootManagerPresent() && Date.now() - startTime < 300) {
+      await new Promise(r => setTimeout(r, 30));
+    }
+  }
+
   return new Promise<ExecResult>((resolve, reject) => {
     let settled = false;
     let timer: ReturnType<typeof setTimeout> | null = null;

@@ -62,13 +62,22 @@ EOF
 fi
 chmod 644 "$CONFIG_FILE"
 
-# 3. Detect if font is variable font (has 'fvar' table in sfnt directory)
-IS_VARIABLE=false
-if grep -q '"is_variable": *true' "$CONFIG_FILE" 2>/dev/null || head -c 2048 "$DEST_CUSTOM" 2>/dev/null | grep -q -a "fvar"; then
-    IS_VARIABLE=true
+# 3. Mark pending font staging for boot deployment and clear full reboot requirement
+touch "$DATA_DIR/.staged_font_pending"
+rm -f "$DATA_DIR/.full_reboot_required" 2>/dev/null
+
+# 4. Check if device is currently booted and font overlay is active
+# If the system is booted (sys.boot_completed=1) and Roboto-Regular.ttf exists,
+# running processes (SystemUI, Zygote, WebUI Chromium) have that file memory-mapped.
+# Mutating an mmap'd font in-place while booted raises SIGBUS and crashes SystemUI/WebUI.
+# We defer populating $MODDIR/system and $MODDIR/product to early boot in post-fs-data.sh.
+IS_BOOTED="$(getprop sys.boot_completed 2>/dev/null || echo 0)"
+if [ "$IS_BOOTED" = "1" ] && [ -f "$MODDIR/system/fonts/Roboto-Regular.ttf" ]; then
+    echo '{"success": true, "message": "Font staged successfully! Please reboot your device to load new fonts."}'
+    exit 0
 fi
 
-# 4. Populate module overlay trees
+# 5. Populate module overlay trees (only when unpopulated or prior to initial boot)
 # Core system Roboto targets
 cp -af "$DEST_CUSTOM" "$MODDIR/system/fonts/Roboto-Regular.ttf"
 cp -af "$DEST_CUSTOM" "$MODDIR/system/fonts/RobotoFlex-Regular.ttf"
@@ -100,7 +109,6 @@ fi
 # 5. Preserve custom emoji overlays if custom emoji is active
 if [ -f "$DATA_DIR/custom_emoji.ttf" ] && [ -s "$DATA_DIR/custom_emoji.ttf" ]; then
     cp -af "$DATA_DIR/custom_emoji.ttf" "$MODDIR/system/fonts/NotoColorEmoji.ttf"
-    cp -af "$DATA_DIR/custom_emoji.ttf" "$MODDIR/system/fonts/NotoColorEmojiFlags.ttf"
     cp -af "$DATA_DIR/custom_emoji.ttf" "$MODDIR/product/fonts/NotoColorEmoji.ttf"
     cp -af "$DATA_DIR/custom_emoji.ttf" "$MODDIR/system/product/fonts/NotoColorEmoji.ttf"
 fi
@@ -118,9 +126,6 @@ done
 # 7. Staging complete: NoMount VFS redirection rules and font caches are safely synchronized
 # at boot by post-fs-data.sh. Live kernel VFS hot-swapping and live font clearing must NOT
 # run while booted to prevent WebUI/Zygote crashes from swapped font inodes.
-rm -rf /data/fonts/files/* 2>/dev/null
-rm -rf /data/fonts/config/* 2>/dev/null
-rm -rf /data/system/font_cache/* 2>/dev/null
 
 echo '{"success": true, "message": "Font applied successfully! Please reboot your device to load new fonts."}'
 exit 0
