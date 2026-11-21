@@ -16,6 +16,10 @@ ACTION="$1"
 NM_BIN=""
 if [ -x "/data/adb/modules/nomount/bin/nm" ]; then
     NM_BIN="/data/adb/modules/nomount/bin/nm"
+elif [ -x "/data/adb/ksu/bin/nm" ]; then
+    NM_BIN="/data/adb/ksu/bin/nm"
+elif [ -x "/data/adb/ap/bin/nm" ]; then
+    NM_BIN="/data/adb/ap/bin/nm"
 elif command -v nm >/dev/null 2>&1; then
     NM_BIN="nm"
 fi
@@ -42,8 +46,17 @@ sync_tree() {
 
 case "$ACTION" in
     sync)
-        sync_tree "$MODDIR/system" "/system"
-        sync_tree "$MODDIR/product" "/product"
+        # Purge any stale or deleted inode rules registered for this module
+        "$NM_BIN" module unload "$MODDIR" 2>/dev/null || true
+        # Clean any orphaned rules from legacy paths if present
+        "$NM_BIN" rule del "/product/product/fonts/NotoColorEmoji.ttf" 2>/dev/null || true
+        "$NM_BIN" rule del "/product/product/fonts/GoogleSansFlex-Regular.ttf" 2>/dev/null || true
+        # Native module loader automatically injects system, product, etc.
+        if ! "$NM_BIN" module load "$MODDIR" 2>/dev/null; then
+            # Fallback to manual sync_tree if module load is not supported
+            sync_tree "$MODDIR/system" "/system"
+            sync_tree "$MODDIR/product" "/product"
+        fi
         ;;
     del_emoji)
         "$NM_BIN" rule del "/system/fonts/NotoColorEmoji.ttf" 2>/dev/null || true
@@ -51,6 +64,12 @@ case "$ACTION" in
         "$NM_BIN" rule del "/system/fonts/NotoColorEmojiLegacy.ttf" 2>/dev/null || true
         "$NM_BIN" rule del "/product/fonts/NotoColorEmoji.ttf" 2>/dev/null || true
         "$NM_BIN" rule del "/system/product/fonts/NotoColorEmoji.ttf" 2>/dev/null || true
+        "$NM_BIN" rule del "/product/product/fonts/NotoColorEmoji.ttf" 2>/dev/null || true
+        # If other font overlay files still exist in the module, re-sync to keep valid rules intact
+        if [ -d "$MODDIR/system/fonts" ] && [ "$(ls -A "$MODDIR/system/fonts" 2>/dev/null)" ]; then
+            "$NM_BIN" module unload "$MODDIR" 2>/dev/null || true
+            "$NM_BIN" module load "$MODDIR" 2>/dev/null || true
+        fi
         ;;
     del_fonts)
         for target in Roboto-Regular.ttf RobotoFlex-Regular.ttf RobotoStatic-Regular.ttf DroidSans.ttf DroidSans-Bold.ttf Roboto-Bold.ttf Roboto-Italic.ttf Roboto-BoldItalic.ttf Roboto-Medium.ttf Roboto-MediumItalic.ttf Roboto-Light.ttf Roboto-LightItalic.ttf Roboto-Thin.ttf Roboto-ThinItalic.ttf Roboto-Black.ttf Roboto-BlackItalic.ttf SourceSansPro-Regular.ttf SourceSansPro-Bold.ttf SourceSansPro-SemiBold.ttf SourceSansPro-Italic.ttf SourceSansPro-BoldItalic.ttf SourceSansPro-SemiBoldItalic.ttf; do
@@ -69,6 +88,21 @@ case "$ACTION" in
                 esac
             done
         fi
+        "$NM_BIN" rule del "/product/product/fonts/GoogleSansFlex-Regular.ttf" 2>/dev/null || true
+        # If emoji overlay still exists, re-sync to keep emoji rule active
+        if [ -f "$MODDIR/data/custom_emoji.ttf" ]; then
+            "$NM_BIN" module unload "$MODDIR" 2>/dev/null || true
+            "$NM_BIN" module load "$MODDIR" 2>/dev/null || true
+        fi
+        ;;
+    del_all)
+        "$NM_BIN" module unload "$MODDIR" 2>/dev/null || true
+        "$NM_BIN" rule del "/system/fonts/NotoColorEmoji.ttf" 2>/dev/null || true
+        "$NM_BIN" rule del "/system/fonts/NotoColorEmojiFlags.ttf" 2>/dev/null || true
+        "$NM_BIN" rule del "/product/fonts/NotoColorEmoji.ttf" 2>/dev/null || true
+        "$NM_BIN" rule del "/system/product/fonts/NotoColorEmoji.ttf" 2>/dev/null || true
+        "$NM_BIN" rule del "/product/product/fonts/NotoColorEmoji.ttf" 2>/dev/null || true
+        "$NM_BIN" rule del "/product/product/fonts/GoogleSansFlex-Regular.ttf" 2>/dev/null || true
         ;;
     del)
         if [ -n "$2" ]; then

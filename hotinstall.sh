@@ -22,16 +22,7 @@ if { [ -f "$CUSTOM_FONT" ] && [ -s "$CUSTOM_FONT" ]; } || { [ -f "$CUSTOM_EMOJI"
     done
 fi
 
-# Re-synchronize NoMount VFS redirection rules with new module inodes
-if [ -f "$MODDIR/bin/nomount_sync.sh" ]; then
-    sh "$MODDIR/bin/nomount_sync.sh" sync 2>/dev/null
-fi
-
-# Refresh font caches if system is already booted
-if [ -f "$MODDIR/bin/clear_font_cache.sh" ]; then
-    sh "$MODDIR/bin/clear_font_cache.sh" 2>/dev/null
-else
-    cmd font clear 2>/dev/null || true
-fi
+# Do not live-swap font inodes or clear font caches while booted to prevent
+# SIGBUS crashes in WebView/Zygote. Changes will activate cleanly upon device restart.
 
 exit 0
