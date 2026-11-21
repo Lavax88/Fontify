@@ -888,10 +888,10 @@ export async function handleApplyDirectly(item: BrowseItem, variant?: FontVarian
             });
           },
           onReboot: async () => {
-            await fontService.reboot();
+            await fontService.reboot('soft');
           },
           onCancelReboot: () => {
-            store.setState({ rebootRequired: true });
+            store.setState({ rebootRequired: true, rebootType: 'soft' });
             showToast('Reboot postponed. Restart anytime from the Overview tab.');
           }
         });
@@ -902,7 +902,7 @@ export async function handleApplyDirectly(item: BrowseItem, variant?: FontVarian
     const selectedVariant = variant || state.activeVariant || resolveVariant(item);
     const varVariant = getVariableVariant(item);
     const isVarSelected = selectedVariant.weight === '100-900' || selectedVariant.name.toLowerCase().includes('variable');
-    const downloadTarget = (isVariableItem(item) && (isVarSelected || !selectedVariant.url.includes('google/fonts'))) && varVariant
+    const downloadTarget = (isVarSelected && varVariant)
       ? varVariant
       : selectedVariant;
 
@@ -937,10 +937,10 @@ export async function handleApplyDirectly(item: BrowseItem, variant?: FontVarian
           });
         },
         onReboot: async () => {
-          await fontService.reboot();
+          await fontService.reboot('soft');
         },
         onCancelReboot: () => {
-          store.setState({ rebootRequired: true });
+          store.setState({ rebootRequired: true, rebootType: 'soft' });
           showToast('Reboot postponed. Restart anytime from the Overview tab.');
         }
       });
@@ -978,10 +978,10 @@ export async function handleApplyDirectly(item: BrowseItem, variant?: FontVarian
           });
         },
         onReboot: async () => {
-          await fontService.reboot();
+          await fontService.reboot('soft');
         },
         onCancelReboot: () => {
-          store.setState({ rebootRequired: true });
+          store.setState({ rebootRequired: true, rebootType: 'soft' });
           showToast('Reboot postponed. Restart anytime from the Overview tab.');
         }
       });

@@ -638,28 +638,36 @@ export async function downloadAndCacheFont(
   variant?: FontVariant,
   onProgress?: (percent: number, message: string) => void
 ): Promise<ArrayBuffer> {
-  const wantsVariable = Boolean(
-    item.isVariable ||
-    item.variableUrl ||
-    variant?.isVariable ||
+  const isVarVariant = Boolean(
     variant?.weight === '100-900' ||
-    variant?.name?.toLowerCase().includes('variable')
+    variant?.name?.toLowerCase().includes('variable') ||
+    variant?.isVariable
   );
+  // Only download variable font if caller explicitly requested variable variant, or if no variant specified and item is variable
+  const wantsVariable = variant ? isVarVariant : Boolean(item.isVariable && item.variableUrl);
 
-  const cached = await getCachedFont(item.id);
+  // Distinguish cache keys between variable fonts and specific static weights to prevent cache collisions
+  const cacheKey = (!wantsVariable && variant && variant.weight)
+    ? `${item.id}-weight-${variant.weight}`
+    : item.id;
+
+  const cached = await getCachedFont(cacheKey);
   if (cached && cached.buffer && cached.buffer.byteLength > 0) {
     const isRealFontFile = cached.buffer.byteLength >= 1000;
-    if (!wantsVariable || !isRealFontFile || hasFvarTable(cached.buffer)) {
+    const bufferIsVariable = hasFvarTable(cached.buffer);
+    if (!isRealFontFile || (wantsVariable ? bufferIsVariable : !bufferIsVariable)) {
       onProgress?.(100, `Loaded ${item.name} from cache`);
       return cached.buffer;
     }
-    console.info(`[CatalogService] Cached font ${item.id} lacks 'fvar' table; invalidating stale cache to download authentic variable font.`);
+    console.info(`[CatalogService] Cached font ${cacheKey} type mismatch (wantsVariable=${wantsVariable}, bufferIsVariable=${bufferIsVariable}); invalidating stale cache.`);
   }
 
   const selectedVariant = variant || resolveVariant(item);
-  let downloadUrl = selectedVariant.url || item.variableUrl || item.url || '';
-  if (wantsVariable && !downloadUrl.includes('google/fonts') && item.variableUrl) {
+  let downloadUrl = selectedVariant.url || '';
+  if (wantsVariable && item.variableUrl) {
     downloadUrl = item.variableUrl;
+  } else if (!downloadUrl) {
+    downloadUrl = item.url || '';
   }
   if (!downloadUrl) {
     throw new Error(`Item ${item.name} (${item.id}) does not have a valid download URL.`);
@@ -757,7 +765,7 @@ export async function downloadAndCacheFont(
     onProgress?.(100, `Downloaded ${item.name}!`);
   }
 
-  await saveCachedFont(item.id, item, buffer);
+  await saveCachedFont(cacheKey, item, buffer);
 
   return buffer;
 }

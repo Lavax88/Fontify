@@ -317,4 +317,87 @@ describe('Customize Reactive UI & Direct Apply Fixes', () => {
     expect(mockModalText.textContent).toBe('Verifying package payload...');
     expect(mockModalPct.textContent).toBe('100%');
   });
+
+  it('downloads and applies the static variant when a specific weight is selected for a variable font', async () => {
+    const { handleApplyDirectly } = await import('../src/ui/browse');
+
+    const domMap: Record<string, any> = {
+      'modal-download-progress-box': { style: { display: 'none' } },
+      'modal-download-progress-fill': { style: { width: '0%' } },
+      'modal-download-progress-text': { textContent: '' },
+      'modal-download-progress-pct': { textContent: '' },
+      'btn-preview-apply': { disabled: false, innerHTML: 'Apply Directly' },
+      'browse-preview-backdrop': { style: { display: 'flex' }, classList: { remove: vi.fn() }, setAttribute: vi.fn() }
+    };
+
+    globalThis.document = {
+      getElementById: (id: string) => domMap[id] || null,
+      querySelectorAll: () => []
+    } as any;
+
+    const dummyVariableItem: any = {
+      id: 'gf-outfit',
+      name: 'Outfit',
+      type: 'font',
+      source: 'google',
+      isVariable: true,
+      url: 'https://raw.githubusercontent.com/google/fonts/main/ofl/outfit/Outfit[wght].ttf',
+      variants: [
+        {
+          name: 'Variable (100–900)',
+          weight: '100-900',
+          url: 'https://raw.githubusercontent.com/google/fonts/main/ofl/outfit/Outfit[wght].ttf',
+          isVariable: true
+        },
+        {
+          name: 'Regular',
+          weight: 400,
+          url: 'https://cdn.jsdelivr.net/fontsource/fonts/outfit@latest/latin-400-normal.ttf',
+          isVariable: false
+        }
+      ]
+    };
+
+    const regularVariant = dummyVariableItem.variants[1];
+    let downloadedTargetVariant: any = null;
+
+    vi.spyOn(await import('../src/browse/catalogService'), 'downloadAndCacheFont').mockImplementation(async (_item, variant) => {
+      downloadedTargetVariant = variant;
+      return new Uint8Array([1, 2, 3, 4]).buffer;
+    });
+
+    let appliedOptions: any = null;
+    vi.spyOn(await import('../src/bridge/service'), 'fontService', 'get').mockReturnValue({
+      applyFont: vi.fn(async (opts) => {
+        appliedOptions = opts;
+      }),
+      checkLocalDownload: vi.fn().mockResolvedValue(null)
+    } as any);
+
+    vi.spyOn(await import('../src/font/parser'), 'FontParser', 'get').mockReturnValue({
+      parse: vi.fn(() => ({
+        valid: true,
+        fullName: 'Outfit Regular',
+        family: 'Outfit',
+        weight: 400,
+        isVariable: false
+      }))
+    } as any);
+
+    vi.spyOn(await import('../src/ui/components/dialog'), 'runApplyWorkflow').mockImplementation(async (opts: any) => {
+      await opts.onApply();
+      return true;
+    });
+
+    await handleApplyDirectly(dummyVariableItem, regularVariant);
+
+    // downloadTarget should be the selected Regular static variant, NOT the variable variant!
+    expect(downloadedTargetVariant.name).toBe('Regular');
+    expect(downloadedTargetVariant.weight).toBe(400);
+    expect(downloadedTargetVariant.url).toContain('latin-400-normal.ttf');
+
+    // Applied options should register as static regular font
+    expect(appliedOptions.fontName).toBe('Outfit Regular');
+    expect(appliedOptions.isVariable).toBe(false);
+  });
 });

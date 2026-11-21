@@ -2629,7 +2629,7 @@ export const BUNDLED_GOOGLE_FONTS: BrowseItem[] = GOOGLE_FONT_DEFINITIONS.map((d
       style: 'normal' as const,
       url: fontsourceUrl(def.slug, w),
       sizeMb: isVar ? '0.8 MB' : '0.2 MB',
-      isVariable: isVar,
+      isVariable: false,
       ...(isVar ? { axisValues: { wght: w } } : {})
     });
   }
@@ -2665,10 +2665,12 @@ export const BUNDLED_ZFONT_FONTS: BrowseItem[] = [];
  * zFont Emojis linked from existing EMOJI_CATALOG with authentic specimen preview images (accelerated via edge CDN)
  */
 export const BUNDLED_ZFONT_EMOJIS: BrowseItem[] = EMOJI_CATALOG.map((item) => {
-  const previewImgUrl = item.url
-    .replace('https://raw.githubusercontent.com/zFont/Host/main/', 'https://cdn.jsdelivr.net/gh/zFont/Host@main/')
-    .replace('/Font/', '/Preview/')
-    .replace(/\.ttf$/, '.png');
+  const previewImgUrl = item.url.includes('zFont/Host')
+    ? item.url
+        .replace('https://raw.githubusercontent.com/zFont/Host/main/', 'https://cdn.jsdelivr.net/gh/zFont/Host@main/')
+        .replace('/Font/', '/Preview/')
+        .replace(/\.ttf$/, '.png')
+    : 'https://cdn.jsdelivr.net/gh/zFont/Host@main/Preview/Emoji/2024/NotoColorEmojiu16PNG_v041024[MFFMEmoji].png';
   return {
     id: `emoji-${item.id}`,
     name: item.name,

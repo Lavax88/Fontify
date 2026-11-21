@@ -73,8 +73,8 @@ export const EMOJI_CATALOG: EmojiCatalogItem[] = [
     "id": "noto",
     "name": "Google Noto Color (Stock)",
     "author": "Google",
-    "sizeMb": "10.2 MB",
-    "url": "https://raw.githubusercontent.com/zFont/Host/main/Font/Emoji/2024/NotoColorEmojiu16PNG_v041024[MFFMEmoji].ttf"
+    "sizeMb": "2.9 MB",
+    "url": "https://raw.githubusercontent.com/googlefonts/noto-emoji/main/fonts/NotoColorEmoji.ttf"
   },
   {
     "id": "zf-0-unofficial-ios18",
@@ -108,8 +108,8 @@ export const EMOJI_CATALOG: EmojiCatalogItem[] = [
     "id": "zf-6-noto-color-emoji-unicode-16",
     "name": "Noto Color Emoji [Unicode 16]",
     "author": "MFFM Emoji",
-    "sizeMb": "10.2 MB",
-    "url": "https://raw.githubusercontent.com/zFont/Host/main/Font/Emoji/2024/NotoColorEmojiu16PNG_v041024%5BMFFMEmoji%5D.ttf"
+    "sizeMb": "2.9 MB",
+    "url": "https://raw.githubusercontent.com/googlefonts/noto-emoji/main/fonts/NotoColorEmoji.ttf"
   },
   {
     "id": "zf-7-emoji-swiftuiflat15-1",

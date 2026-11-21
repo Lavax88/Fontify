@@ -569,6 +569,28 @@ describe('Browse Catalog & Data Contracts', () => {
       expect(buffer2.byteLength).toBe(4);
       expect(fetchSpy).toHaveBeenCalledTimes(1); // not called again
     });
+
+    it('downloads the static variant URL and does not force variable font when a static weight variant is requested', async () => {
+      const outfit = getItemById('gf-outfit')!;
+      const staticVariant = outfit.variants.find((v) => v.weight === 400 && !v.isVariable)!;
+      expect(staticVariant).toBeDefined();
+
+      let fetchedUrl = '';
+      const dummyStaticBuf = new Uint8Array([11, 22, 33, 44]).buffer;
+      vi.spyOn(globalThis, 'fetch').mockImplementation(async (input: any) => {
+        fetchedUrl = String(input);
+        return {
+          ok: true,
+          status: 200,
+          arrayBuffer: async () => dummyStaticBuf
+        } as unknown as Response;
+      });
+
+      const buffer = await downloadAndCacheFont(outfit, staticVariant);
+      expect(fetchedUrl).toContain('latin-400-normal.ttf');
+      expect(fetchedUrl).not.toContain('Outfit[wght].ttf');
+      expect(buffer.byteLength).toBe(4);
+    });
   });
 
   describe('Zero-Download Live Preview Logic', () => {
