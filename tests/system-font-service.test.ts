@@ -74,5 +74,8 @@ describe('SystemFontService (Deep Module)', () => {
   it('triggers device reboot', async () => {
     // Should resolve without errors under mock bridge
     await expect(service.reboot()).resolves.toBeUndefined();
+    await expect(service.reboot('soft')).resolves.toBeUndefined();
+    await expect(service.reboot('full')).resolves.toBeUndefined();
+    await expect(service.fullReboot()).resolves.toBeUndefined();
   });
 });

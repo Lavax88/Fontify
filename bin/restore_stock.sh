@@ -14,7 +14,11 @@ DATA_DIR="$MODDIR/data"
 
 # 1. Clean custom font active files
 rm -f "$DATA_DIR/current_font.json" "$DATA_DIR/custom_font.ttf" 2>/dev/null
+rm -f "$DATA_DIR/.staged_font_pending" 2>/dev/null
 rm -f /data/local/tmp/fontify_custom_font.ttf 2>/dev/null
+
+# Mark full reboot requirement to prevent bootloops on soft reboot
+touch "$DATA_DIR/.full_reboot_required" 2>/dev/null
 
 # 2. Revert text font overlays while preserving custom emoji if active
 if [ -f "$DATA_DIR/custom_emoji.ttf" ] && [ -s "$DATA_DIR/custom_emoji.ttf" ]; then
@@ -25,10 +29,16 @@ if [ -f "$DATA_DIR/custom_emoji.ttf" ] && [ -s "$DATA_DIR/custom_emoji.ttf" ]; t
     rm -rf "$MODDIR/system/etc" 2>/dev/null
     rm -rf "$MODDIR/system/product/etc" 2>/dev/null
     rm -rf "$MODDIR/product/etc" 2>/dev/null
+    if [ -f "$MODDIR/bin/nomount_sync.sh" ]; then
+        sh "$MODDIR/bin/nomount_sync.sh" del_fonts 2>/dev/null
+    fi
 else
     # Neither font nor emoji active - wipe overlay tree
     rm -rf "$MODDIR/system" 2>/dev/null
     rm -rf "$MODDIR/product" 2>/dev/null
+    if [ -f "$MODDIR/bin/nomount_sync.sh" ]; then
+        sh "$MODDIR/bin/nomount_sync.sh" del_all 2>/dev/null
+    fi
 fi
 
 # 3. Clean font caches and updatable font overrides from storage.

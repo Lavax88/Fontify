@@ -95,8 +95,8 @@ export const CURATED_EMOJI_PACKS: CuratedEmojiPack[] = [
     icon: '🤖',
     description: 'Standard Android system emojis',
     author: 'Google',
-    sizeMb: '10.2 MB',
-    url: 'https://raw.githubusercontent.com/zFont/Host/main/Font/Emoji/2024/NotoColorEmojiu16PNG_v041024[MFFMEmoji].ttf'
+    sizeMb: '2.9 MB',
+    url: 'https://raw.githubusercontent.com/googlefonts/noto-emoji/main/fonts/NotoColorEmoji.ttf'
   }
 ];
 
@@ -189,8 +189,8 @@ export const FLAGSHIP_PRESETS: EmojiPreset[] = [
     category: 'noto',
     description: 'Standard Android system emojis',
     author: 'Google',
-    sizeMb: '10.2 MB',
-    url: 'https://raw.githubusercontent.com/zFont/Host/main/Font/Emoji/2024/NotoColorEmojiu16PNG_v041024[MFFMEmoji].ttf'
+    sizeMb: '2.9 MB',
+    url: 'https://raw.githubusercontent.com/googlefonts/noto-emoji/main/fonts/NotoColorEmoji.ttf'
   }
 ];
 
@@ -254,10 +254,10 @@ export async function applySelectedEmoji(): Promise<void> {
       });
     },
     onReboot: async () => {
-      await fontService.reboot();
+      await fontService.reboot('soft');
     },
     onCancelReboot: () => {
-      store.setState({ rebootRequired: true });
+      store.setState({ rebootRequired: true, rebootType: 'soft' });
       showToast('Reboot postponed. Restart anytime from the Overview tab.');
     }
   });
@@ -276,8 +276,21 @@ export async function restoreStockEmoji(): Promise<void> {
   showToast('Restoring stock emojis...');
   try {
     await fontService.restoreEmojiStock();
-    store.setState({ rebootRequired: true });
-    showToast('Stock emojis restored! Restart device to apply.');
+    store.setState({ rebootRequired: true, rebootType: 'full' });
+
+    const rebootConfirmed = await showConfirmDialog({
+      title: 'Full Reboot Required',
+      body: 'Stock emojis have been restored. A <strong>full device reboot</strong> is required to safely unmount system overlays and prevent bootloops.<br><br>Reboot now?',
+      confirmText: 'Full Reboot',
+      cancelText: 'Later',
+      iconType: 'reboot'
+    });
+
+    if (rebootConfirmed) {
+      await fontService.fullReboot();
+    } else {
+      showToast('Full reboot postponed. Restart anytime from the Overview tab.');
+    }
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
     showToast(`Failed to restore stock emojis: ${msg}`);
@@ -691,13 +704,26 @@ export function setupEmojiTab(): void {
 
   if (btnEmojiReboot) {
     btnEmojiReboot.addEventListener('click', async () => {
-      await showConfirmDialog({
-        title: 'Reboot Device',
-        body: 'Restart system to load updated emoji overlays?',
-        confirmText: 'Reboot',
-        iconType: 'reboot',
-        onConfirm: () => fontService.reboot()
-      });
+      const isFull = store.getState().rebootType === 'full';
+      if (isFull) {
+        await showConfirmDialog({
+          title: 'Full Reboot Required',
+          body: 'A full device reboot is required to safely restore stock emojis and prevent bootloops.<br><br>Reboot now?',
+          confirmText: 'Full Reboot',
+          cancelText: 'Cancel',
+          iconType: 'reboot',
+          onConfirm: () => fontService.fullReboot()
+        });
+      } else {
+        await showConfirmDialog({
+          title: 'Reboot Device',
+          body: 'Restart system to load updated emoji overlays?',
+          confirmText: 'Reboot',
+          cancelText: 'Cancel',
+          iconType: 'reboot',
+          onConfirm: () => fontService.reboot('soft')
+        });
+      }
     });
   }
 

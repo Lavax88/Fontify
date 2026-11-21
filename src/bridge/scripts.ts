@@ -219,12 +219,33 @@ export async function restoreStock(): Promise<ScriptActionResult> {
 }
 
 /**
- * Triggers a device soft reboot by killing system_server.
- * Matches the official Fontify v1.0.0 implementation on GitHub (https://github.com/Lavax88/Fontify):
- * restarts Zygote and the Android framework to reload all fonts & emojis without a full reboot.
+ * Triggers a real Android system reboot to reload kernel VFS module overlays and font caches.
+ * Executes Android framework svc power reboot with fallback to init sys.powerctl and reboot binary.
  */
-export async function rebootDevice(): Promise<void> {
-  await exec('pkill -f system_server || killall system_server');
+export async function fullRebootDevice(): Promise<void> {
+  await exec('/system/bin/svc power reboot || /system/bin/setprop sys.powerctl reboot || /system/bin/reboot || reboot');
+}
+
+/**
+ * Triggers a device soft reboot to reload all fonts & emojis in ~3 seconds, or full reboot if specified.
+ * Deploys any staged font/emoji overlays, clears font caches, synchronizes VFS rules,
+ * and restarts system_server & Zygote without requiring a slow hardware reboot.
+ */
+export async function rebootDevice(mode: 'soft' | 'full' = 'soft'): Promise<void> {
+  if (mode === 'full') {
+    await fullRebootDevice();
+    return;
+  }
+
+  const deployScript = `
+    if [ -f /data/adb/modules/fontify/bin/deploy_pending.sh ]; then
+      sh /data/adb/modules/fontify/bin/deploy_pending.sh 2>/dev/null
+    elif [ -f /data/adb/modules/custom_font_installer/bin/deploy_pending.sh ]; then
+      sh /data/adb/modules/custom_font_installer/bin/deploy_pending.sh 2>/dev/null
+    fi
+  `.trim();
+
+  await exec(`${deployScript} && { pkill -f system_server || killall system_server; }`);
 }
 
 /**

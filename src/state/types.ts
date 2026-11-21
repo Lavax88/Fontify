@@ -47,6 +47,7 @@ export interface AppState {
 
   // System restart reminder
   rebootRequired: boolean;
+  rebootType?: 'soft' | 'full';
 }
 
 export interface CachedData {

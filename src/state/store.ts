@@ -47,6 +47,7 @@ export class Store {
       applyEmojiProgress: 0,
       applyEmojiProgressMessage: '',
       rebootRequired: false,
+      rebootType: 'soft',
       ...initialState
     };
   }

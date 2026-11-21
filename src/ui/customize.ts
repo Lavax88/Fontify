@@ -36,10 +36,10 @@ export async function applySelectedFont(): Promise<void> {
       });
     },
     onReboot: async () => {
-      await fontService.reboot();
+      await fontService.reboot('soft');
     },
     onCancelReboot: () => {
-      store.setState({ rebootRequired: true });
+      store.setState({ rebootRequired: true, rebootType: 'soft' });
       showToast('Reboot postponed. Restart anytime from the Overview tab.');
     }
   });
@@ -58,8 +58,21 @@ export async function restoreStockFont(): Promise<void> {
   showToast('Reverting to stock font...');
   try {
     await fontService.restoreStock();
-    store.setState({ rebootRequired: true });
-    showToast('Stock fonts restored! Restart device to apply.');
+    store.setState({ rebootRequired: true, rebootType: 'full' });
+
+    const rebootConfirmed = await showConfirmDialog({
+      title: 'Full Reboot Required',
+      body: 'Stock fonts have been restored. A <strong>full device reboot</strong> is required to safely unmount system overlays and prevent bootloops.<br><br>Reboot now?',
+      confirmText: 'Full Reboot',
+      cancelText: 'Later',
+      iconType: 'reboot'
+    });
+
+    if (rebootConfirmed) {
+      await fontService.fullReboot();
+    } else {
+      showToast('Full reboot postponed. Restart anytime from the Overview tab.');
+    }
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
     showToast(`Restore failed: ${msg}`);
@@ -142,8 +155,13 @@ export function setupCustomizeTab(): void {
     if (!fontData || !fontData.valid) {
       if (fontInfoRow) fontInfoRow.style.display = 'none';
       if (variableControlsGroup) variableControlsGroup.style.display = 'none';
-      if (pickerTitle) pickerTitle.textContent = 'Import Font File';
-      if (pickerSubtitle) pickerSubtitle.textContent = 'Tap to select or drop any .ttf or .otf font';
+      if (state.status.active) {
+        if (pickerTitle) pickerTitle.textContent = `${state.status.active_font_name} (Active)`;
+        if (pickerSubtitle) pickerSubtitle.textContent = 'Custom font applied. Tap or drop any font to customize.';
+      } else {
+        if (pickerTitle) pickerTitle.textContent = 'Import Font File';
+        if (pickerSubtitle) pickerSubtitle.textContent = 'Tap to select or drop any .ttf or .otf font';
+      }
       if (btnApply) btnApply.disabled = true;
       return;
     }
@@ -235,13 +253,26 @@ export function setupCustomizeTab(): void {
   }
   if (btnSoftReboot) {
     btnSoftReboot.addEventListener('click', async () => {
-      await showConfirmDialog({
-        title: 'Reboot Device',
-        body: 'Restart system to load updated fonts?',
-        confirmText: 'Reboot',
-        iconType: 'reboot',
-        onConfirm: () => fontService.reboot()
-      });
+      const isFull = store.getState().rebootType === 'full';
+      if (isFull) {
+        await showConfirmDialog({
+          title: 'Full Reboot Required',
+          body: 'A full device reboot is required to cleanly restore stock system fonts and prevent bootloops.<br><br>Reboot now?',
+          confirmText: 'Full Reboot',
+          cancelText: 'Cancel',
+          iconType: 'reboot',
+          onConfirm: () => fontService.fullReboot()
+        });
+      } else {
+        await showConfirmDialog({
+          title: 'Reboot Device',
+          body: 'Restart system to load updated fonts?',
+          confirmText: 'Reboot',
+          cancelText: 'Cancel',
+          iconType: 'reboot',
+          onConfirm: () => fontService.reboot('soft')
+        });
+      }
     });
   }
 }

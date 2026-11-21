@@ -23,13 +23,24 @@ export function setupOverviewTab(): void {
 
   if (btnBannerReboot) {
     btnBannerReboot.addEventListener('click', async () => {
-      await fontService.reboot();
+      const mode = store.getState().rebootType || 'soft';
+      await fontService.reboot(mode);
     });
   }
 
   function updateRebootReminder(required: boolean): void {
     if (rebootReminderBanner) {
       rebootReminderBanner.style.display = required ? 'flex' : 'none';
+      const isFull = store.getState().rebootType === 'full';
+      if (btnBannerReboot) {
+        btnBannerReboot.textContent = isFull ? 'Full Reboot' : 'Reboot';
+      }
+      const bannerSub = rebootReminderBanner.querySelector('.banner-subtitle');
+      if (bannerSub) {
+        bannerSub.textContent = isFull
+          ? 'A full device reboot is required to restore stock system mounts safely.'
+          : 'Restart your device to apply updated font/emoji overlays.';
+      }
     }
   }
 
@@ -87,4 +98,5 @@ export function setupOverviewTab(): void {
   // Subscribe to store updates for status and rebootRequired slice
   store.subscribe(state => state.status, renderStatus);
   store.subscribe(state => state.rebootRequired, updateRebootReminder);
+  store.subscribe(state => state.rebootType, () => updateRebootReminder(store.getState().rebootRequired));
 }

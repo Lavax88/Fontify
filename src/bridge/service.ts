@@ -11,6 +11,7 @@ import {
   applyEmoji as runApplyEmoji,
   restoreEmojiStock as runRestoreEmojiStock,
   rebootDevice as runRebootDevice,
+  fullRebootDevice as runFullRebootDevice,
   findLocalDownload
 } from './scripts';
 import type { SystemStatus, ScriptActionResult } from './types';
@@ -245,9 +246,21 @@ export class SystemFontService {
 
   /**
    * Reboots the Android device.
+   * Supports 'soft' (fast 3s soft reboot) or 'full' (hardware reboot for restoring stock).
    */
-  public async reboot(): Promise<void> {
-    await runRebootDevice();
+  public async reboot(mode: 'soft' | 'full' = 'soft'): Promise<void> {
+    if (mode === 'full') {
+      await runFullRebootDevice();
+    } else {
+      await runRebootDevice();
+    }
+  }
+
+  /**
+   * Triggers a full Android hardware reboot.
+   */
+  public async fullReboot(): Promise<void> {
+    await runFullRebootDevice();
   }
 
   /**
