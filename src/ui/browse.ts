@@ -28,7 +28,7 @@ import type {
   BrowseFilterState,
   FontVariant
 } from '../browse/types';
-import type { FontifyTab } from './components/pageSwipe';
+import { navigateToTab } from './navigation';
 
 const PAGE_SIZE = 24;
 
@@ -1073,10 +1073,7 @@ export async function handleOpenInCustomize(item: BrowseItem, variant?: FontVari
     closePreviewSheet();
 
     // Switch to customize tab
-    const navSwitchTab = (window as unknown as { switchTab?: (tab: FontifyTab) => void }).switchTab;
-    if (typeof navSwitchTab === 'function') {
-      navSwitchTab('customize');
-    }
+    navigateToTab('customize');
 
     const variantLabel = isVarSelected ? 'Variable' : `${targetWeight}`;
     showToast(`Opened "${item.name}" (${variantLabel}) in Customize`);

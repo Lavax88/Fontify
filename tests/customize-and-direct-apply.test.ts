@@ -190,13 +190,8 @@ describe('Customize Reactive UI & Direct Apply Fixes', () => {
     };
     vi.spyOn(FontParser, 'parse').mockReturnValue(mockFontInfo);
 
-    // Mock window switchTab and document
-    let switchedTo: string | null = null;
-    globalThis.window = {
-      switchTab: vi.fn((tab: string) => {
-        switchedTo = tab;
-      })
-    } as any;
+    // Mock window and document
+    globalThis.window = {} as any;
 
     globalThis.document = {
       body: { appendChild: vi.fn(), removeChild: vi.fn() },
@@ -227,7 +222,7 @@ describe('Customize Reactive UI & Direct Apply Fixes', () => {
     expect(state.axisValues['wght']).toBe(700);
     expect(state.selectedPreset).toBe('Bold (700)');
     expect(state.weightMode).toBe('custom');
-    expect(switchedTo).toBe('customize');
+    expect(state.currentTab).toBe('customize');
   });
 
   it('guarantees bundled Google variable fonts have authentic variableUrl and Variable variant', async () => {
