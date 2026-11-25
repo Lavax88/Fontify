@@ -525,7 +525,7 @@ export function openPreviewSheet(item: BrowseItem): void {
 
     <div style="display: flex; flex-direction: column; gap: 6px; margin-top: 10px;">
       <div style="display: flex; justify-content: space-between; align-items: center;">
-        <span style="font-size: 0.75rem; font-weight: 700; color: var(--md-sys-color-on-surface-variant);">${isEmoji ? 'Emoji Specimen' : 'Live Specimen (Editable)'}</span>
+        <span style="font-size: 0.75rem; font-weight: 700; color: var(--md-sys-color-on-surface-variant);">${isEmoji ? 'Emoji Specimen' : 'Live Specimen'}</span>
         <span id="preview-load-status" style="font-size: 0.75rem; color: var(--md-sys-color-primary);">Loading preview...</span>
       </div>
       ${
@@ -542,8 +542,6 @@ export function openPreviewSheet(item: BrowseItem): void {
       <div
         id="preview-specimen-box"
         class="browse-preview-specimen ${isEmoji ? 'browse-specimen-emoji' : 'browse-specimen-text'}"
-        contenteditable="true"
-        spellcheck="false"
       >${escapeHtml(defaultSpecimen)}</div>
     </div>
 
@@ -646,22 +644,6 @@ export function openPreviewSheet(item: BrowseItem): void {
       }
     });
   });
-
-  // Wire specimen text box input listener for dynamic subset updates
-  const specimen = document.getElementById('preview-specimen-box');
-  if (specimen && !isEmoji) {
-    let specimenInputTimer: ReturnType<typeof setTimeout> | null = null;
-    specimen.addEventListener('input', () => {
-      if (specimenInputTimer) clearTimeout(specimenInputTimer);
-      specimenInputTimer = setTimeout(() => {
-        const currentText = specimen.textContent || '';
-        const hasExtraChars = currentText.split('').some((ch) => !SUBSET_CHARS.includes(ch));
-        if (hasExtraChars && state.activeItem?.id === item.id) {
-          loadPreviewFontFace(item, state.activeVariant || undefined);
-        }
-      }, 500);
-    });
-  }
 
   // Wire actions
   document.getElementById('btn-preview-apply')?.addEventListener('click', () => {
