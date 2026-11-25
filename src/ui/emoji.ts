@@ -611,7 +611,7 @@ export function setupEmojiTab(): void {
       console.warn('FontFace preview load notice:', err);
     }
 
-    if (emojiInfoRow) emojiInfoRow.style.display = 'block';
+    if (emojiInfoRow) emojiInfoRow.style.display = 'flex';
     if (emojiNameElem) emojiNameElem.textContent = fontName;
     if (emojiSizeElem) {
       const mb = (buffer.byteLength / (1024 * 1024)).toFixed(1);

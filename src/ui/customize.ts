@@ -166,7 +166,7 @@ export function setupCustomizeTab(): void {
       pickerSubtitle.textContent = `${fontData.format} (${fontData.numGlyphs || 0} glyphs)`;
     }
 
-    if (fontInfoRow) fontInfoRow.style.display = 'block';
+    if (fontInfoRow) fontInfoRow.style.display = 'flex';
     if (fontNameElem) fontNameElem.textContent = fontData.fullName;
     if (fontFormatElem) {
       const ver = fontData.version ? (fontData.version.toLowerCase().startsWith('v') ? fontData.version : `v${fontData.version}`) : 'v1.0';

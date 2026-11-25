@@ -1,5 +1,5 @@
 /**
- * Fontify - Variable Font Preset Chips (<m3e-filter-chip-set>) & Axis Sliders (<m3e-slider>)
+ * Fontify - Variable Font Weight & Style Preset Chips (<m3e-filter-chip-set>) & Axis Sliders (<m3e-slider>)
  */
 
 import type { FontInfo } from '../../font/types';
@@ -11,6 +11,10 @@ type FilterChipLike = HTMLElement & {
   value?: string;
 };
 
+type FilterChipSetLike = HTMLElement & {
+  selected?: readonly FilterChipLike[];
+};
+
 type SliderThumbLike = HTMLElement & {
   value: number | null;
 };
@@ -18,6 +22,11 @@ type SliderThumbLike = HTMLElement & {
 type SliderLike = HTMLElement & {
   thumb?: SliderThumbLike | null;
 };
+
+interface PresetOption {
+  name: string;
+  values: Record<string, number | string>;
+}
 
 function setActiveChip(chips: NodeListOf<FilterChipLike> | FilterChipLike[], activeChip: FilterChipLike | null): void {
   chips.forEach(c => {
@@ -56,12 +65,15 @@ export function renderVariableControls(
   const variableControlsGroup = document.getElementById('variable-controls-group');
   const slidersContainer = document.getElementById('sliders-container');
   const presetsContainer = document.getElementById('presets-container');
+  const stylePresetsSection = document.getElementById('style-presets-section');
+  const stylePresetsContainer = document.getElementById('style-presets-container');
 
   if (!variableControlsGroup || !slidersContainer || !presetsContainer) return;
 
   variableControlsGroup.style.display = 'block';
   slidersContainer.innerHTML = '';
   presetsContainer.innerHTML = '';
+  if (stylePresetsContainer) stylePresetsContainer.innerHTML = '';
 
   const currentStoreAxes = store.getState().axisValues || {};
   const initialAxisValues: Record<string, number> = {};
@@ -73,8 +85,8 @@ export function renderVariableControls(
     weightMode: store.getState().weightMode || 'auto'
   });
 
-  // 1. Build Presets inside <m3e-filter-chip-set>
-  const presets: { name: string; values: Record<string, number | string> }[] = [
+  // 1. Build Weight Presets
+  const weightPresets: PresetOption[] = [
     { name: 'Auto (Stock)', values: { mode: 'auto' } },
     { name: 'Thin (100)', values: { wght: 100 } },
     { name: 'Light (300)', values: { wght: 300 } },
@@ -86,70 +98,128 @@ export function renderVariableControls(
     { name: 'Black (900)', values: { wght: 900 } }
   ];
 
+  // 2. Build Style Presets from named fvar instances or slant/italic axes
+  const stylePresets: PresetOption[] = [];
   if (fontData.instances && fontData.instances.length > 0) {
     for (const inst of fontData.instances) {
-      presets.push({ name: inst.name, values: inst.values });
+      stylePresets.push({ name: inst.name, values: inst.values });
+    }
+  } else {
+    const italAxis = fontData.axes.find(a => a.tag === 'ital');
+    const slntAxis = fontData.axes.find(a => a.tag === 'slnt');
+    if (italAxis) {
+      stylePresets.push({ name: 'Roman', values: { ital: italAxis.min } });
+      stylePresets.push({ name: 'Italic', values: { ital: italAxis.max } });
+    } else if (slntAxis) {
+      stylePresets.push({ name: 'Upright', values: { slnt: 0 } });
+      stylePresets.push({ name: 'Slanted', values: { slnt: slntAxis.min < 0 ? slntAxis.min : slntAxis.max } });
     }
   }
 
   const selectedPresetFromStore = store.getState().selectedPreset;
-  let matchedPresetIndex = -1;
+
+  const weightChipSet = document.createElement('m3e-filter-chip-set') as FilterChipSetLike;
+  weightChipSet.setAttribute('aria-label', 'Font weight presets');
+
+  const styleChipSet = document.createElement('m3e-filter-chip-set') as FilterChipSetLike;
+  styleChipSet.setAttribute('aria-label', 'Font style presets');
+
+  const applyPreset = (preset: PresetOption) => {
+    const nextAxisValues = { ...store.getState().axisValues };
+
+    if (preset.values.mode === 'auto') {
+      store.setState({ weightMode: 'auto', selectedPreset: preset.name });
+      for (const axis of fontData.axes) {
+        nextAxisValues[axis.tag] = axis.default;
+        updateSliderValue(axis.tag, axis.default);
+      }
+    } else {
+      store.setState({ weightMode: 'custom', selectedPreset: preset.name });
+      for (const [tag, val] of Object.entries(preset.values)) {
+        if (typeof val === 'number') {
+          nextAxisValues[tag] = val;
+          updateSliderValue(tag, val);
+        }
+      }
+    }
+
+    store.setState({ axisValues: nextAxisValues });
+    FontEngine.scheduleVariationUpdate(previewElements, nextAxisValues);
+  };
+
+  let matchedWeightIdx = -1;
   if (selectedPresetFromStore) {
-    matchedPresetIndex = presets.findIndex(p => p.name.toLowerCase() === selectedPresetFromStore.toLowerCase());
+    matchedWeightIdx = weightPresets.findIndex(p => p.name.toLowerCase() === selectedPresetFromStore.toLowerCase());
   }
-  if (matchedPresetIndex === -1 && initialAxisValues['wght'] !== undefined) {
-    matchedPresetIndex = presets.findIndex(p => p.values.wght === initialAxisValues['wght']);
+  if (matchedWeightIdx === -1 && initialAxisValues['wght'] !== undefined) {
+    matchedWeightIdx = weightPresets.findIndex(p => p.values.wght === initialAxisValues['wght']);
   }
-  if (matchedPresetIndex === -1) {
-    matchedPresetIndex = 0;
+  if (matchedWeightIdx === -1 && stylePresets.length === 0) {
+    matchedWeightIdx = 0;
   }
 
-  const chipSet = document.createElement('m3e-filter-chip-set');
-  chipSet.setAttribute('aria-label', 'Font variation presets');
-
-  presets.forEach((preset, idx) => {
-    const isInitialActive = idx === matchedPresetIndex;
+  weightPresets.forEach((preset, idx) => {
+    const isInitialActive = idx === matchedWeightIdx;
     const chip = document.createElement('m3e-filter-chip') as FilterChipLike;
     chip.className = 'm3-chip';
     chip.textContent = preset.name;
     chip.value = preset.name;
     chip.selected = isInitialActive;
-    if (isInitialActive) {
-      chip.setAttribute('selected', '');
-    }
+    if (isInitialActive) chip.setAttribute('selected', '');
     chip.setAttribute('aria-pressed', isInitialActive ? 'true' : 'false');
-
-    chip.addEventListener('click', () => {
-      setActiveChip(chipSet.querySelectorAll<FilterChipLike>('m3e-filter-chip'), chip);
-
-      const nextAxisValues = { ...store.getState().axisValues };
-
-      if (preset.values.mode === 'auto') {
-        store.setState({ weightMode: 'auto', selectedPreset: preset.name });
-        for (const axis of fontData.axes) {
-          nextAxisValues[axis.tag] = axis.default;
-          updateSliderValue(axis.tag, axis.default);
-        }
-      } else {
-        store.setState({ weightMode: 'custom', selectedPreset: preset.name });
-        for (const [tag, val] of Object.entries(preset.values)) {
-          if (typeof val === 'number') {
-            nextAxisValues[tag] = val;
-            updateSliderValue(tag, val);
-          }
-        }
-      }
-
-      store.setState({ axisValues: nextAxisValues });
-      FontEngine.scheduleVariationUpdate(previewElements, nextAxisValues);
-    });
-
-    chipSet.appendChild(chip);
+    weightChipSet.appendChild(chip);
   });
 
-  presetsContainer.appendChild(chipSet);
+  // Listen to M3E 'change' (fires after M3E's internal click toggle completes) so selection stays highlighted
+  weightChipSet.addEventListener('change', () => {
+    const selectedChip = weightChipSet.selected?.[0] ?? weightChipSet.querySelector<FilterChipLike>('m3e-filter-chip[selected]');
+    const preset = selectedChip ? weightPresets.find(p => p.name === selectedChip.value) : undefined;
+    if (preset && selectedChip) {
+      setActiveChip(weightChipSet.querySelectorAll<FilterChipLike>('m3e-filter-chip'), selectedChip);
+      setActiveChip(styleChipSet.querySelectorAll<FilterChipLike>('m3e-filter-chip'), null);
+      applyPreset(preset);
+    }
+  });
 
-  // 2. Build M3E Expressive Sliders (<m3e-slider size="medium" labelled>)
+  presetsContainer.appendChild(weightChipSet);
+
+  if (stylePresetsSection && stylePresetsContainer) {
+    if (stylePresets.length > 0) {
+      stylePresetsSection.style.display = 'block';
+      let matchedStyleIdx = -1;
+      if (selectedPresetFromStore) {
+        matchedStyleIdx = stylePresets.findIndex(p => p.name.toLowerCase() === selectedPresetFromStore.toLowerCase());
+      }
+
+      stylePresets.forEach((preset, idx) => {
+        const isInitialActive = idx === matchedStyleIdx;
+        const chip = document.createElement('m3e-filter-chip') as FilterChipLike;
+        chip.className = 'm3-chip';
+        chip.textContent = preset.name;
+        chip.value = preset.name;
+        chip.selected = isInitialActive;
+        if (isInitialActive) chip.setAttribute('selected', '');
+        chip.setAttribute('aria-pressed', isInitialActive ? 'true' : 'false');
+        styleChipSet.appendChild(chip);
+      });
+
+      styleChipSet.addEventListener('change', () => {
+        const selectedChip = styleChipSet.selected?.[0] ?? styleChipSet.querySelector<FilterChipLike>('m3e-filter-chip[selected]');
+        const preset = selectedChip ? stylePresets.find(p => p.name === selectedChip.value) : undefined;
+        if (preset && selectedChip) {
+          setActiveChip(styleChipSet.querySelectorAll<FilterChipLike>('m3e-filter-chip'), selectedChip);
+          setActiveChip(weightChipSet.querySelectorAll<FilterChipLike>('m3e-filter-chip'), null);
+          applyPreset(preset);
+        }
+      });
+
+      stylePresetsContainer.appendChild(styleChipSet);
+    } else {
+      stylePresetsSection.style.display = 'none';
+    }
+  }
+
+  // 3. Build M3E Expressive Sliders (<m3e-slider size="medium" labelled>)
   for (const axis of fontData.axes) {
     const currentVal = initialAxisValues[axis.tag] ?? axis.default;
     const step = axis.max - axis.min > 100 ? 10 : 1;
@@ -180,7 +250,8 @@ export function renderVariableControls(
         const currentAxes = { ...store.getState().axisValues, [axis.tag]: val };
         store.setState({ axisValues: currentAxes, weightMode: 'custom', selectedPreset: 'Custom' });
 
-        setActiveChip(chipSet.querySelectorAll<FilterChipLike>('m3e-filter-chip'), null);
+        setActiveChip(weightChipSet.querySelectorAll<FilterChipLike>('m3e-filter-chip'), null);
+        setActiveChip(styleChipSet.querySelectorAll<FilterChipLike>('m3e-filter-chip'), null);
         FontEngine.scheduleVariationUpdate(previewElements, currentAxes);
       };
 

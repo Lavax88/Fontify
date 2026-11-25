@@ -165,33 +165,35 @@
                             </div>
                         </m3e-card>
 
-                        <!-- 2. Loaded Font Properties Card -->
-                        <m3e-card class="section-card" id="font-info-row" variant="outlined" style="display: none;">
-                            <m3e-list class="info-list">
-                                <m3e-list-item>
-                                    Font Family
-                                    <span slot="trailing" class="info-val" id="font-name">Custom Font</span>
-                                </m3e-list-item>
-                                <m3e-divider></m3e-divider>
-                                <m3e-list-item>
-                                    Format
-                                    <span slot="trailing" class="info-val" id="font-format">TrueType Variable Font</span>
-                                </m3e-list-item>
-                                <m3e-divider></m3e-divider>
-                                <m3e-list-item>
-                                    Font Type
-                                    <m3e-badge slot="trailing" id="font-type-badge">Variable</m3e-badge>
-                                </m3e-list-item>
-                            </m3e-list>
-                        </m3e-card>
+                        <!-- 2. Loaded Font Properties (Segmented Card List) -->
+                        <m3e-list id="font-info-row" variant="segmented" class="info-list" style="display: none;">
+                            <m3e-list-item>
+                                Font Family
+                                <span slot="trailing" class="info-val" id="font-name">Custom Font</span>
+                            </m3e-list-item>
+                            <m3e-list-item>
+                                Format
+                                <span slot="trailing" class="info-val" id="font-format">TrueType Variable Font</span>
+                            </m3e-list-item>
+                            <m3e-list-item>
+                                Font Type
+                                <m3e-badge slot="trailing" id="font-type-badge">Variable</m3e-badge>
+                            </m3e-list-item>
+                        </m3e-list>
 
                         <!-- 3. Variable Font Axis Tuning Card -->
                         <m3e-card class="section-card" id="variable-controls-group" variant="filled" style="display: none;">
                             <div slot="content">
                                 <div class="section-card-header">
-                                    <span class="section-card-title">Weight &amp; Style Presets</span>
+                                    <span class="section-card-title">Weight</span>
                                 </div>
-                                <div class="m3-presets-scroll" id="presets-container" role="group" aria-label="Font variation presets"></div>
+                                <div class="m3-presets-scroll" id="presets-container" role="group" aria-label="Font weight presets"></div>
+                                <div id="style-presets-section" style="display: none; margin-top: 10px;">
+                                    <div class="section-card-header">
+                                        <span class="section-card-title">Style</span>
+                                    </div>
+                                    <div class="m3-presets-scroll" id="style-presets-container" role="group" aria-label="Font style presets"></div>
+                                </div>
                                 <div class="tuning-card-body" id="sliders-container" role="group" aria-label="Font variation axis sliders"></div>
                             </div>
                         </m3e-card>
@@ -246,25 +248,21 @@
                             <div class="curated-emoji-grid" id="curated-emoji-grid" role="list" aria-label="Curated emoji packs"></div>
                         </div>
 
-                        <!-- 3. Loaded Emoji Information Card -->
-                        <m3e-card class="section-card" id="emoji-info-row" variant="outlined" style="display: none;">
-                            <m3e-list class="info-list">
-                                <m3e-list-item>
-                                    Emoji Family
-                                    <span slot="trailing" class="info-val" id="emoji-font-name">Custom Emoji</span>
-                                </m3e-list-item>
-                                <m3e-divider></m3e-divider>
-                                <m3e-list-item>
-                                    File Size
-                                    <span slot="trailing" class="info-val" id="emoji-font-size">--</span>
-                                </m3e-list-item>
-                                <m3e-divider></m3e-divider>
-                                <m3e-list-item>
-                                    Source
-                                    <m3e-badge slot="trailing" id="emoji-source-badge">Custom</m3e-badge>
-                                </m3e-list-item>
-                            </m3e-list>
-                        </m3e-card>
+                        <!-- 3. Loaded Emoji Information (Segmented Card List) -->
+                        <m3e-list id="emoji-info-row" variant="segmented" class="info-list" style="display: none;">
+                            <m3e-list-item>
+                                Emoji Family
+                                <span slot="trailing" class="info-val" id="emoji-font-name">Custom Emoji</span>
+                            </m3e-list-item>
+                            <m3e-list-item>
+                                File Size
+                                <span slot="trailing" class="info-val" id="emoji-font-size">--</span>
+                            </m3e-list-item>
+                            <m3e-list-item>
+                                Source
+                                <m3e-badge slot="trailing" id="emoji-source-badge">Custom</m3e-badge>
+                            </m3e-list-item>
+                        </m3e-list>
 
                         <!-- 4. Interactive Emoji Preview Stage -->
                         <m3e-card class="section-card" variant="outlined">
@@ -288,7 +286,7 @@
         <div class="floating-action-cluster hidden" id="floating-action-cluster" aria-label="Quick Actions">
             <m3e-fab id="fab-menu-trigger-btn" variant="primary" size="medium" aria-label="Quick Actions">
                 <m3e-fab-menu-trigger for="fab-actions-menu">
-                    <m3e-icon name="tune"></m3e-icon>
+                    <m3e-icon name="edit"></m3e-icon>
                 </m3e-fab-menu-trigger>
             </m3e-fab>
             <m3e-fab-menu id="fab-actions-menu" variant="primary">
@@ -400,7 +398,7 @@
         </m3e-dialog>
 
         <!-- M3E Browse Preview Bottom Sheet -->
-        <m3e-bottom-sheet id="browse-preview-sheet" modal handle hideable detents="fit half full" detent="1" aria-labelledby="browse-preview-title">
+        <m3e-bottom-sheet id="browse-preview-sheet" modal handle hideable detents="fit half full" detent="0" aria-labelledby="browse-preview-title">
             <div class="browse-preview-container" id="browse-preview-container"></div>
         </m3e-bottom-sheet>
     </m3e-theme>

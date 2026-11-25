@@ -70,8 +70,15 @@
 /* ================= BOTTOM NAV BAR ================= */
 #main-nav-bar {
   flex-shrink: 0;
+  width: 100%;
   padding-bottom: var(--bottom-inset);
+  --m3e-nav-bar-vertical-item-width: 0px;
   z-index: 25;
+}
+
+#main-nav-bar m3e-nav-item {
+  flex: 1 1 0;
+  min-width: 0;
 }
 
 /* ================= FLOATING ACTION CLUSTER ================= */
@@ -161,7 +168,10 @@ m3e-badge.browse-badge-downloaded {
   font-weight: 500;
   color: var(--md-sys-color-on-surface-variant);
   text-align: right;
-  white-space: nowrap;
+  white-space: normal;
+  word-break: break-word;
+  max-width: min(220px, 56vw);
+  line-height: 1.3;
 }
 
 /* ================= OVERVIEW TAB ================= */
@@ -316,8 +326,9 @@ m3e-badge.browse-badge-downloaded {
 .browse-specimen-box {
   min-height: 68px;
   padding: 12px;
-  border-radius: 14px;
-  background-color: var(--md-sys-color-surface-container-lowest);
+  border-radius: 16px;
+  background-color: var(--md-sys-color-surface-container-highest);
+  border: 1px solid color-mix(in srgb, var(--md-sys-color-outline-variant) 60%, transparent);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -392,7 +403,8 @@ m3e-badge.browse-badge-downloaded {
   min-height: 110px;
   padding: 18px;
   border-radius: 20px;
-  background-color: var(--md-sys-color-surface-container-low);
+  background-color: var(--md-sys-color-surface-container-highest);
+  border: 1px solid color-mix(in srgb, var(--md-sys-color-outline-variant) 60%, transparent);
   color: var(--md-sys-color-on-surface);
   font-size: 1.5rem;
   line-height: 1.4;
@@ -406,9 +418,10 @@ m3e-badge.browse-badge-downloaded {
   align-items: center;
   justify-content: center;
   min-height: 96px;
-  padding: 12px;
+  padding: 14px;
   border-radius: 20px;
-  background-color: var(--md-sys-color-surface-container-low);
+  background-color: var(--md-sys-color-surface-container-highest);
+  border: 1px solid color-mix(in srgb, var(--md-sys-color-outline-variant) 60%, transparent);
   margin-bottom: 12px;
 }
 
@@ -521,6 +534,10 @@ m3e-slider {
   flex-direction: column;
   gap: 12px;
   margin-top: 10px;
+  padding: 14px;
+  border-radius: 18px;
+  background-color: var(--md-sys-color-surface-container-highest);
+  border: 1px solid color-mix(in srgb, var(--md-sys-color-outline-variant) 60%, transparent);
 }
 
 .preview-text {
@@ -643,9 +660,10 @@ m3e-slider {
 .emoji-specimen-hero {
   font-size: 1.75rem;
   line-height: 1.5;
-  padding: 12px;
+  padding: 14px;
   border-radius: 16px;
-  background-color: var(--md-sys-color-surface-container-low);
+  background-color: var(--md-sys-color-surface-container-highest);
+  border: 1px solid color-mix(in srgb, var(--md-sys-color-outline-variant) 60%, transparent);
   font-family: 'CustomEmojiPreview', 'Apple Color Emoji', 'Segoe UI Emoji', 'Noto Color Emoji', sans-serif;
   outline: none;
 }

@@ -40,6 +40,7 @@ import '@m3e/icons/outlined/search';
 import '@m3e/icons/outlined/cloud_upload';
 import '@m3e/icons/outlined/close';
 import '@m3e/icons/outlined/delete';
+import '@m3e/icons/outlined/edit';
 import '@m3e/icons/outlined/tune';
 import '@m3e/icons/outlined/check_circle';
 import '@m3e/icons/outlined/error';

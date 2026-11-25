@@ -149,7 +149,7 @@ describe('Customize Reactive UI & Direct Apply Fixes', () => {
     // Reactive subscription should automatically populate UI:
     expect(mockPickerTitle.textContent).toBe('Roboto Flex');
     expect(mockPickerSubtitle.textContent).toContain('1200 glyphs');
-    expect(mockFontInfoRow.style.display).toBe('block');
+    expect(mockFontInfoRow.style.display).toBe('flex');
     expect(mockFontName.textContent).toBe('Roboto Flex');
     expect(mockFontTypeBadge.textContent).toBe('Variable');
 

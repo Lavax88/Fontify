@@ -579,7 +579,7 @@ export function openPreviewSheet(item: BrowseItem): void {
 
   if (sheet) {
     if (typeof sheet.show === 'function') {
-      sheet.show(1);
+      sheet.show(0);
     } else {
       sheet.style.display = 'block';
       sheet.removeAttribute('aria-hidden');

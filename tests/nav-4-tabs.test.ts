@@ -177,7 +177,7 @@ describe('4-Tab Navigation & ViewPager Mechanics (M3E)', () => {
     };
 
     openPreviewSheet(sampleItem);
-    expect(mockSheet.show).toHaveBeenCalledWith(1);
+    expect(mockSheet.show).toHaveBeenCalledWith(0);
     expect(mockContainer.innerHTML).toContain('Inter');
     expect(mockContainer.innerHTML).toContain('Rasmus Andersson');
     expect(mockContainer.innerHTML).toContain('Apply Directly');
