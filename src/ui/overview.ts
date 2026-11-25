@@ -2,11 +2,25 @@
  * Fontify - Overview Tab Controller (M3E Expressive)
  * Subscribes to system status and renders Split Pane (Font + Emoji status),
  * Reboot Callout, and Segmented Device Info lists.
+ * Active Font/Emoji cards are actionable and trigger Revert to Stock on tap.
  */
 
 import { store } from '../state/store';
 import { fontService } from '../bridge/service';
 import type { SystemStatus } from '../bridge/types';
+import { restoreStockFont } from './customize';
+import { restoreStockEmoji } from './emoji';
+
+function setCardActionable(card: HTMLElement, isActionable: boolean, ariaLabel: string): void {
+  if (isActionable) {
+    card.setAttribute('actionable', '');
+    card.setAttribute('tabindex', '0');
+  } else {
+    card.removeAttribute('actionable');
+    card.removeAttribute('tabindex');
+  }
+  card.setAttribute('aria-label', ariaLabel);
+}
 
 export function setupOverviewTab(): void {
   const overviewBanner = document.getElementById('overview-banner');
@@ -38,6 +52,36 @@ export function setupOverviewTab(): void {
     });
   }
 
+  if (overviewBanner) {
+    const onFontCardActivate = async () => {
+      if (store.getState().status.active) {
+        await restoreStockFont();
+      }
+    };
+    overviewBanner.addEventListener('click', onFontCardActivate);
+    overviewBanner.addEventListener('keydown', async (e: KeyboardEvent) => {
+      if (e.key === 'Enter' || e.key === ' ') {
+        e.preventDefault();
+        await onFontCardActivate();
+      }
+    });
+  }
+
+  if (emojiBanner) {
+    const onEmojiCardActivate = async () => {
+      if (store.getState().status.emoji_active) {
+        await restoreStockEmoji();
+      }
+    };
+    emojiBanner.addEventListener('click', onEmojiCardActivate);
+    emojiBanner.addEventListener('keydown', async (e: KeyboardEvent) => {
+      if (e.key === 'Enter' || e.key === ' ') {
+        e.preventDefault();
+        await onEmojiCardActivate();
+      }
+    });
+  }
+
   function updateRebootReminder(required: boolean): void {
     if (!rebootReminderBanner) return;
     rebootReminderBanner.style.display = required ? 'block' : 'none';
@@ -63,12 +107,14 @@ export function setupOverviewTab(): void {
         bannerSubtitle.textContent = fontName;
         bannerBadge.textContent = 'ACTIVE';
         bannerIcon?.setAttribute('name', 'check_circle');
+        setCardActionable(overviewBanner, true, `${fontName} active. Tap to revert to stock.`);
       } else {
         overviewBanner.className = 'overview-banner is-stock';
         bannerTitle.textContent = 'Default Font';
         bannerSubtitle.textContent = 'Stock System Font';
         bannerBadge.textContent = 'STOCK';
         bannerIcon?.setAttribute('name', 'font_download');
+        setCardActionable(overviewBanner, false, 'Default Font: Stock System Font');
       }
     }
 
@@ -82,12 +128,14 @@ export function setupOverviewTab(): void {
         emojiBannerSubtitle.textContent = emojiName;
         emojiBannerBadge.textContent = 'ACTIVE';
         emojiBannerIcon?.setAttribute('name', 'check_circle');
+        setCardActionable(emojiBanner, true, `${emojiName} active. Tap to revert to stock.`);
       } else {
         emojiBanner.className = 'overview-banner is-stock';
         emojiBannerTitle.textContent = 'Default Emoji';
         emojiBannerSubtitle.textContent = 'Stock (Google)';
         emojiBannerBadge.textContent = 'STOCK';
         emojiBannerIcon?.setAttribute('name', 'mood');
+        setCardActionable(emojiBanner, false, 'Default Emoji: Stock (Google)');
       }
     }
 
