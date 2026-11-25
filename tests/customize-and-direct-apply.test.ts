@@ -401,4 +401,29 @@ describe('Customize Reactive UI & Direct Apply Fixes', () => {
     expect(appliedOptions.fontName).toBe('Outfit Regular');
     expect(appliedOptions.isVariable).toBe(false);
   });
+
+  it('resolves active font name from selected style/weight preset instead of default Thin fullName', async () => {
+    const { resolveAppliedFontName } = await import('../src/ui/customize');
+
+    const variableThinDefault: FontInfo = {
+      valid: true,
+      format: 'TrueType Variable Font',
+      fullName: 'Inter Thin',
+      familyName: 'Inter',
+      subfamilyName: 'Thin',
+      postscriptName: 'Inter-Thin',
+      version: '4.0',
+      isVariable: true,
+      isCollection: false,
+      numGlyphs: 1200,
+      unitsPerEm: 1000,
+      axes: [{ tag: 'wght', name: 'Weight', min: 100, default: 100, max: 900, current: 400 }],
+      instances: [{ name: 'Regular', values: { wght: 400 } }]
+    };
+
+    expect(resolveAppliedFontName(variableThinDefault, 'Regular', 'custom', { wght: 400 })).toBe('Inter Regular');
+    expect(resolveAppliedFontName(variableThinDefault, 'SemiBold (600)', 'custom', { wght: 600 })).toBe('Inter SemiBold');
+    expect(resolveAppliedFontName(variableThinDefault, 'Auto (Stock)', 'auto', { wght: 100 })).toBe('Inter (Variable)');
+    expect(resolveAppliedFontName(variableThinDefault, 'Custom', 'custom', { wght: 550 })).toBe('Inter (wght 550)');
+  });
 });

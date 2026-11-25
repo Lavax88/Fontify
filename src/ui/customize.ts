@@ -12,6 +12,41 @@ import { showToast } from './components/toast';
 import { showConfirmDialog, runApplyWorkflow } from './components/dialog';
 import { renderVariableControls } from './components/sliders';
 
+import type { FontInfo } from '../font/types';
+
+export function resolveAppliedFontName(
+  fontData: FontInfo,
+  selectedPreset: string,
+  weightMode: string,
+  axisValues: Record<string, number>
+): string {
+  if (!fontData.isVariable) {
+    return fontData.fullName;
+  }
+
+  const family = (fontData.familyName || fontData.fullName || 'Custom Font').trim();
+  const preset = (selectedPreset || '').trim();
+
+  if (preset && preset !== 'Custom' && preset !== 'Auto (Stock)') {
+    // Normalize "Regular (400)" -> "Regular" while keeping named styles like "Regular" or "Bold Italic"
+    const cleanPreset = preset.replace(/\s*\(\d+\)\s*$/, '').trim();
+    if (cleanPreset.toLowerCase().startsWith(family.toLowerCase())) {
+      return cleanPreset;
+    }
+    return `${family} ${cleanPreset}`.trim();
+  }
+
+  if (weightMode === 'auto' || preset === 'Auto (Stock)') {
+    return `${family} (Variable)`;
+  }
+
+  if (preset === 'Custom' && typeof axisValues?.wght === 'number') {
+    return `${family} (wght ${axisValues.wght})`;
+  }
+
+  return fontData.fullName;
+}
+
 export async function applySelectedFont(): Promise<void> {
   const state = store.getState();
   if (!state.fontBuffer || !state.fontData) {
@@ -19,16 +54,23 @@ export async function applySelectedFont(): Promise<void> {
     return;
   }
 
+  const resolvedFontName = resolveAppliedFontName(
+    state.fontData,
+    state.selectedPreset,
+    state.weightMode,
+    state.axisValues
+  );
+
   await runApplyWorkflow({
     title: 'Apply Font',
-    body: `Apply <strong>${state.fontData.fullName}</strong> across /system and /product partitions?<br><br>Original stock system fonts remain safely protected.`,
+    body: `Apply <strong>${resolvedFontName}</strong> across /system and /product partitions?<br><br>Original stock system fonts remain safely protected.`,
     confirmText: 'Apply Font',
     iconType: 'apply',
     onApply: async (onProgress) => {
       await fontService.applyFont({
         fontBuffer: state.fontBuffer!,
         fontFile: state.fontFile,
-        fontName: state.fontData!.fullName,
+        fontName: resolvedFontName,
         isVariable: state.fontData!.isVariable,
         weightMode: state.weightMode,
         axisValues: state.axisValues,
