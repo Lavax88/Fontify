@@ -225,7 +225,13 @@ export class SystemFontService {
 
       // Automatically sync cache and store upon success
       const currentStatus = this.appStore.getState().status;
-      saveCachedStatus(false, 'Roboto / Google Sans', currentStatus.device);
+      saveCachedStatus(
+        false,
+        'Roboto / Google Sans',
+        currentStatus.device,
+        currentStatus.emoji_active ?? false,
+        currentStatus.active_emoji_name ?? 'Stock (Google)'
+      );
       this.appStore.setState({
         status: {
           ...currentStatus,

@@ -65,11 +65,6 @@ case "$ACTION" in
         "$NM_BIN" rule del "/product/fonts/NotoColorEmoji.ttf" 2>/dev/null || true
         "$NM_BIN" rule del "/system/product/fonts/NotoColorEmoji.ttf" 2>/dev/null || true
         "$NM_BIN" rule del "/product/product/fonts/NotoColorEmoji.ttf" 2>/dev/null || true
-        # If other font overlay files still exist in the module, re-sync to keep valid rules intact
-        if [ -d "$MODDIR/system/fonts" ] && [ "$(ls -A "$MODDIR/system/fonts" 2>/dev/null)" ]; then
-            "$NM_BIN" module unload "$MODDIR" 2>/dev/null || true
-            "$NM_BIN" module load "$MODDIR" 2>/dev/null || true
-        fi
         ;;
     del_fonts)
         for target in Roboto-Regular.ttf RobotoFlex-Regular.ttf RobotoStatic-Regular.ttf DroidSans.ttf DroidSans-Bold.ttf Roboto-Bold.ttf Roboto-Italic.ttf Roboto-BoldItalic.ttf Roboto-Medium.ttf Roboto-MediumItalic.ttf Roboto-Light.ttf Roboto-LightItalic.ttf Roboto-Thin.ttf Roboto-ThinItalic.ttf Roboto-Black.ttf Roboto-BlackItalic.ttf SourceSansPro-Regular.ttf SourceSansPro-Bold.ttf SourceSansPro-SemiBold.ttf SourceSansPro-Italic.ttf SourceSansPro-BoldItalic.ttf SourceSansPro-SemiBoldItalic.ttf; do

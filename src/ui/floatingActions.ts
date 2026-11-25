@@ -50,16 +50,19 @@ export function initFloatingActions(): { destroy: () => void } {
       fabApply.setAttribute('aria-label', 'Apply Custom Font');
       setItemDisabled(fabApply, !state.fontBuffer || !state.fontData || state.isApplying);
       fabReset.setAttribute('title', 'Revert Font to Stock');
+      setItemDisabled(fabReset, !state.status.active || state.isRestoring);
     } else if (tab === 'emoji') {
       if (fabApplyLabel) fabApplyLabel.textContent = 'Apply Emoji';
       if (fabResetLabel) fabResetLabel.textContent = 'Revert Emoji to Stock';
       fabApply.setAttribute('aria-label', 'Apply Emoji Font');
       setItemDisabled(fabApply, !state.emojiBuffer || state.isApplyingEmoji);
       fabReset.setAttribute('title', 'Revert Emoji to Stock');
+      setItemDisabled(fabReset, !state.status.emoji_active || state.isRestoringEmoji);
     }
   }
 
   const onApplyClick = async () => {
+    if (fabApply.disabled) return;
     fabMenu?.hide?.(false);
     const tab = store.getState().currentTab;
     if (tab === 'customize') {
@@ -70,6 +73,7 @@ export function initFloatingActions(): { destroy: () => void } {
   };
 
   const onResetClick = async () => {
+    if (fabReset.disabled) return;
     fabMenu?.hide?.(false);
     const tab = store.getState().currentTab;
     if (tab === 'customize') {
@@ -85,8 +89,11 @@ export function initFloatingActions(): { destroy: () => void } {
   const unsubTab = store.subscribe(s => s.currentTab, () => updateCluster());
   const unsubFont = store.subscribe(s => s.fontBuffer, () => updateCluster());
   const unsubEmoji = store.subscribe(s => s.emojiBuffer, () => updateCluster());
+  const unsubStatus = store.subscribe(s => s.status, () => updateCluster());
   const unsubApplyingFont = store.subscribe(s => s.isApplying, () => updateCluster());
   const unsubApplyingEmoji = store.subscribe(s => s.isApplyingEmoji, () => updateCluster());
+  const unsubRestoringFont = store.subscribe(s => s.isRestoring, () => updateCluster());
+  const unsubRestoringEmoji = store.subscribe(s => s.isRestoringEmoji, () => updateCluster());
 
   updateCluster();
 
@@ -97,8 +104,11 @@ export function initFloatingActions(): { destroy: () => void } {
       unsubTab();
       unsubFont();
       unsubEmoji();
+      unsubStatus();
       unsubApplyingFont();
       unsubApplyingEmoji();
+      unsubRestoringFont();
+      unsubRestoringEmoji();
     }
   };
 }

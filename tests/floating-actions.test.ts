@@ -68,17 +68,29 @@ describe('Dual Floating Action Cluster (M3 Expressive)', () => {
       }
     } as any;
 
-    // Start on overview tab
-    store.setState({ currentTab: 'overview', fontBuffer: null, emojiBuffer: null });
+    // Start on overview tab with stock font & emoji
+    store.setState({
+      currentTab: 'overview',
+      fontBuffer: null,
+      emojiBuffer: null,
+      status: { ...store.getState().status, active: false, emoji_active: false }
+    });
     const controller = initFloatingActions();
 
     expect(mockCluster.classList.contains('hidden')).toBe(true);
 
-    // Switch to customize tab without fontBuffer
+    // Switch to customize tab without fontBuffer and stock font
     store.setState({ currentTab: 'customize' });
     expect(mockCluster.classList.contains('hidden')).toBe(false);
     expect(mockFabApplyLabel.textContent).toBe('Apply Font');
     expect(mockFabApply.disabled).toBe(true);
+    expect(mockFabReset.disabled).toBe(true);
+
+    // Active font enables Revert Font to Stock
+    store.setState({
+      status: { ...store.getState().status, active: true }
+    });
+    expect(mockFabReset.disabled).toBe(false);
 
     // Provide fontBuffer & fontData
     store.setState({
