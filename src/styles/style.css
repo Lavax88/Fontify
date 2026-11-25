@@ -140,6 +140,9 @@
 m3e-badge {
   --m3e-badge-container-color: var(--md-sys-color-secondary-container);
   --m3e-badge-color: var(--md-sys-color-on-secondary-container);
+  background-color: var(--m3e-badge-container-color);
+  border-radius: 9999px;
+  padding-inline: 6px;
 }
 
 m3e-badge.browse-badge-variable,
