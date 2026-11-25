@@ -82,6 +82,15 @@
 #main-nav-bar m3e-nav-item {
   flex: 1 1 0;
   min-width: 0;
+  --m3e-nav-item-icon-size: 28px;
+}
+
+#main-nav-bar m3e-nav-item[selected] {
+  --m3e-nav-item-icon-size: 22px;
+}
+
+#main-nav-bar m3e-nav-item m3e-icon {
+  transition: font-size 180ms cubic-bezier(0.2, 0, 0, 1);
 }
 
 #main-nav-bar m3e-nav-item:not([selected]) {

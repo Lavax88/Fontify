@@ -5,6 +5,8 @@
   /* Edge-to-edge Insets with Desktop/Dev fallbacks */
   --top-inset: var(--window-inset-top, 0px);
   --bottom-inset: var(--window-inset-bottom, 0px);
+  --md-ref-typeface-plain: system-ui, -apple-system, sans-serif;
+  --md-ref-typeface-brand: system-ui, -apple-system, sans-serif;
 
   /* Fallback surface tokens before m3e-theme hydrates */
   --md-sys-color-surface: var(--surface, #f8faf0);
@@ -69,7 +71,7 @@ html, body {
   color-scheme: dark light;
   background-color: var(--md-sys-color-surface);
   color: var(--md-sys-color-on-surface);
-  font-family: "Google Sans", "Google Sans Flex", "Google Sans Text", Roboto, system-ui, -apple-system, sans-serif;
+  font-family: system-ui, -apple-system, sans-serif;
   height: 100%;
   overflow: hidden;
   -webkit-font-smoothing: antialiased;
