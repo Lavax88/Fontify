@@ -190,10 +190,18 @@ describe('Page Swipe ViewPager Mechanics', () => {
     containerListeners['touchcancel']();
     expect(onResetSprings).toHaveBeenCalled();
 
-    // 6. Test window resize handler
+    // 6. Test window resize handler: ignores height-only resizes (e.g., mobile keyboard)
     const resizeHandler = windowListeners['resize'];
     expect(resizeHandler).toBeDefined();
+    mockTrack.style.transform = 'sentinel';
     resizeHandler();
+    expect(mockTrack.style.transform).toBe('sentinel');
+
+    // Width change triggers ViewPager re-alignment
+    mockContainer.offsetWidth = 400;
+    store.setState({ currentTab: 'browse' });
+    resizeHandler();
+    expect(mockTrack.style.transform).toBe('translate3d(-400px, 0, 0)');
 
     // 7. Cleanup
     cleanup();

@@ -223,9 +223,29 @@ export function initPageSwipe(options: PageSwipeOptions): () => void {
     }
   }
 
+  let lastContainerWidth = container.offsetWidth;
+  let resizeRafId: number | null = null;
+
   function handleResize() {
-    const currentTab = store.getState().currentTab;
-    moveToTab(currentTab, true);
+    const nextWidth = container?.offsetWidth ?? 0;
+    if (nextWidth === lastContainerWidth) return;
+    lastContainerWidth = nextWidth;
+
+    if (resizeRafId !== null && typeof cancelAnimationFrame === 'function') {
+      cancelAnimationFrame(resizeRafId);
+    }
+
+    const applyResize = () => {
+      resizeRafId = null;
+      const currentTab = store.getState().currentTab;
+      moveToTab(currentTab, true);
+    };
+
+    if (typeof requestAnimationFrame === 'function') {
+      resizeRafId = requestAnimationFrame(applyResize);
+    } else {
+      applyResize();
+    }
   }
 
   container.addEventListener('touchstart', handleTouchStart, { passive: true });
