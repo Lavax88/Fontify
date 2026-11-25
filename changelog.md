@@ -1,5 +1,13 @@
 # Fontify Changelog
 
+## v4.0.0 (versionCode 2003)
+
+* **Material 3 Expressive WebUI Redesign**: Rebuilt the interface with M3E components, tonal-spot Monet theming, split-pane status cards, segmented lists, FAB action menu, wavy progress indicators, and native swipe gestures.
+* **Tap-to-Reset & Cancel Pending**: Tap active Font or Emoji cards on Overview to revert to stock, and cancel staged font or emoji changes before rebooting.
+* **Overview & Emoji Fixes**: Display clean font family names without weight/style suffixes, isolate emoji stock restore from font rules, and disable revert when already on stock.
+* **Smooth Performance & Layout**: Eliminated keyboard-resize layout thrash, stabilized nav bar height, and added background UI blur for dialogs and bottom sheets.
+* **Architecture & Shell Cleanup**: Unified font/emoji binary caching, variant resolution, overlay lifecycle tracking, and shared Android overlay shell staging.
+
 ## v3.1.0 (versionCode 2002)
 
 * **Instant 3-Second Soft Reboot**: Restored fast soft rebooting via system_server restart with a dedicated pre-reboot deployment hook (deploy_pending.sh) that populates overlays and clears font caches right before Zygote restarts.
