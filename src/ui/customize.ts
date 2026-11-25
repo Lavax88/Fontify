@@ -10,7 +10,6 @@ import { FontEngine } from '../font/engine';
 import { resolveAppliedFontName as resolveFamilyName } from '../font/variants';
 import { fontService } from '../bridge/service';
 import { showToast } from './components/toast';
-import { showConfirmDialog, runApplyWorkflow } from './components/dialog';
 import { renderVariableControls } from './components/sliders';
 
 import type { FontInfo } from '../font/types';
@@ -38,65 +37,24 @@ export async function applySelectedFont(): Promise<void> {
     state.axisValues
   );
 
-  await runApplyWorkflow({
-    title: 'Apply Font',
-    body: `Apply <strong>${resolvedFontName}</strong> across /system and /product partitions?<br><br>Original stock system fonts remain safely protected.`,
-    confirmText: 'Apply Font',
-    iconType: 'apply',
-    onApply: async (onProgress) => {
-      await fontService.applyFont({
-        fontBuffer: state.fontBuffer!,
-        fontFile: state.fontFile,
-        fontName: resolvedFontName,
-        isVariable: state.fontData!.isVariable,
-        weightMode: state.weightMode,
-        axisValues: state.axisValues,
-        onProgress
-      });
+  await fontService.applyFontWithPrompt(
+    {
+      fontBuffer: state.fontBuffer,
+      fontFile: state.fontFile,
+      fontName: resolvedFontName,
+      isVariable: state.fontData.isVariable,
+      weightMode: state.weightMode,
+      axisValues: state.axisValues
     },
-    onReboot: async () => {
-      store.setState({ rebootRequired: false, pendingFont: false });
-      await fontService.reboot('soft');
-    },
-    onCancelReboot: () => {
-      store.setState({ rebootRequired: true, rebootType: 'soft', pendingFont: true });
-      showToast('Reboot postponed. Restart anytime from the Overview tab.');
+    {
+      title: 'Apply Font',
+      body: `Apply <strong>${resolvedFontName}</strong> across /system and /product partitions?<br><br>Original stock system fonts remain safely protected.`
     }
-  });
+  );
 }
 
 export async function restoreStockFont(): Promise<void> {
-  const confirmed = await showConfirmDialog({
-    title: 'Revert to Stock',
-    body: 'Remove custom font overlays and restore original stock system font?',
-    confirmText: 'Revert',
-    iconType: 'revert'
-  });
-
-  if (!confirmed) return;
-
-  showToast('Reverting to stock font...');
-  try {
-    await fontService.restoreStock();
-    store.setState({ rebootRequired: true, rebootType: 'full' });
-
-    const rebootConfirmed = await showConfirmDialog({
-      title: 'Full Reboot Required',
-      body: 'Stock fonts have been restored. A <strong>full device reboot</strong> is required to safely unmount system overlays and prevent bootloops.<br><br>Reboot now?',
-      confirmText: 'Full Reboot',
-      cancelText: 'Later',
-      iconType: 'reboot'
-    });
-
-    if (rebootConfirmed) {
-      await fontService.fullReboot();
-    } else {
-      showToast('Full reboot postponed. Restart anytime from the Overview tab.');
-    }
-  } catch (err) {
-    const msg = err instanceof Error ? err.message : String(err);
-    showToast(`Restore failed: ${msg}`);
-  }
+  await fontService.restoreWithPrompt('font');
 }
 
 export function setupCustomizeTab(): void {

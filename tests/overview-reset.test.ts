@@ -1,8 +1,6 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { store } from '../src/state/store';
 import { fontService } from '../src/bridge/service';
-import * as customizeModule from '../src/ui/customize';
-import * as emojiModule from '../src/ui/emoji';
 import * as dialogModule from '../src/ui/components/dialog';
 import * as toastModule from '../src/ui/components/toast';
 import { setupOverviewTab } from '../src/ui/overview';
@@ -61,8 +59,7 @@ describe('Overview Active Card Tap-to-Reset', () => {
       getElementById: (id: string) => domMap[id] || null
     } as any;
 
-    const restoreFontSpy = vi.spyOn(customizeModule, 'restoreStockFont').mockResolvedValue();
-    const restoreEmojiSpy = vi.spyOn(emojiModule, 'restoreStockEmoji').mockResolvedValue();
+    const restoreSpy = vi.spyOn(fontService, 'restoreWithPrompt').mockResolvedValue();
 
     store.setState({
       status: {
@@ -83,8 +80,7 @@ describe('Overview Active Card Tap-to-Reset', () => {
 
     await domMap['overview-banner'].trigger('click');
     await domMap['overview-emoji-banner'].trigger('click');
-    expect(restoreFontSpy).not.toHaveBeenCalled();
-    expect(restoreEmojiSpy).not.toHaveBeenCalled();
+    expect(restoreSpy).not.toHaveBeenCalled();
 
     // Active state: actionable, taps trigger stock restore
     store.setState({
@@ -103,8 +99,8 @@ describe('Overview Active Card Tap-to-Reset', () => {
 
     await domMap['overview-banner'].trigger('click');
     await domMap['overview-emoji-banner'].trigger('click');
-    expect(restoreFontSpy).toHaveBeenCalledTimes(1);
-    expect(restoreEmojiSpy).toHaveBeenCalledTimes(1);
+    expect(restoreSpy).toHaveBeenCalledWith('font');
+    expect(restoreSpy).toHaveBeenCalledWith('emoji');
   });
 
   it('shows cancel pending button for soft reboot and cancels pending font/emoji', async () => {

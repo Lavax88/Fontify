@@ -97,73 +97,39 @@ describe('Emoji Service & Management (Deep Module)', () => {
     expect(testStore.getState().lastError).toBeTruthy();
   });
 
-  it('guarantees emoji action buttons preserve DOM hierarchy and iconography during apply/restore', () => {
-    // Mimic the DOM structure of the M3 action item buttons with mock elements
-    interface MockElement {
-      tagName: string;
-      className: string;
-      textContent?: string;
-      disabled?: boolean;
-      children?: MockElement[];
-      querySelector?: (selector: string) => MockElement | null;
-    }
-
-    const createMockActionBtn = (title: string, sub: string) => {
-      const icon: MockElement = { tagName: 'DIV', className: 'action-btn-icon' };
-      const titleEl: MockElement = { tagName: 'DIV', className: 'action-btn-title', textContent: title };
-      const subEl: MockElement = { tagName: 'DIV', className: 'action-btn-sub', textContent: sub };
-      const textContainer: MockElement = {
-        tagName: 'DIV',
-        className: 'action-btn-text',
-        children: [titleEl, subEl]
-      };
-
-      const btn: MockElement = {
-        tagName: 'BUTTON',
-        className: 'm3-action-item-btn',
-        disabled: false,
-        children: [icon, textContainer],
-        querySelector: (selector: string) => {
-          if (selector === '.action-btn-icon') return icon;
-          if (selector === '.action-btn-text') return textContainer;
-          if (selector === '.action-btn-title') return titleEl;
-          if (selector === '.action-btn-sub') return subEl;
-          return null;
-        }
-      };
-
-      return { btn, icon, titleEl, subEl };
+  it('tracks pendingEmoji and rebootRequired atomically across applyEmojiWithPrompt and cancelPendingWithPrompt', async () => {
+    const notifications: string[] = [];
+    const promptAdapter = {
+      confirm: async () => true,
+      runApply: async (opts: any) => {
+        await opts.onApply(() => {});
+        opts.onCancelReboot?.();
+        return true;
+      },
+      notify: (msg: string) => notifications.push(msg)
     };
 
-    const applyMock = createMockActionBtn('Apply Emoji', 'Apply selected emoji font across system & apps');
-    const restoreMock = createMockActionBtn('Revert Stock Emoji', 'Safely restore standard Google system emojis');
+    const promptedService = new SystemFontService(testStore, promptAdapter);
+    const syntheticBuffer = new Uint8Array([0x00, 0x01, 0x00, 0x00]).buffer;
 
-    // Simulate safe text updates as implemented in src/ui/emoji.ts
-    const titleEl = applyMock.btn.querySelector?.('.action-btn-title');
-    const subEl = applyMock.btn.querySelector?.('.action-btn-sub');
-    applyMock.btn.disabled = true;
-    if (titleEl) titleEl.textContent = 'Applying...';
-    if (subEl) subEl.textContent = 'Installing emoji font overlay...';
+    await promptedService.applyEmojiWithPrompt(
+      {
+        emojiBuffer: syntheticBuffer,
+        emojiName: 'iOS 26',
+        emojiSource: 'preset'
+      },
+      { body: 'Install iOS 26?' }
+    );
 
-    // Verify .action-btn-icon and .action-btn-text are intact
-    expect(applyMock.btn.querySelector?.('.action-btn-icon')).toBe(applyMock.icon);
-    expect(applyMock.titleEl.textContent).toBe('Applying...');
+    expect(testStore.getState().rebootRequired).toBe(true);
+    expect(testStore.getState().rebootType).toBe('soft');
+    expect(testStore.getState().pendingEmoji).toBe(true);
+    expect(notifications.some(n => n.includes('postponed'))).toBe(true);
 
-    // Reset to final state
-    applyMock.btn.disabled = false;
-    if (titleEl) titleEl.textContent = 'Apply Emoji';
-    if (subEl) subEl.textContent = 'Apply selected emoji font across system & apps';
-    expect(applyMock.btn.querySelector?.('.action-btn-icon')).toBe(applyMock.icon);
-    expect(applyMock.subEl.textContent).toBe('Apply selected emoji font across system & apps');
-
-    // Verify restore button safe state handling
-    const restoreTitle = restoreMock.btn.querySelector?.('.action-btn-title');
-    restoreMock.btn.disabled = true;
-    if (restoreTitle) restoreTitle.textContent = 'Reverting...';
-    expect(restoreMock.btn.querySelector?.('.action-btn-icon')).toBe(restoreMock.icon);
-
-    restoreMock.btn.disabled = false;
-    if (restoreTitle) restoreTitle.textContent = 'Revert Stock Emoji';
-    expect(restoreMock.btn.querySelector?.('.action-btn-icon')).toBe(restoreMock.icon);
+    const cancelled = await promptedService.cancelPendingWithPrompt();
+    expect(cancelled).toBe(true);
+    expect(testStore.getState().rebootRequired).toBe(false);
+    expect(testStore.getState().pendingEmoji).toBe(false);
+    expect(testStore.getState().status.emoji_active).toBe(false);
   });
 });

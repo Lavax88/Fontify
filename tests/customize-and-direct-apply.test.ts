@@ -365,8 +365,9 @@ describe('Customize Reactive UI & Direct Apply Fixes', () => {
 
     let appliedOptions: any = null;
     vi.spyOn(await import('../src/bridge/service'), 'fontService', 'get').mockReturnValue({
-      applyFont: vi.fn(async (opts) => {
+      applyFontWithPrompt: vi.fn(async (opts) => {
         appliedOptions = opts;
+        return true;
       }),
       checkLocalDownload: vi.fn().mockResolvedValue(null)
     } as any);
@@ -375,16 +376,10 @@ describe('Customize Reactive UI & Direct Apply Fixes', () => {
       parse: vi.fn(() => ({
         valid: true,
         fullName: 'Outfit Regular',
-        family: 'Outfit',
-        weight: 400,
+        familyName: 'Outfit',
         isVariable: false
       }))
     } as any);
-
-    vi.spyOn(await import('../src/ui/components/dialog'), 'runApplyWorkflow').mockImplementation(async (opts: any) => {
-      await opts.onApply();
-      return true;
-    });
 
     await handleApplyDirectly(dummyVariableItem, regularVariant);
 

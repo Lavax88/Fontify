@@ -5,9 +5,10 @@
  */
 
 import { store } from '../state/store';
+import { fontService } from '../bridge/service';
 import { FontEngine } from '../font/engine';
-import { applySelectedFont, restoreStockFont } from './customize';
-import { applySelectedEmoji, restoreStockEmoji } from './emoji';
+import { applySelectedFont } from './customize';
+import { applySelectedEmoji } from './emoji';
 
 export type FontifyTab = 'overview' | 'browse' | 'customize' | 'emoji';
 
@@ -313,9 +314,9 @@ export function initNavigation(): { destroy: () => void } {
     fabMenu?.hide?.(false);
     const tab = store.getState().currentTab;
     if (tab === 'customize') {
-      await restoreStockFont();
+      await fontService.restoreWithPrompt('font');
     } else if (tab === 'emoji') {
-      await restoreStockEmoji();
+      await fontService.restoreWithPrompt('emoji');
     }
   };
 

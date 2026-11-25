@@ -89,9 +89,11 @@ export function saveCachedStatus(
     };
     localStorage.setItem(CACHE_KEY, JSON.stringify(data));
 
-    // Also update legacy keys for backward compatibility
+    // Also update legacy keys for backward compatibility and dev mock sync
     localStorage.setItem('fontify_is_active', isActive ? 'true' : 'false');
     localStorage.setItem('fontify_active_font', activeFontName);
+    localStorage.setItem('fontify_is_emoji_active', isEmojiActive ? 'true' : 'false');
+    localStorage.setItem('fontify_active_emoji', activeEmojiName);
   } catch (_) {
     // Storage quota or permissions error ignored
   }

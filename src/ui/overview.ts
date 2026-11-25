@@ -8,9 +8,6 @@
 import { store } from '../state/store';
 import { fontService } from '../bridge/service';
 import type { SystemStatus } from '../bridge/types';
-import { restoreStockFont } from './customize';
-import { restoreStockEmoji } from './emoji';
-import { showConfirmDialog } from './components/dialog';
 import { showToast } from './components/toast';
 
 function setCardActionable(card: HTMLElement, isActionable: boolean, ariaLabel: string): void {
@@ -57,41 +54,9 @@ export function setupOverviewTab(): void {
 
   if (btnBannerCancelPending) {
     btnBannerCancelPending.addEventListener('click', async () => {
-      const { pendingFont, pendingEmoji } = store.getState();
-      const targetLabel = pendingFont && pendingEmoji
-        ? 'font and emoji'
-        : pendingEmoji
-          ? 'emoji'
-          : pendingFont
-            ? 'font'
-            : 'font and emoji';
-
-      const confirmed = await showConfirmDialog({
-        title: 'Cancel Pending Application?',
-        body: `Cancel the pending ${targetLabel} changes and clear staged overlays before rebooting?`,
-        confirmText: 'Cancel Pending',
-        iconType: 'revert'
-      });
-      if (!confirmed) return;
-
       btnBannerCancelPending.disabled = true;
       try {
-        const cancelFont = pendingFont || !pendingEmoji;
-        const cancelEmoji = pendingEmoji || !pendingFont;
-
-        if (cancelFont) {
-          await fontService.restoreStock();
-        }
-        if (cancelEmoji) {
-          await fontService.restoreEmojiStock();
-        }
-
-        store.setState({
-          rebootRequired: false,
-          pendingFont: false,
-          pendingEmoji: false
-        });
-        showToast('Pending changes cancelled.');
+        await fontService.cancelPendingWithPrompt();
       } catch (err: any) {
         showToast(err?.message || 'Failed to cancel pending changes.');
       } finally {
@@ -103,7 +68,7 @@ export function setupOverviewTab(): void {
   if (overviewBanner) {
     const onFontCardActivate = async () => {
       if (store.getState().status.active) {
-        await restoreStockFont();
+        await fontService.restoreWithPrompt('font');
       }
     };
     overviewBanner.addEventListener('click', onFontCardActivate);
@@ -118,7 +83,7 @@ export function setupOverviewTab(): void {
   if (emojiBanner) {
     const onEmojiCardActivate = async () => {
       if (store.getState().status.emoji_active) {
-        await restoreStockEmoji();
+        await fontService.restoreWithPrompt('emoji');
       }
     };
     emojiBanner.addEventListener('click', onEmojiCardActivate);

@@ -9,7 +9,6 @@ import { store } from '../state/store';
 import { fontService } from '../bridge/service';
 import { FontEngine } from '../font/engine';
 import { showToast } from './components/toast';
-import { showConfirmDialog, runApplyWorkflow } from './components/dialog';
 import { getCachedFontBuffer, saveCachedFont } from '../browse/fontCache';
 import { streamAssetDownload } from '../browse/catalogService';
 import { EMOJI_CATALOG } from '../browse/emojiCatalog';
@@ -135,64 +134,23 @@ export async function applySelectedEmoji(): Promise<void> {
     return;
   }
 
-  await runApplyWorkflow({
-    title: 'Apply Emoji Font?',
-    body: `Install <strong>${state.emojiName || 'Custom Emoji'}</strong> across SystemUI and apps?<br><br>A device restart is required to reload system emojis.`,
-    confirmText: 'Apply Emoji',
-    iconType: 'apply',
-    onApply: async (onProgress) => {
-      await fontService.applyEmoji({
-        emojiBuffer: state.emojiBuffer!,
-        emojiFile: state.emojiFile,
-        emojiName: state.emojiName,
-        emojiSource: state.emojiSource || 'custom',
-        emojiUrl: state.emojiUrl || undefined,
-        onProgress
-      });
+  await fontService.applyEmojiWithPrompt(
+    {
+      emojiBuffer: state.emojiBuffer,
+      emojiFile: state.emojiFile,
+      emojiName: state.emojiName,
+      emojiSource: state.emojiSource || 'custom',
+      emojiUrl: state.emojiUrl || undefined
     },
-    onReboot: async () => {
-      store.setState({ rebootRequired: false, pendingEmoji: false });
-      await fontService.reboot('soft');
-    },
-    onCancelReboot: () => {
-      store.setState({ rebootRequired: true, rebootType: 'soft', pendingEmoji: true });
-      showToast('Reboot postponed. Restart anytime from the Overview tab.');
+    {
+      title: 'Apply Emoji Font?',
+      body: `Install <strong>${state.emojiName || 'Custom Emoji'}</strong> across SystemUI and apps?<br><br>A device restart is required to reload system emojis.`
     }
-  });
+  );
 }
 
 export async function restoreStockEmoji(): Promise<void> {
-  const confirmed = await showConfirmDialog({
-    title: 'Revert to Stock Emojis?',
-    body: 'Remove custom emoji overlays and restore standard Google system emojis? This does not alter your typeface font configuration.',
-    confirmText: 'Revert',
-    iconType: 'revert'
-  });
-
-  if (!confirmed) return;
-
-  showToast('Restoring stock emojis...');
-  try {
-    await fontService.restoreEmojiStock();
-    store.setState({ rebootRequired: true, rebootType: 'full' });
-
-    const rebootConfirmed = await showConfirmDialog({
-      title: 'Full Reboot Required',
-      body: 'Stock emojis have been restored. A <strong>full device reboot</strong> is required to safely unmount system overlays and prevent bootloops.<br><br>Reboot now?',
-      confirmText: 'Full Reboot',
-      cancelText: 'Later',
-      iconType: 'reboot'
-    });
-
-    if (rebootConfirmed) {
-      await fontService.fullReboot();
-    } else {
-      showToast('Full reboot postponed. Restart anytime from the Overview tab.');
-    }
-  } catch (err) {
-    const msg = err instanceof Error ? err.message : String(err);
-    showToast(`Failed to restore stock emojis: ${msg}`);
-  }
+  await fontService.restoreWithPrompt('emoji');
 }
 
 export function setupEmojiTab(): void {

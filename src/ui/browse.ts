@@ -20,7 +20,6 @@ import {
 
 export { getStaticVariants, getVariableVariant, isVariableItem, getWeightLabel as getWeightName };
 import { showToast } from './components/toast';
-import { runApplyWorkflow } from './components/dialog';
 import {
   getItems,
   getItemById,
@@ -778,29 +777,19 @@ export async function handleApplyDirectly(item: BrowseItem, variant?: FontVarian
         updateDownloadProgress(false);
         closePreviewSheet();
 
-        await runApplyWorkflow({
-          title: 'Apply Emoji Font?',
-          body: `Install <strong>${escapeHtml(item.name)}</strong> (from local Downloads) across SystemUI and apps?<br><br>A device restart is required to reload system emojis.`,
-          confirmText: 'Apply Emoji',
-          iconType: 'apply',
-          onApply: async (onProgress) => {
-            await fontService.applyEmoji({
-              emojiBuffer: new ArrayBuffer(0),
-              emojiFile: null,
-              emojiName: item.name,
-              emojiSource: 'preset',
-              localFilePath: localPath,
-              onProgress
-            });
+        await fontService.applyEmojiWithPrompt(
+          {
+            emojiBuffer: new ArrayBuffer(0),
+            emojiFile: null,
+            emojiName: item.name,
+            emojiSource: 'preset',
+            localFilePath: localPath
           },
-          onReboot: async () => {
-            await fontService.reboot('soft');
-          },
-          onCancelReboot: () => {
-            store.setState({ rebootRequired: true, rebootType: 'soft' });
-            showToast('Reboot postponed. Restart anytime from the Overview tab.');
+          {
+            title: 'Apply Emoji Font?',
+            body: `Install <strong>${escapeHtml(item.name)}</strong> (from local Downloads) across SystemUI and apps?<br><br>A device restart is required to reload system emojis.`
           }
-        });
+        );
         return;
       }
     }
@@ -827,30 +816,19 @@ export async function handleApplyDirectly(item: BrowseItem, variant?: FontVarian
     closePreviewSheet();
 
     if (item.type === 'emoji') {
-      await runApplyWorkflow({
-        title: 'Apply Emoji Font?',
-        body: `Install <strong>${escapeHtml(item.name)}</strong> across SystemUI and apps?<br><br>A device restart is required to reload system emojis.`,
-        confirmText: 'Apply Emoji',
-        iconType: 'apply',
-        onApply: async (onProgress) => {
-          await fontService.applyEmoji({
-            emojiBuffer: buffer,
-            emojiFile: new File([buffer], `${item.name}.ttf`, { type: 'font/ttf' }),
-            emojiName: item.name,
-            emojiSource: 'preset',
-            emojiUrl: selectedVariant.url || item.url,
-            onProgress
-          });
+      await fontService.applyEmojiWithPrompt(
+        {
+          emojiBuffer: buffer,
+          emojiFile: new File([buffer], `${item.name}.ttf`, { type: 'font/ttf' }),
+          emojiName: item.name,
+          emojiSource: 'preset',
+          emojiUrl: selectedVariant.url || item.url
         },
-        onReboot: async () => {
-          store.setState({ rebootRequired: false, pendingEmoji: false });
-          await fontService.reboot('soft');
-        },
-        onCancelReboot: () => {
-          store.setState({ rebootRequired: true, rebootType: 'soft', pendingEmoji: true });
-          showToast('Reboot postponed. Restart anytime from the Overview tab.');
+        {
+          title: 'Apply Emoji Font?',
+          body: `Install <strong>${escapeHtml(item.name)}</strong> across SystemUI and apps?<br><br>A device restart is required to reload system emojis.`
         }
-      });
+      );
     } else {
       const parsed = FontParser.parse(buffer);
       const isVariableFont = parsed.isVariable;
@@ -868,31 +846,20 @@ export async function handleApplyDirectly(item: BrowseItem, variant?: FontVarian
         ? 'Variable (100–900)'
         : (selectedVariant.name || `${targetWeight}`);
 
-      await runApplyWorkflow({
-        title: 'Apply Font',
-        body: `Apply <strong>${escapeHtml(item.name)}</strong> (${escapeHtml(variantDisplay)}) across /system and /product partitions?<br><br>Original stock system fonts remain safely protected.`,
-        confirmText: 'Apply Font',
-        iconType: 'apply',
-        onApply: async (onProgress) => {
-          await fontService.applyFont({
-            fontBuffer: buffer,
-            fontFile: new File([buffer], `${item.name}.ttf`, { type: 'font/ttf' }),
-            fontName: (item.name || parsed.familyName || parsed.fullName || 'Custom Font').trim(),
-            isVariable: isVariableFont,
-            weightMode: 'normal',
-            axisValues,
-            onProgress
-          });
+      await fontService.applyFontWithPrompt(
+        {
+          fontBuffer: buffer,
+          fontFile: new File([buffer], `${item.name}.ttf`, { type: 'font/ttf' }),
+          fontName: (item.name || parsed.familyName || parsed.fullName || 'Custom Font').trim(),
+          isVariable: isVariableFont,
+          weightMode: 'normal',
+          axisValues
         },
-        onReboot: async () => {
-          store.setState({ rebootRequired: false, pendingFont: false });
-          await fontService.reboot('soft');
-        },
-        onCancelReboot: () => {
-          store.setState({ rebootRequired: true, rebootType: 'soft', pendingFont: true });
-          showToast('Reboot postponed. Restart anytime from the Overview tab.');
+        {
+          title: 'Apply Font',
+          body: `Apply <strong>${escapeHtml(item.name)}</strong> (${escapeHtml(variantDisplay)}) across /system and /product partitions?<br><br>Original stock system fonts remain safely protected.`
         }
-      });
+      );
     }
   } catch (err) {
     updateDownloadProgress(false);
