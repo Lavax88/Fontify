@@ -1,7 +1,10 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { store } from '../src/state/store';
+import { fontService } from '../src/bridge/service';
 import * as customizeModule from '../src/ui/customize';
 import * as emojiModule from '../src/ui/emoji';
+import * as dialogModule from '../src/ui/components/dialog';
+import * as toastModule from '../src/ui/components/toast';
 import { setupOverviewTab } from '../src/ui/overview';
 
 function createMockElement(id: string) {
@@ -102,5 +105,54 @@ describe('Overview Active Card Tap-to-Reset', () => {
     await domMap['overview-emoji-banner'].trigger('click');
     expect(restoreFontSpy).toHaveBeenCalledTimes(1);
     expect(restoreEmojiSpy).toHaveBeenCalledTimes(1);
+  });
+
+  it('shows cancel pending button for soft reboot and cancels pending font/emoji', async () => {
+    const domMap: Record<string, any> = {
+      'reboot-reminder-banner': createMockElement('reboot-reminder-banner'),
+      'reboot-reminder-subtitle': createMockElement('reboot-reminder-subtitle'),
+      'btn-banner-reboot': createMockElement('btn-banner-reboot'),
+      'btn-banner-cancel-pending': createMockElement('btn-banner-cancel-pending')
+    };
+
+    globalThis.document = {
+      getElementById: (id: string) => domMap[id] || null
+    } as any;
+
+    const confirmSpy = vi.spyOn(dialogModule, 'showConfirmDialog').mockResolvedValue(true);
+    const toastSpy = vi.spyOn(toastModule, 'showToast').mockImplementation(() => {});
+    const restoreStockSpy = vi.spyOn(fontService, 'restoreStock').mockResolvedValue({ success: true });
+    const restoreEmojiStockSpy = vi.spyOn(fontService, 'restoreEmojiStock').mockResolvedValue({ success: true });
+
+    store.setState({
+      rebootRequired: true,
+      rebootType: 'full',
+      pendingFont: false,
+      pendingEmoji: false
+    });
+
+    setupOverviewTab();
+
+    expect(domMap['reboot-reminder-banner'].style.display).toBe('block');
+    expect(domMap['btn-banner-cancel-pending'].style.display).toBe('none');
+
+    store.setState({
+      rebootRequired: true,
+      rebootType: 'soft',
+      pendingFont: true,
+      pendingEmoji: false
+    });
+
+    expect(domMap['btn-banner-cancel-pending'].style.display).toBe('');
+
+    await domMap['btn-banner-cancel-pending'].trigger('click');
+
+    expect(confirmSpy).toHaveBeenCalledTimes(1);
+    expect(restoreStockSpy).toHaveBeenCalledTimes(1);
+    expect(restoreEmojiStockSpy).not.toHaveBeenCalled();
+    expect(store.getState().rebootRequired).toBe(false);
+    expect(store.getState().pendingFont).toBe(false);
+    expect(store.getState().pendingEmoji).toBe(false);
+    expect(toastSpy).toHaveBeenCalledWith('Pending changes cancelled.');
   });
 });

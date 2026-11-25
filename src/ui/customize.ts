@@ -78,10 +78,11 @@ export async function applySelectedFont(): Promise<void> {
       });
     },
     onReboot: async () => {
+      store.setState({ rebootRequired: false, pendingFont: false });
       await fontService.reboot('soft');
     },
     onCancelReboot: () => {
-      store.setState({ rebootRequired: true, rebootType: 'soft' });
+      store.setState({ rebootRequired: true, rebootType: 'soft', pendingFont: true });
       showToast('Reboot postponed. Restart anytime from the Overview tab.');
     }
   });

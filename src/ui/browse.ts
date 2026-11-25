@@ -914,10 +914,11 @@ export async function handleApplyDirectly(item: BrowseItem, variant?: FontVarian
           });
         },
         onReboot: async () => {
+          store.setState({ rebootRequired: false, pendingEmoji: false });
           await fontService.reboot('soft');
         },
         onCancelReboot: () => {
-          store.setState({ rebootRequired: true, rebootType: 'soft' });
+          store.setState({ rebootRequired: true, rebootType: 'soft', pendingEmoji: true });
           showToast('Reboot postponed. Restart anytime from the Overview tab.');
         }
       });
@@ -957,10 +958,11 @@ export async function handleApplyDirectly(item: BrowseItem, variant?: FontVarian
           });
         },
         onReboot: async () => {
+          store.setState({ rebootRequired: false, pendingFont: false });
           await fontService.reboot('soft');
         },
         onCancelReboot: () => {
-          store.setState({ rebootRequired: true, rebootType: 'soft' });
+          store.setState({ rebootRequired: true, rebootType: 'soft', pendingFont: true });
           showToast('Reboot postponed. Restart anytime from the Overview tab.');
         }
       });

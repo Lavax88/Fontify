@@ -253,6 +253,8 @@ m3e-badge.browse-badge-downloaded {
   margin-top: 10px;
   display: flex;
   justify-content: flex-end;
+  gap: 8px;
+  flex-wrap: wrap;
 }
 
 /* ================= BROWSE TAB ================= */

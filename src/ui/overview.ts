@@ -10,6 +10,8 @@ import { fontService } from '../bridge/service';
 import type { SystemStatus } from '../bridge/types';
 import { restoreStockFont } from './customize';
 import { restoreStockEmoji } from './emoji';
+import { showConfirmDialog } from './components/dialog';
+import { showToast } from './components/toast';
 
 function setCardActionable(card: HTMLElement, isActionable: boolean, ariaLabel: string): void {
   if (isActionable) {
@@ -44,11 +46,57 @@ export function setupOverviewTab(): void {
   const rebootReminderBanner = document.getElementById('reboot-reminder-banner');
   const rebootReminderSubtitle = document.getElementById('reboot-reminder-subtitle');
   const btnBannerReboot = document.getElementById('btn-banner-reboot');
+  const btnBannerCancelPending = document.getElementById('btn-banner-cancel-pending') as HTMLButtonElement | null;
 
   if (btnBannerReboot) {
     btnBannerReboot.addEventListener('click', async () => {
       const mode = store.getState().rebootType || 'soft';
       await fontService.reboot(mode);
+    });
+  }
+
+  if (btnBannerCancelPending) {
+    btnBannerCancelPending.addEventListener('click', async () => {
+      const { pendingFont, pendingEmoji } = store.getState();
+      const targetLabel = pendingFont && pendingEmoji
+        ? 'font and emoji'
+        : pendingEmoji
+          ? 'emoji'
+          : pendingFont
+            ? 'font'
+            : 'font and emoji';
+
+      const confirmed = await showConfirmDialog({
+        title: 'Cancel Pending Application?',
+        body: `Cancel the pending ${targetLabel} changes and clear staged overlays before rebooting?`,
+        confirmText: 'Cancel Pending',
+        iconType: 'revert'
+      });
+      if (!confirmed) return;
+
+      btnBannerCancelPending.disabled = true;
+      try {
+        const cancelFont = pendingFont || !pendingEmoji;
+        const cancelEmoji = pendingEmoji || !pendingFont;
+
+        if (cancelFont) {
+          await fontService.restoreStock();
+        }
+        if (cancelEmoji) {
+          await fontService.restoreEmojiStock();
+        }
+
+        store.setState({
+          rebootRequired: false,
+          pendingFont: false,
+          pendingEmoji: false
+        });
+        showToast('Pending changes cancelled.');
+      } catch (err: any) {
+        showToast(err?.message || 'Failed to cancel pending changes.');
+      } finally {
+        btnBannerCancelPending.disabled = false;
+      }
     });
   }
 
@@ -88,6 +136,9 @@ export function setupOverviewTab(): void {
     const isFull = store.getState().rebootType === 'full';
     if (btnBannerReboot) {
       btnBannerReboot.textContent = isFull ? 'Full Reboot' : 'Reboot';
+    }
+    if (btnBannerCancelPending) {
+      btnBannerCancelPending.style.display = isFull ? 'none' : '';
     }
     if (rebootReminderSubtitle) {
       rebootReminderSubtitle.textContent = isFull
@@ -171,4 +222,5 @@ export function setupOverviewTab(): void {
 
   store.subscribe(state => state.status, renderStatus);
   store.subscribe(state => state.rebootRequired, updateRebootReminder);
+  store.subscribe(state => state.rebootType, () => updateRebootReminder(store.getState().rebootRequired));
 }

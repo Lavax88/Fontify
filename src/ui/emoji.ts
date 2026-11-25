@@ -254,10 +254,11 @@ export async function applySelectedEmoji(): Promise<void> {
       });
     },
     onReboot: async () => {
+      store.setState({ rebootRequired: false, pendingEmoji: false });
       await fontService.reboot('soft');
     },
     onCancelReboot: () => {
-      store.setState({ rebootRequired: true, rebootType: 'soft' });
+      store.setState({ rebootRequired: true, rebootType: 'soft', pendingEmoji: true });
       showToast('Reboot postponed. Restart anytime from the Overview tab.');
     }
   });

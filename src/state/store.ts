@@ -48,6 +48,8 @@ export class Store {
       applyEmojiProgressMessage: '',
       rebootRequired: false,
       rebootType: 'soft',
+      pendingFont: false,
+      pendingEmoji: false,
       ...initialState
     };
   }
