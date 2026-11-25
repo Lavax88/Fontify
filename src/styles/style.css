@@ -119,7 +119,38 @@
 
 .info-list {
   width: 100%;
-  --m3e-segmented-list-item-container-color: var(--md-sys-color-surface-container-low);
+  --m3e-segmented-list-item-container-color: var(--md-sys-color-surface-container);
+  --m3e-segmented-list-container-shape: 24px;
+  --m3e-segmented-list-segment-gap: 3px;
+}
+
+.overview-section-group {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.overview-section-label {
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--md-sys-color-on-surface-variant);
+  padding: 0 6px;
+}
+
+m3e-badge {
+  --m3e-badge-container-color: var(--md-sys-color-secondary-container);
+  --m3e-badge-color: var(--md-sys-color-on-secondary-container);
+}
+
+m3e-badge.browse-badge-variable,
+.overview-banner.is-active m3e-badge {
+  --m3e-badge-container-color: var(--md-sys-color-primary-container);
+  --m3e-badge-color: var(--md-sys-color-on-primary-container);
+}
+
+m3e-badge.browse-badge-downloaded {
+  --m3e-badge-container-color: var(--md-sys-color-tertiary-container);
+  --m3e-badge-color: var(--md-sys-color-on-tertiary-container);
 }
 
 .info-val {

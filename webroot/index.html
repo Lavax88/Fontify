@@ -75,12 +75,10 @@
                             </div>
                         </m3e-callout>
 
-                        <!-- 2. Font & Module Configuration (Segmented List) -->
-                        <m3e-card class="section-card" variant="outlined" aria-label="Font configuration">
-                            <div slot="header" class="section-card-header">
-                                <span class="section-card-title">Font Configuration</span>
-                            </div>
-                            <m3e-list variant="segmented" class="info-list">
+                        <!-- 2. Font & Module Configuration (Segmented Card List) -->
+                        <div class="overview-section-group" role="group" aria-label="Font configuration">
+                            <div class="overview-section-label">Font Configuration</div>
+                            <m3e-list variant="segmented" class="info-list segmented-card-list">
                                 <m3e-list-item>
                                     Active Font
                                     <span slot="trailing" class="info-val" id="info-active-font">Roboto / Google Sans</span>
@@ -98,14 +96,12 @@
                                     <span slot="trailing" class="info-val" id="info-backup-status">Protected (/data/adb)</span>
                                 </m3e-list-item>
                             </m3e-list>
-                        </m3e-card>
+                        </div>
 
-                        <!-- 3. Device & System Environment (Segmented List) -->
-                        <m3e-card class="section-card" variant="outlined" aria-label="Device and system environment">
-                            <div slot="header" class="section-card-header">
-                                <span class="section-card-title">Device &amp; System</span>
-                            </div>
-                            <m3e-list variant="segmented" class="info-list">
+                        <!-- 3. Device & System Environment (Segmented Card List) -->
+                        <div class="overview-section-group" role="group" aria-label="Device and system environment">
+                            <div class="overview-section-label">Device &amp; System</div>
+                            <m3e-list variant="segmented" class="info-list segmented-card-list">
                                 <m3e-list-item>
                                     Device
                                     <span slot="trailing" class="info-val" id="info-device-name">POCO F7 (onyx)</span>
@@ -119,7 +115,7 @@
                                     <span slot="trailing" class="info-val" id="info-system-abi">arm64-v8a (4K)</span>
                                 </m3e-list-item>
                             </m3e-list>
-                        </m3e-card>
+                        </div>
                     </section>
 
                     <!-- ================= TAB 2: BROWSE (ONLINE CATALOG) ================= -->
