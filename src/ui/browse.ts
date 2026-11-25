@@ -551,7 +551,7 @@ export function openPreviewSheet(item: BrowseItem): void {
         <span id="modal-download-progress-text">Downloading...</span>
         <span id="modal-download-progress-pct">0%</span>
       </div>
-      <m3e-linear-progress-indicator id="modal-download-progress-fill" variant="wavy" max="100" value="0"></m3e-linear-progress-indicator>
+      <m3e-linear-progress-indicator id="modal-download-progress-fill" variant="flat" max="100" value="0"></m3e-linear-progress-indicator>
     </div>
 
     <div class="preview-sheet-actions">

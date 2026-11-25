@@ -51,7 +51,6 @@
   display: flex;
   width: 400%;
   height: 100%;
-  will-change: transform;
 }
 
 .tab-view {
@@ -60,7 +59,7 @@
   overflow-y: auto;
   overflow-x: hidden;
   overscroll-behavior-y: contain;
-  contain: strict;
+  contain: layout style;
   padding: 12px 16px calc(var(--bottom-inset) + 104px);
   display: flex;
   flex-direction: column;
@@ -83,6 +82,12 @@
 #main-nav-bar m3e-nav-item {
   flex: 1 1 0;
   min-width: 0;
+}
+
+#main-nav-bar m3e-nav-item:not([selected]) {
+  --m3e-nav-item-label-text-font-size: 0px;
+  --m3e-nav-item-label-text-line-height: 0px;
+  --m3e-nav-item-spacing: 0px;
 }
 
 /* ================= FLOATING ACTION CLUSTER ================= */
@@ -709,6 +714,12 @@ m3e-slider {
 m3e-snackbar {
   --m3e-snackbar-margin: calc(var(--bottom-inset) + 84px);
   --m3e-snackbar-min-width: min(344px, calc(100vw - 32px));
+}
+
+m3e-dialog::backdrop,
+m3e-bottom-sheet[modal]::backdrop {
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
 }
 
 #credits-body {

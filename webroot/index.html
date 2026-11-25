@@ -142,7 +142,7 @@
                                 <span id="browse-download-progress-text">Downloading font...</span>
                                 <span id="browse-download-progress-pct">0%</span>
                             </div>
-                            <m3e-linear-progress-indicator id="browse-download-progress-fill" variant="wavy" max="100" value="0"></m3e-linear-progress-indicator>
+                            <m3e-linear-progress-indicator id="browse-download-progress-fill" variant="flat" max="100" value="0"></m3e-linear-progress-indicator>
                         </div>
 
                         <!-- 4. Catalog Grid Container -->
@@ -243,7 +243,7 @@
                                 <div class="browse-progress-header">
                                     <span id="emoji-download-progress-text">Downloading...</span>
                                 </div>
-                                <m3e-linear-progress-indicator id="emoji-download-progress-fill" variant="wavy" max="100" value="0"></m3e-linear-progress-indicator>
+                                <m3e-linear-progress-indicator id="emoji-download-progress-fill" variant="flat" max="100" value="0"></m3e-linear-progress-indicator>
                             </div>
 
                             <div class="curated-emoji-grid" id="curated-emoji-grid" role="list" aria-label="Curated emoji packs"></div>
@@ -333,14 +333,14 @@
             <div id="modal-body">Description</div>
 
             <div class="dialog-stage" id="dialog-progress-stage" style="display: none;">
-                <m3e-circular-progress-indicator id="dialog-progress-bar" variant="wavy" max="100" value="0">
+                <m3e-circular-progress-indicator id="dialog-progress-bar" variant="flat" max="100" value="0">
                     <span class="dialog-progress-pct" id="dialog-progress-pct">0%</span>
                 </m3e-circular-progress-indicator>
                 <div class="dialog-progress-msg" id="dialog-progress-msg">Preparing payload...</div>
             </div>
 
             <div class="dialog-stage" id="dialog-countdown-stage" style="display: none;">
-                <m3e-circular-progress-indicator id="dialog-countdown-bar" variant="wavy" max="5" value="5">
+                <m3e-circular-progress-indicator id="dialog-countdown-bar" variant="flat" max="5" value="5">
                     <span class="dialog-progress-pct" id="dialog-countdown-sec">5</span>
                 </m3e-circular-progress-indicator>
                 <div class="dialog-progress-msg" id="dialog-countdown-msg">Restarting in 5s to reload fonts...</div>
