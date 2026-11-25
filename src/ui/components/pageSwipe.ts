@@ -17,11 +17,22 @@ export function getTabOffset(targetTab: FontifyTab, containerWidth: number): num
 
 export interface PageSwipeOptions {
   onSettle: (tab: FontifyTab) => void;
-  onAnimateHighlighter?: (tab: FontifyTab) => void;
-  onProgress?: (fromTab: FontifyTab, toTab: FontifyTab, progress: number) => void;
-  onOverscroll?: (overscrollPx: number) => void;
-  onResetSprings?: () => void;
 }
+
+interface SwipeGestureDetailLike {
+  phase?: 'start' | 'move' | 'end' | 'cancel';
+  direction?: 'left' | 'right' | 'up' | 'down';
+  axis?: 'x' | 'y';
+  translationX?: number;
+  velocityX?: number;
+}
+
+type SwipeGestureElementLike = HTMLElement & {
+  inputFilter?: (input: { target?: EventTarget | null }) => boolean;
+};
+
+const EXCLUDED_SWIPE_SELECTOR =
+  'm3e-bottom-sheet, m3e-dialog, m3e-slider, m3e-slider-thumb, m3e-search-bar, m3e-button-group, m3e-filter-chip-set, m3e-split-pane, input[type="range"], [contenteditable="true"], .emoji-category-bar, .emoji-showcase-grid, .m3-presets-scroll, #browse-search-input, .browse-filter-row, #browse-preview-sheet, .specimen-box';
 
 let activeSlideToTab: ((targetTab: FontifyTab, immediate?: boolean) => void) | null = null;
 
@@ -36,17 +47,10 @@ export function initPageSwipe(options: PageSwipeOptions): () => void {
 
   const container = document.getElementById('viewpager-container');
   const track = document.getElementById('viewpager-track');
+  const swipeEl = document.getElementById('viewpager-swipe') as SwipeGestureElementLike | null;
   if (!container || !track) return () => {};
 
-  let isPointerDown = false;
-  let isTracking = false;
-  let gestureType: 'none' | 'horizontal' | 'vertical' = 'none';
-  let startX = 0;
-  let startY = 0;
-  let lastX = 0;
-  let lastTime = 0;
-  let velocity = 0;
-  let currentDeltaX = 0;
+  let isSwiping = false;
 
   function moveToTab(targetTab: FontifyTab, immediate = false) {
     if (!track || !container) return;
@@ -65,7 +69,7 @@ export function initPageSwipe(options: PageSwipeOptions): () => void {
     track.style.transition = 'transform 0.38s cubic-bezier(0.28, 1.18, 0.5, 1)';
     track.style.transform = `translate3d(${targetOffset}px, 0, 0)`;
     setTimeout(() => {
-      if (!isPointerDown && track) {
+      if (!isSwiping && track) {
         track.style.transition = '';
       }
     }, 400);
@@ -73,153 +77,72 @@ export function initPageSwipe(options: PageSwipeOptions): () => void {
 
   activeSlideToTab = moveToTab;
 
-  function handleTouchStart(e: TouchEvent) {
-    if (e.touches.length !== 1) return;
+  if (swipeEl) {
+    swipeEl.inputFilter = (input) => {
+      const target = input?.target as HTMLElement | null;
+      if (!target || typeof target.closest !== 'function') return true;
+      return !target.closest(EXCLUDED_SWIPE_SELECTOR);
+    };
+  }
 
-    const target = e.target as HTMLElement | null;
-    if (!target) return;
+  function handleSwipeGesture(e: Event) {
+    if (!container || !track) return;
+    const detail = (e as CustomEvent<SwipeGestureDetailLike>).detail;
+    if (!detail) return;
 
-    // Skip horizontal page gestures on interactive M3E controls, dialogs, sheets, sliders, and editable playgrounds
-    if (
-      target.closest(
-        'm3e-bottom-sheet, m3e-dialog, m3e-slider, m3e-slider-thumb, m3e-search-bar, m3e-button-group, m3e-filter-chip-set, m3e-split-pane, input[type="range"], [contenteditable="true"], .emoji-category-bar, .emoji-showcase-grid, .m3-presets-scroll, #browse-search-input, .browse-filter-row, #browse-preview-sheet, .specimen-box'
-      )
-    ) {
-      isPointerDown = false;
-      isTracking = false;
-      gestureType = 'none';
+    const currentTab = store.getState().currentTab;
+    const currentIndex = TAB_ORDER.indexOf(currentTab);
+    const width = container.offsetWidth || 1;
+    const baseOffset = -currentIndex * width;
+    const dx = detail.translationX ?? 0;
+
+    if (detail.phase === 'start') {
+      isSwiping = true;
+      track.style.transition = 'none';
       return;
     }
 
-    const touch = e.touches[0];
-    if (!touch) return;
-
-    if (track) {
+    if (detail.phase === 'move') {
+      if (detail.axis === 'y') return;
+      isSwiping = true;
       track.style.transition = 'none';
-    }
 
-    isPointerDown = true;
-    isTracking = false;
-    gestureType = 'none';
-    startX = touch.clientX;
-    startY = touch.clientY;
-    lastX = startX;
-    lastTime = performance.now();
-    velocity = 0;
-    currentDeltaX = 0;
-  }
-
-  function handleTouchMove(e: TouchEvent) {
-    if (!isPointerDown || e.touches.length !== 1 || !container || !track) return;
-
-    const touch = e.touches[0];
-    if (!touch) return;
-
-    const dx = touch.clientX - startX;
-    const dy = touch.clientY - startY;
-
-    if (gestureType === 'none') {
-      const absX = Math.abs(dx);
-      const absY = Math.abs(dy);
-
-      if (absX < 8 && absY < 8) return;
-
-      if (absX > absY * 1.2) {
-        gestureType = 'horizontal';
-        isTracking = true;
-      } else {
-        gestureType = 'vertical';
-        isPointerDown = false;
-        isTracking = false;
-        return;
+      let effectiveDx = dx;
+      if (currentIndex === 0 && dx > 0) {
+        effectiveDx = Math.pow(dx, 0.78) * 1.8;
+      } else if (currentIndex === TAB_ORDER.length - 1 && dx < 0) {
+        effectiveDx = -Math.pow(-dx, 0.78) * 1.8;
       }
+      track.style.transform = `translate3d(${baseOffset + effectiveDx}px, 0, 0)`;
+      return;
     }
 
-    if (!isTracking) return;
-
-    if (e.cancelable) {
-      e.preventDefault();
+    if (detail.phase === 'cancel') {
+      isSwiping = false;
+      moveToTab(currentTab, false);
+      return;
     }
 
-    const now = performance.now();
-    const dt = now - lastTime;
-    if (dt > 0) {
-      const instantV = (touch.clientX - lastX) / dt;
-      velocity = velocity * 0.4 + instantV * 0.6;
-    }
-    lastX = touch.clientX;
-    lastTime = now;
+    if (detail.phase === 'end' || !detail.phase) {
+      isSwiping = false;
+      let targetIndex = currentIndex;
+      const vx = detail.velocityX ?? 0;
 
-    const currentTab = store.getState().currentTab;
-    const currentIndex = TAB_ORDER.indexOf(currentTab);
-    const width = container.offsetWidth;
-    const baseOffset = -currentIndex * width;
-
-    let effectiveDx = dx;
-    let isOverscroll = false;
-
-    if (currentIndex === 0 && dx > 0) {
-      isOverscroll = true;
-      effectiveDx = Math.pow(dx, 0.78) * 1.8;
-    } else if (currentIndex === TAB_ORDER.length - 1 && dx < 0) {
-      isOverscroll = true;
-      effectiveDx = -Math.pow(-dx, 0.78) * 1.8;
-    }
-
-    currentDeltaX = effectiveDx;
-    track.style.transform = `translate3d(${baseOffset + effectiveDx}px, 0, 0)`;
-
-    if (isOverscroll) {
-      options.onOverscroll?.(effectiveDx);
-    } else {
-      options.onOverscroll?.(0);
-      const progress = Math.min(1, Math.max(0, Math.abs(dx) / width));
-      if (dx < 0 && currentIndex < TAB_ORDER.length - 1) {
-        options.onProgress?.(currentTab, TAB_ORDER[currentIndex + 1], progress);
-      } else if (dx > 0 && currentIndex > 0) {
-        options.onProgress?.(currentTab, TAB_ORDER[currentIndex - 1], progress);
-      } else {
-        options.onProgress?.(currentTab, currentTab, 0);
+      if (detail.direction === 'left' && currentIndex < TAB_ORDER.length - 1) {
+        if (Math.abs(vx) > 0.2 || Math.abs(dx) > width * 0.25 || detail.translationX === undefined) {
+          targetIndex = currentIndex + 1;
+        }
+      } else if (detail.direction === 'right' && currentIndex > 0) {
+        if (Math.abs(vx) > 0.2 || Math.abs(dx) > width * 0.25 || detail.translationX === undefined) {
+          targetIndex = currentIndex - 1;
+        }
       }
-    }
-  }
 
-  function handleTouchEnd() {
-    if (!isPointerDown || !container || !track) return;
-    isPointerDown = false;
-
-    if (!isTracking) return;
-    isTracking = false;
-
-    const currentTab = store.getState().currentTab;
-    const currentIndex = TAB_ORDER.indexOf(currentTab);
-    const width = container.offsetWidth;
-
-    let targetIndex = currentIndex;
-    const flickThreshold = 0.35;
-    const distThreshold = width * 0.35;
-
-    if (Math.abs(velocity) > flickThreshold) {
-      if (velocity < 0 && currentIndex < TAB_ORDER.length - 1) {
-        targetIndex = currentIndex + 1;
-      } else if (velocity > 0 && currentIndex > 0) {
-        targetIndex = currentIndex - 1;
+      const targetTab = TAB_ORDER[targetIndex];
+      moveToTab(targetTab, false);
+      if (targetTab !== currentTab) {
+        options.onSettle(targetTab);
       }
-    } else if (Math.abs(currentDeltaX) > distThreshold) {
-      if (currentDeltaX < 0 && currentIndex < TAB_ORDER.length - 1) {
-        targetIndex = currentIndex + 1;
-      } else if (currentDeltaX > 0 && currentIndex > 0) {
-        targetIndex = currentIndex - 1;
-      }
-    }
-
-    const targetTab = TAB_ORDER[targetIndex];
-    options.onResetSprings?.();
-    moveToTab(targetTab, false);
-
-    if (targetTab !== currentTab) {
-      options.onAnimateHighlighter?.(targetTab);
-      options.onSettle(targetTab);
     }
   }
 
@@ -248,17 +171,14 @@ export function initPageSwipe(options: PageSwipeOptions): () => void {
     }
   }
 
-  container.addEventListener('touchstart', handleTouchStart, { passive: true });
-  container.addEventListener('touchmove', handleTouchMove, { passive: false });
-  container.addEventListener('touchend', handleTouchEnd, { passive: true });
-  container.addEventListener('touchcancel', handleTouchEnd, { passive: true });
+  swipeEl?.addEventListener('gesture', handleSwipeGesture);
   window.addEventListener('resize', handleResize, { passive: true });
 
   return () => {
-    container.removeEventListener('touchstart', handleTouchStart);
-    container.removeEventListener('touchmove', handleTouchMove);
-    container.removeEventListener('touchend', handleTouchEnd);
-    container.removeEventListener('touchcancel', handleTouchEnd);
+    swipeEl?.removeEventListener('gesture', handleSwipeGesture);
+    if (swipeEl) {
+      swipeEl.inputFilter = undefined;
+    }
     window.removeEventListener('resize', handleResize);
     if (activeSlideToTab === moveToTab) {
       activeSlideToTab = null;

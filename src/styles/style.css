@@ -42,6 +42,7 @@
   width: 100%;
   overflow: hidden;
   position: relative;
+  touch-action: pan-y;
   contain: layout style;
 }
 

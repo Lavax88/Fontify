@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { initPageSwipe, slideToTab } from '../src/ui/components/pageSwipe';
 import { store } from '../src/state/store';
 
-describe('Page Swipe ViewPager Mechanics', () => {
+describe('Page Swipe ViewPager Mechanics (<m3e-swipe-gesture>)', () => {
   let originalDocument: any;
   let originalWindow: any;
 
@@ -18,22 +18,22 @@ describe('Page Swipe ViewPager Mechanics', () => {
   });
 
   it('gracefully returns no-op cleanup when container or track elements are missing', () => {
+    globalThis.document = {
+      getElementById: () => null
+    } as any;
+
     const cleanup = initPageSwipe({
-      onSettle: vi.fn(),
-      onAnimateHighlighter: vi.fn(),
-      onProgress: vi.fn(),
-      onOverscroll: vi.fn(),
-      onResetSprings: vi.fn()
+      onSettle: vi.fn()
     });
 
     expect(typeof cleanup).toBe('function');
     expect(() => cleanup()).not.toThrow();
-    expect(() => slideToTab('customize')).not.toThrow();
+    expect(() => slideToTab('browse')).not.toThrow();
   });
 
-  it('attaches touch listeners, handles swipe gestures, exclusions, and tab navigation', () => {
-    const containerListeners: Record<string, Function> = {};
-    const windowListeners: Record<string, Function> = {};
+  it('configures m3e-swipe-gesture inputFilter, handles gesture phases, and guards resize', () => {
+    const swipeListeners: Record<string, any> = {};
+    const windowListeners: Record<string, any> = {};
 
     const mockTrack: any = {
       id: 'viewpager-track',
@@ -42,170 +42,85 @@ describe('Page Swipe ViewPager Mechanics', () => {
 
     const mockContainer: any = {
       id: 'viewpager-container',
-      offsetWidth: 360,
-      addEventListener: vi.fn((event: string, handler: Function) => {
-        containerListeners[event] = handler;
-      }),
-      removeEventListener: vi.fn()
+      offsetWidth: 360
     };
 
-    const mockBottomNav: any = {
-      classList: {
-        add: vi.fn(),
-        remove: vi.fn()
-      }
-    };
-
-    const mockDoc: any = {
-      getElementById: vi.fn((id: string) => {
-        if (id === 'viewpager-container') return mockContainer;
-        if (id === 'viewpager-track') return mockTrack;
-        return null;
+    const mockSwipeEl: any = {
+      id: 'viewpager-swipe',
+      inputFilter: undefined as any,
+      addEventListener: vi.fn((event: string, fn: any) => {
+        swipeListeners[event] = fn;
       }),
-      querySelector: vi.fn((sel: string) => {
-        if (sel === '.bottom-nav') return mockBottomNav;
-        return null;
+      removeEventListener: vi.fn((event: string) => {
+        delete swipeListeners[event];
       })
     };
 
-    const mockWin: any = {
-      addEventListener: vi.fn((event: string, handler: Function) => {
-        windowListeners[event] = handler;
+    globalThis.document = {
+      getElementById: (id: string) => {
+        if (id === 'viewpager-container') return mockContainer;
+        if (id === 'viewpager-track') return mockTrack;
+        if (id === 'viewpager-swipe') return mockSwipeEl;
+        return null;
+      }
+    } as any;
+
+    globalThis.window = {
+      addEventListener: vi.fn((event: string, fn: any) => {
+        windowListeners[event] = fn;
       }),
-      removeEventListener: vi.fn()
-    };
-
-    globalThis.document = mockDoc;
-    globalThis.window = mockWin;
-
-    const onSettle = vi.fn();
-    const onAnimateHighlighter = vi.fn();
-    const onProgress = vi.fn();
-    const onOverscroll = vi.fn();
-    const onResetSprings = vi.fn();
+      removeEventListener: vi.fn((event: string) => {
+        delete windowListeners[event];
+      })
+    } as any;
 
     store.setState({ currentTab: 'overview' });
+    const onSettle = vi.fn();
 
-    const cleanup = initPageSwipe({
-      onSettle,
-      onAnimateHighlighter,
-      onProgress,
-      onOverscroll,
-      onResetSprings
-    });
+    const cleanup = initPageSwipe({ onSettle });
 
-    expect(containerListeners['touchstart']).toBeDefined();
-    expect(containerListeners['touchmove']).toBeDefined();
-    expect(containerListeners['touchend']).toBeDefined();
-    expect(containerListeners['touchcancel']).toBeDefined();
+    // 1. inputFilter excludes interactive M3E controls
+    expect(typeof mockSwipeEl.inputFilter).toBe('function');
+    const sliderTarget = { closest: (sel: string) => (sel.includes('m3e-slider') ? {} : null) };
+    const normalTarget = { closest: () => null };
+    expect(mockSwipeEl.inputFilter({ target: sliderTarget })).toBe(false);
+    expect(mockSwipeEl.inputFilter({ target: normalTarget })).toBe(true);
 
-    // 1. Test slideToTab programmatically
-    slideToTab('browse', true);
+    // 2. Gesture move & end settle from overview -> browse
+    const gestureHandler = swipeListeners['gesture'];
+    expect(gestureHandler).toBeDefined();
+
+    gestureHandler({ detail: { phase: 'start', axis: 'x', translationX: 0 } });
+    gestureHandler({ detail: { phase: 'move', axis: 'x', translationX: -120 } });
+    expect(mockTrack.style.transform).toBe('translate3d(-120px, 0, 0)');
+
+    gestureHandler({ detail: { phase: 'end', direction: 'left', axis: 'x', translationX: -150, velocityX: -0.5 } });
+    expect(mockTrack.style.transform).toBe('translate3d(-360px, 0, 0)');
+    expect(onSettle).toHaveBeenCalledWith('browse');
+
+    // 3. Cancel snaps back to current tab
+    store.setState({ currentTab: 'browse' });
+    gestureHandler({ detail: { phase: 'cancel', axis: 'x', translationX: -40 } });
     expect(mockTrack.style.transform).toBe('translate3d(-360px, 0, 0)');
 
-    slideToTab('customize', true);
-    expect(mockTrack.style.transform).toBe('translate3d(-720px, 0, 0)');
-
-    slideToTab('emoji', false);
-    expect(mockTrack.style.transform).toBe('translate3d(-1080px, 0, 0)');
-
-    // Reset back to overview
-    store.setState({ currentTab: 'overview' });
-
-    // 2. Test touch start on excluded elements (range slider)
-    const mockSliderTarget: any = {
-      closest: vi.fn((sel: string) => sel.includes('input[type="range"]'))
-    };
-
-    containerListeners['touchstart']({
-      touches: [{ clientX: 200, clientY: 300 }],
-      target: mockSliderTarget
-    });
-
-    // Touchmove should be ignored because touchstart was excluded
-    containerListeners['touchmove']({
-      touches: [{ clientX: 100, clientY: 300 }],
-      cancelable: true,
-      preventDefault: vi.fn()
-    });
-    expect(onProgress).not.toHaveBeenCalled();
-
-    // 3. Test touch gesture on normal content with vertical scroll dominance
-    const mockContentTarget: any = {
-      closest: vi.fn(() => null)
-    };
-
-    containerListeners['touchstart']({
-      touches: [{ clientX: 200, clientY: 200 }],
-      target: mockContentTarget
-    });
-
-    // Move vertically by 30px, horizontally by 5px -> vertical dominant
-    containerListeners['touchmove']({
-      touches: [{ clientX: 205, clientY: 230 }],
-      cancelable: true,
-      preventDefault: vi.fn()
-    });
-    expect(onProgress).not.toHaveBeenCalled();
-
-    // 4. Test horizontal swipe from overview towards browse (swipe left, dx < 0)
-    containerListeners['touchstart']({
-      touches: [{ clientX: 300, clientY: 200 }],
-      target: mockContentTarget
-    });
-
-    const preventDefaultSpy = vi.fn();
-    containerListeners['touchmove']({
-      touches: [{ clientX: 150, clientY: 202 }],
-      cancelable: true,
-      preventDefault: preventDefaultSpy
-    });
-
-    expect(preventDefaultSpy).toHaveBeenCalled();
-    expect(onProgress).toHaveBeenCalledWith('overview', 'browse', expect.any(Number));
-
-    // Release drag beyond distance threshold (>35% of 360 = 126px; dx is -150px)
-    containerListeners['touchend']();
-
-    expect(onAnimateHighlighter).toHaveBeenCalledWith('browse');
-    expect(onSettle).toHaveBeenCalledWith('browse');
-    expect(onResetSprings).toHaveBeenCalled();
-
-    // 5. Test boundary overscroll (pulling right at overview, dx > 0)
-    store.setState({ currentTab: 'overview' });
-    containerListeners['touchstart']({
-      touches: [{ clientX: 50, clientY: 200 }],
-      target: mockContentTarget
-    });
-
-    containerListeners['touchmove']({
-      touches: [{ clientX: 120, clientY: 200 }],
-      cancelable: true,
-      preventDefault: vi.fn()
-    });
-
-    expect(onOverscroll).toHaveBeenCalledWith(expect.any(Number));
-
-    // Cancel touch
-    containerListeners['touchcancel']();
-    expect(onResetSprings).toHaveBeenCalled();
-
-    // 6. Test window resize handler: ignores height-only resizes (e.g., mobile keyboard)
+    // 4. Resize ignores height-only changes (keyboard) and updates on width change
     const resizeHandler = windowListeners['resize'];
-    expect(resizeHandler).toBeDefined();
     mockTrack.style.transform = 'sentinel';
     resizeHandler();
     expect(mockTrack.style.transform).toBe('sentinel');
 
-    // Width change triggers ViewPager re-alignment
     mockContainer.offsetWidth = 400;
-    store.setState({ currentTab: 'browse' });
     resizeHandler();
     expect(mockTrack.style.transform).toBe('translate3d(-400px, 0, 0)');
 
-    // 7. Cleanup
     cleanup();
-    expect(mockContainer.removeEventListener).toHaveBeenCalledWith('touchstart', expect.any(Function));
-    expect(mockWin.removeEventListener).toHaveBeenCalledWith('resize', expect.any(Function));
+    expect(mockSwipeEl.removeEventListener).toHaveBeenCalledWith('gesture', expect.any(Function));
+    expect(mockWinRemoveCalled()).toBe(true);
+
+    function mockWinRemoveCalled() {
+      return (globalThis.window.removeEventListener as any).mock.calls.some(
+        (c: any[]) => c[0] === 'resize'
+      );
+    }
   });
 });
