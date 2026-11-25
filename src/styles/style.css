@@ -703,6 +703,11 @@ m3e-slider {
   font-weight: 500;
 }
 
+m3e-snackbar {
+  --m3e-snackbar-margin: calc(var(--bottom-inset) + 84px);
+  --m3e-snackbar-min-width: min(344px, calc(100vw - 32px));
+}
+
 #credits-body {
   display: block;
   max-height: 55vh;
