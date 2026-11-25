@@ -1,8 +1,15 @@
-import { describe, it, expect, vi } from 'vitest';
-import { quoteArg } from '../src/bridge/shell';
+import { describe, it, expect, vi, afterEach } from 'vitest';
+import { quoteArg, exec, setShellTransport, setWindowDecor } from '../src/bridge/shell';
 import { mockExec, setMockFailure } from '../src/bridge/mock';
 
 describe('Shell Bridge & Quoting', () => {
+  const originalWindow = globalThis.window;
+
+  afterEach(() => {
+    setShellTransport(null);
+    globalThis.window = originalWindow;
+    vi.restoreAllMocks();
+  });
   it('correctly quotes arguments containing spaces and quotes', () => {
     expect(quoteArg('simple')).toBe("'simple'");
     expect(quoteArg('Roboto Flex')).toBe("'Roboto Flex'");
@@ -57,5 +64,28 @@ describe('Shell Bridge & Quoting', () => {
     await rebootDevice('full');
     expect(executedCmd).toContain('svc power reboot');
     expect(executedCmd).not.toContain('pkill -f system_server');
+  });
+
+  it('routes exec() through an injected ShellTransport adapter and setWindowDecor through host bridge', async () => {
+    const seen: string[] = [];
+    setShellTransport(async (cmd) => {
+      seen.push(cmd);
+      return { errno: 0, stdout: 'adapter-ok', stderr: '' };
+    });
+
+    const res = await exec('echo hello');
+    expect(res.stdout).toBe('adapter-ok');
+    expect(seen).toEqual(['echo hello']);
+
+    const setLightStatusBars = vi.fn();
+    const setWindowDecorHost = vi.fn();
+    globalThis.window = {
+      $fontify: { setLightStatusBars },
+      ksu: { exec: vi.fn(), setWindowDecor: setWindowDecorHost }
+    } as any;
+
+    setWindowDecor('#11140e', false);
+    expect(setLightStatusBars).toHaveBeenCalledWith(false);
+    expect(setWindowDecorHost).toHaveBeenCalledWith('#11140e', false);
   });
 });

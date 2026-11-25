@@ -21,56 +21,27 @@ import {
 export { getStaticVariants, getVariableVariant, isVariableItem, getWeightLabel as getWeightName };
 import { showToast } from './components/toast';
 import {
-  getItems,
   getItemById,
-  resolveVariant,
   downloadAndCacheFont,
   syncOnlineCatalog
 } from '../browse/catalogService';
 import {
-  getAllCachedFontIds,
-  deleteCachedFont
-} from '../browse/fontCache';
+  BrowseController,
+  buildGoogleFontsCssUrl,
+  buildSubsetText,
+  SUBSET_CHARS
+} from '../browse/browseController';
+import { resolveVariant } from '../font/variants';
 import type {
   BrowseItem,
-  BrowseFilterState,
   FontVariant
 } from '../browse/types';
 import { navigateToTab } from './navigation';
 
-const PAGE_SIZE = 24;
+const controller = new BrowseController();
+const state = controller.state;
 
-interface ExtendedFilterState extends BrowseFilterState {
-  isVariable?: boolean;
-}
-
-interface BrowseState {
-  filters: Partial<ExtendedFilterState>;
-  items: BrowseItem[];
-  cachedIds: Set<string>;
-  displayedCount: number;
-  activeItem: BrowseItem | null;
-  activeVariant: FontVariant | null;
-  isLoading: boolean;
-  isDownloading: boolean;
-}
-
-const state: BrowseState = {
-  filters: {
-    query: '',
-    type: 'font',
-    source: 'all',
-    category: 'all',
-    downloadedOnly: false
-  },
-  items: [],
-  cachedIds: new Set(),
-  displayedCount: PAGE_SIZE,
-  activeItem: null,
-  activeVariant: null,
-  isLoading: false,
-  isDownloading: false
-};
+export { SUBSET_CHARS, buildSubsetText };
 
 let debounceTimer: ReturnType<typeof setTimeout> | null = null;
 
@@ -137,13 +108,6 @@ function updateDownloadProgress(visible: boolean, percent = 0, message = 'Downlo
       if (pct) pct.textContent = `${rounded}%`;
     }
   }
-}
-
-export const SUBSET_CHARS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789 .,;:!?\'"-/()[]{}@#%&*+=_';
-
-export function buildSubsetText(item: BrowseItem, extraText = ''): string {
-  const combined = `${SUBSET_CHARS}${item.name}${item.previewText || ''}${extraText}`;
-  return Array.from(new Set(combined.split(''))).filter((c) => c !== '\n' && c !== '\r').join('');
 }
 
 export function updateSpecimenWeight(item: BrowseItem, variant: FontVariant): void {
@@ -246,26 +210,8 @@ export async function refreshCatalogGrid(resetPaging = false): Promise<void> {
   const grid = document.getElementById('browse-grid');
   if (!grid) return;
 
-  state.isLoading = true;
-
-  if (resetPaging) {
-    state.displayedCount = PAGE_SIZE;
-  }
-
   try {
-    let [matchingItems, cachedIdList] = await Promise.all([
-      getItems(state.filters),
-      getAllCachedFontIds()
-    ]);
-
-    // Respect variable font filter
-    if (state.filters.isVariable) {
-      matchingItems = matchingItems.filter((item) => isVariableItem(item));
-    }
-
-    state.items = matchingItems;
-    state.cachedIds = new Set(cachedIdList);
-
+    await controller.refresh(resetPaging);
     renderGridItems();
   } catch (err) {
     console.error('[Browse] Failed to load catalog items:', err);
@@ -277,8 +223,6 @@ export async function refreshCatalogGrid(resetPaging = false): Promise<void> {
         </div>
       `;
     }
-  } finally {
-    state.isLoading = false;
   }
 }
 
@@ -647,27 +591,7 @@ export async function loadPreviewFontFace(item: BrowseItem, variant?: FontVarian
       statusEl.style.color = 'var(--md-sys-color-primary)';
     }
 
-    const familyParam = encodeURIComponent(item.name).replace(/%20/g, '+');
-    const subsetText = buildSubsetText(item, specimen.textContent || '');
-
-    // Weight range or weights
-    const availableWeights = (item.availableWeights && item.availableWeights.length > 0)
-      ? item.availableWeights
-      : item.weights && item.weights.length > 0
-      ? item.weights
-      : [400];
-
-    let wghtSpec = '';
-    if (isVar) {
-      const minW = Math.min(...availableWeights);
-      const maxW = Math.max(...availableWeights);
-      wghtSpec = minW < maxW ? `wght@${minW}..${maxW}` : `wght@${minW}`;
-    } else {
-      wghtSpec = `wght@${availableWeights.join(';')}`;
-    }
-
-    const gfUrl = `https://fonts.googleapis.com/css2?family=${familyParam}:${wghtSpec}&display=swap&text=${encodeURIComponent(subsetText)}`;
-    const fallbackUrl = `https://fonts.googleapis.com/css2?family=${familyParam}&display=swap`;
+    const { primaryUrl: gfUrl, fallbackUrl } = buildGoogleFontsCssUrl(item, specimen.textContent || '');
 
     let linkEl = document.getElementById('browse-gf-preview-css') as HTMLLinkElement | null;
     if (!linkEl) {
@@ -719,8 +643,7 @@ export async function loadPreviewFontFace(item: BrowseItem, variant?: FontVarian
 
 export async function handleDeleteCachedFont(item: BrowseItem): Promise<void> {
   try {
-    await deleteCachedFont(item.id);
-    state.cachedIds.delete(item.id);
+    await controller.deleteCached(item.id);
     showToast(`Deleted ${item.name} from downloads`);
 
     // If currently previewing this item in the bottom sheet, remove the delete button and downloaded badge
@@ -728,14 +651,8 @@ export async function handleDeleteCachedFont(item: BrowseItem): Promise<void> {
       document.getElementById('btn-preview-delete')?.remove();
       const sheet = document.getElementById('browse-preview-sheet');
       sheet?.querySelectorAll('.browse-badge-downloaded').forEach((b) => b.remove());
-    }
-
-    // If currently viewing downloaded fonts only, remove from displayed list
-    if (state.filters.downloadedOnly) {
-      state.items = state.items.filter((i) => i.id !== item.id);
-      if (state.activeItem?.id === item.id) {
-        closePreviewSheet();
-      }
+    } else if (state.filters.downloadedOnly) {
+      closePreviewSheet();
     }
 
     renderGridItems();
@@ -1039,21 +956,10 @@ export function setupBrowseTab(): void {
       target.setAttribute?.('selected', '');
       target.setAttribute('aria-pressed', 'true');
 
-      if (filterType === 'variable') {
-        state.filters.type = 'font';
-        state.filters.source = 'all';
-        state.filters.category = 'all';
-        state.filters.isVariable = true;
-      } else if (filterType === 'emoji') {
-        state.filters.type = 'emoji';
-        state.filters.source = 'all';
-        state.filters.category = 'all';
-        delete state.filters.isVariable;
+      if (filterType === 'variable' || filterType === 'emoji' || filterType === 'all-fonts') {
+        controller.setCategoryFilter(filterType);
       } else {
-        state.filters.type = 'font';
-        state.filters.source = 'all';
-        state.filters.category = 'all';
-        delete state.filters.isVariable;
+        controller.setCategoryFilter('all-fonts');
       }
 
       refreshCatalogGrid(true);
@@ -1125,8 +1031,7 @@ export function setupBrowseTab(): void {
       const scrollBottom = viewBrowse.scrollTop + viewBrowse.clientHeight;
       const scrollHeight = viewBrowse.scrollHeight;
 
-      if (scrollHeight - scrollBottom < 300) {
-        state.displayedCount += PAGE_SIZE;
+      if (scrollHeight - scrollBottom < 300 && controller.loadMore()) {
         renderGridItems();
       }
     });

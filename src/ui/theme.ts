@@ -4,6 +4,8 @@
  * dark/light system mode detection, status bar tinting, and user custom CSS.
  */
 
+import { setWindowDecor } from '../bridge/shell';
+
 export const DEFAULT_SEED_COLOR = '#386a20';
 
 function isHexColor(val: string): boolean {
@@ -80,15 +82,8 @@ export class ThemeManager {
     }
     metaTheme.setAttribute('content', themeColor);
 
-    // 2. Synchronize host root manager status bar
-    try {
-      if (typeof window.$fontify !== 'undefined' && typeof window.$fontify.setLightStatusBars === 'function') {
-        window.$fontify.setLightStatusBars(!dark);
-      }
-      if (typeof window.ksu !== 'undefined' && typeof window.ksu.setWindowDecor === 'function') {
-        window.ksu.setWindowDecor(themeColor, !dark);
-      }
-    } catch (_) {}
+    // 2. Synchronize host root manager status bar via bridge seam
+    setWindowDecor(themeColor, !dark);
   }
 
   public injectUserStyles(): void {

@@ -4,7 +4,7 @@
  * Includes cancel support, progress tracking, size verification, and guaranteed temp file cleanup.
  */
 
-import { exec } from './shell';
+import { exec, quoteArg } from './shell';
 
 export const TMP_B64 = '/data/local/tmp/font_tmp.b64';
 export const TMP_TTF = '/data/local/tmp/font_tmp.ttf';
@@ -85,12 +85,10 @@ export async function streamFontToDevice(
     // 0. Instant local sideload fast-path: copy directly from device storage (/sdcard/Download) in 0ms
     if (localFilePath) {
       onProgress?.(30, 'Using local device font file...');
-      const escapedLocal = localFilePath.replace(/'/g, "'\\''");
-      const cpRes = await exec(`cp -af '${escapedLocal}' ${TMP_TTF} 2>/dev/null && chmod 644 ${TMP_TTF}`);
+      const cpRes = await exec(`cp -af ${quoteArg(localFilePath)} ${TMP_TTF} 2>/dev/null && chmod 644 ${TMP_TTF}`);
       if (cpRes.errno === 0) {
         onProgress?.(85, 'Writing font configuration...');
-        const escapedConfig = configJson.replace(/'/g, "'\\''");
-        await exec(`printf '%s' '${escapedConfig}' > ${TMP_CFG}`);
+        await exec(`printf '%s' ${quoteArg(configJson)} > ${TMP_CFG}`);
         onProgress?.(100, 'Payload ready on device.');
         return { ttfPath: TMP_TTF, configPath: TMP_CFG };
       }
@@ -104,10 +102,8 @@ export async function streamFontToDevice(
         const acceleratedUrl = directUrl.startsWith('https://raw.githubusercontent.com/')
           ? `https://ghfast.top/${directUrl}`
           : directUrl;
-        const escapedAccel = acceleratedUrl.replace(/'/g, "'\\''");
-        const escapedUrl = directUrl.replace(/'/g, "'\\''");
         const dlRes = await exec(
-          `curl -fkLs '${escapedAccel}' -o ${TMP_TTF} 2>/dev/null || curl -fkLs '${escapedUrl}' -o ${TMP_TTF} 2>/dev/null || wget -qO ${TMP_TTF} '${escapedUrl}' 2>/dev/null`,
+          `curl -fkLs ${quoteArg(acceleratedUrl)} -o ${TMP_TTF} 2>/dev/null || curl -fkLs ${quoteArg(directUrl)} -o ${TMP_TTF} 2>/dev/null || wget -qO ${TMP_TTF} ${quoteArg(directUrl)} 2>/dev/null`,
           { timeoutMs: 60000 }
         );
 
@@ -117,8 +113,7 @@ export async function streamFontToDevice(
           const writtenBytes = parseInt(cleanSize, 10);
           if (!isNaN(writtenBytes) && writtenBytes >= 1000) {
             onProgress?.(95, 'Writing font configuration...');
-            const escapedConfig = configJson.replace(/'/g, "'\\''");
-            await exec(`printf '%s' '${escapedConfig}' > ${TMP_CFG}`);
+            await exec(`printf '%s' ${quoteArg(configJson)} > ${TMP_CFG}`);
             onProgress?.(100, 'Payload ready on device.');
             return { ttfPath: TMP_TTF, configPath: TMP_CFG };
           }
@@ -170,8 +165,7 @@ export async function streamFontToDevice(
 
     // Write config JSON to tmpCfg
     onProgress?.(96, 'Writing font configuration...');
-    const escapedConfig = configJson.replace(/'/g, "'\\''");
-    await exec(`printf '%s' '${escapedConfig}' > ${TMP_CFG}`);
+    await exec(`printf '%s' ${quoteArg(configJson)} > ${TMP_CFG}`);
 
     onProgress?.(100, 'Transfer complete. Applying overlay...');
 

@@ -11,6 +11,7 @@ import { resolveAppliedFontName as resolveFamilyName } from '../font/variants';
 import { fontService } from '../bridge/service';
 import { showToast } from './components/toast';
 import { renderVariableControls } from './components/sliders';
+import { bindFileDropzone } from './components/dropzone';
 
 import type { FontInfo } from '../font/types';
 
@@ -58,9 +59,6 @@ export async function restoreStockFont(): Promise<void> {
 }
 
 export function setupCustomizeTab(): void {
-  const dropzone = document.getElementById('dropzone');
-  const fileInput = document.getElementById('file-input') as HTMLInputElement | null;
-  const btnSelectFile = document.getElementById('btn-select-file');
   const pickerTitle = document.getElementById('picker-title');
   const pickerSubtitle = document.getElementById('picker-subtitle');
 
@@ -72,54 +70,30 @@ export function setupCustomizeTab(): void {
 
   const previewElements = Array.from(document.querySelectorAll<HTMLElement>('.preview-text'));
 
-  // 1. File Selection Handlers
-  if (dropzone && fileInput) {
-    dropzone.addEventListener('click', e => {
-      if (e.target !== fileInput) {
-        fileInput.click();
+  // 1. File Selection Handlers (shared dropzone adapter)
+  bindFileDropzone({
+    dropzoneId: 'dropzone',
+    fileInputId: 'file-input',
+    buttonId: 'btn-select-file',
+    onFileLoaded: (file, buffer) => {
+      const fontData = FontParser.parse(buffer);
+      if (!fontData.valid) {
+        showToast(fontData.error ? `Failed to parse font: ${fontData.error}` : 'Failed to parse font. Ensure it is a valid TTF/OTF font.');
+        return;
       }
-    });
 
-    dropzone.addEventListener('keydown', (e: KeyboardEvent) => {
-      if (e.key === 'Enter' || e.key === ' ') {
-        e.preventDefault();
-        fileInput.click();
-      }
-    });
+      store.setState({
+        fontFile: file,
+        fontBuffer: buffer,
+        fontData,
+        selectedPreset: '',
+        weightMode: 'normal'
+      });
 
-    dropzone.addEventListener('dragover', e => {
-      e.preventDefault();
-      dropzone.classList.add('drag-over');
-    });
-
-    dropzone.addEventListener('dragleave', () => {
-      dropzone.classList.remove('drag-over');
-    });
-
-    dropzone.addEventListener('drop', e => {
-      e.preventDefault();
-      dropzone.classList.remove('drag-over');
-      if (e.dataTransfer?.files && e.dataTransfer.files[0]) {
-        processSelectedFile(e.dataTransfer.files[0]);
-      }
-    });
-  }
-
-  if (btnSelectFile && fileInput) {
-    btnSelectFile.addEventListener('click', e => {
-      e.stopPropagation();
-      fileInput.click();
-    });
-  }
-
-  if (fileInput) {
-    fileInput.addEventListener('change', e => {
-      const target = e.target as HTMLInputElement;
-      if (target.files && target.files[0]) {
-        processSelectedFile(target.files[0]);
-      }
-    });
-  }
+      showToast(`Loaded "${fontData.fullName}"`);
+      syncCustomizeUIFromStore();
+    }
+  });
 
   // 2. Sync Customize UI from Store State
   function syncCustomizeUIFromStore(): void {
@@ -186,33 +160,4 @@ export function setupCustomizeTab(): void {
   });
 
   syncCustomizeUIFromStore();
-
-  // 3. Process Imported Font File
-  function processSelectedFile(file: File): void {
-    const reader = new FileReader();
-
-    reader.onload = async event => {
-      const buffer = event.target?.result as ArrayBuffer;
-      if (!buffer) return;
-
-      const fontData = FontParser.parse(buffer);
-      if (!fontData.valid) {
-        showToast(fontData.error ? `Failed to parse font: ${fontData.error}` : 'Failed to parse font. Ensure it is a valid TTF/OTF font.');
-        return;
-      }
-
-      store.setState({
-        fontFile: file,
-        fontBuffer: buffer,
-        fontData,
-        selectedPreset: '',
-        weightMode: 'normal'
-      });
-
-      showToast(`Loaded "${fontData.fullName}"`);
-      syncCustomizeUIFromStore();
-    };
-
-    reader.readAsArrayBuffer(file);
-  }
 }

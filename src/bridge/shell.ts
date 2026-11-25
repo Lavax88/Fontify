@@ -26,6 +26,32 @@ declare global {
   }
 }
 
+export type ShellTransport = (command: string, opts?: ExecOptions) => Promise<ExecResult>;
+
+let customTransport: ShellTransport | null = null;
+
+/**
+ * Installs a custom shell transport adapter (e.g. for testing or alternative hosts).
+ * Pass null to restore the default WebView / dev-mock transport.
+ */
+export function setShellTransport(transport: ShellTransport | null): void {
+  customTransport = transport;
+}
+
+/**
+ * Synchronizes host root manager status bar appearance via the WebView bridge.
+ */
+export function setWindowDecor(themeColor: string, isLight: boolean): void {
+  try {
+    if (typeof window !== 'undefined' && window.$fontify && typeof window.$fontify.setLightStatusBars === 'function') {
+      window.$fontify.setLightStatusBars(isLight);
+    }
+    if (typeof window !== 'undefined' && window.ksu && typeof window.ksu.setWindowDecor === 'function') {
+      window.ksu.setWindowDecor(themeColor, isLight);
+    }
+  } catch (_) {}
+}
+
 /**
  * Escapes and wraps a string in single quotes for safe shell execution.
  */
@@ -48,6 +74,10 @@ export function isRootManagerPresent(): boolean {
  * Executes a shell command with automatic timeout and error guards.
  */
 export async function exec(command: string, opts: ExecOptions = {}): Promise<ExecResult> {
+  if (customTransport) {
+    return customTransport(command, opts);
+  }
+
   const timeoutMs = opts.timeoutMs ?? 10000;
 
   // Use desktop dev mock if running under Vite dev server without root manager

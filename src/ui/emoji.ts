@@ -9,6 +9,7 @@ import { store } from '../state/store';
 import { fontService } from '../bridge/service';
 import { FontEngine } from '../font/engine';
 import { showToast } from './components/toast';
+import { bindFileDropzone } from './components/dropzone';
 import { getCachedFontBuffer, saveCachedFont } from '../browse/fontCache';
 import { streamAssetDownload } from '../browse/catalogService';
 import { EMOJI_CATALOG } from '../browse/emojiCatalog';
@@ -155,10 +156,6 @@ export async function restoreStockEmoji(): Promise<void> {
 
 export function setupEmojiTab(): void {
   // DOM Elements
-  const emojiDropzone = document.getElementById('emoji-dropzone');
-  const emojiFileInput = document.getElementById('emoji-file-input') as HTMLInputElement | null;
-  const btnSelectEmojiFile = document.getElementById('btn-select-emoji-file');
-
   const emojiInfoRow = document.getElementById('emoji-info-row');
   const emojiNameElem = document.getElementById('emoji-font-name');
   const emojiSizeElem = document.getElementById('emoji-font-size');
@@ -412,61 +409,12 @@ export function setupEmojiTab(): void {
     }
   }
 
-  // 5. Custom File Upload Handling
-  if (emojiDropzone && emojiFileInput) {
-    emojiDropzone.addEventListener('click', e => {
-      if (e.target !== emojiFileInput) {
-        emojiFileInput.click();
-      }
-    });
-
-    emojiDropzone.addEventListener('keydown', (e: KeyboardEvent) => {
-      if (e.key === 'Enter' || e.key === ' ') {
-        e.preventDefault();
-        emojiFileInput.click();
-      }
-    });
-
-    emojiDropzone.addEventListener('dragover', e => {
-      e.preventDefault();
-      emojiDropzone.classList.add('drag-over');
-    });
-
-    emojiDropzone.addEventListener('dragleave', () => {
-      emojiDropzone.classList.remove('drag-over');
-    });
-
-    emojiDropzone.addEventListener('drop', e => {
-      e.preventDefault();
-      emojiDropzone.classList.remove('drag-over');
-      if (e.dataTransfer?.files && e.dataTransfer.files[0]) {
-        processEmojiFile(e.dataTransfer.files[0]);
-      }
-    });
-  }
-
-  if (btnSelectEmojiFile && emojiFileInput) {
-    btnSelectEmojiFile.addEventListener('click', e => {
-      e.stopPropagation();
-      emojiFileInput.click();
-    });
-  }
-
-  if (emojiFileInput) {
-    emojiFileInput.addEventListener('change', e => {
-      const target = e.target as HTMLInputElement;
-      if (target.files && target.files[0]) {
-        processEmojiFile(target.files[0]);
-      }
-    });
-  }
-
-  function processEmojiFile(file: File): void {
-    const reader = new FileReader();
-    reader.onload = async event => {
-      const buffer = event.target?.result as ArrayBuffer;
-      if (!buffer) return;
-
+  // 5. Custom File Upload Handling (shared dropzone adapter)
+  bindFileDropzone({
+    dropzoneId: 'emoji-dropzone',
+    fileInputId: 'emoji-file-input',
+    buttonId: 'btn-select-emoji-file',
+    onFileLoaded: async (file, buffer) => {
       const cleanName = file.name.replace(/\.[^/.]+$/, '').trim() || 'Custom Emoji';
 
       store.setState({
@@ -485,14 +433,11 @@ export function setupEmojiTab(): void {
       renderCuratedGrid();
       await registerEmojiPreview(buffer, cleanName);
       showToast(`Loaded ${cleanName} (${(file.size / (1024 * 1024)).toFixed(1)} MB)`);
-    };
-
-    reader.onerror = () => {
+    },
+    onError: () => {
       showToast('Error reading emoji font file.');
-    };
-
-    reader.readAsArrayBuffer(file);
-  }
+    }
+  });
 
   // 6. Subscribe to state changes to update grid highlights
   store.subscribe(s => s.selectedEmojiPreset, () => {
