@@ -90,6 +90,7 @@ However, because root modules operate directly at the system partition, init scr
 
 ## Credits & Acknowledgments
 
+- **[M3E (`@m3e/web` & `@m3e/icons`)](https://github.com/matraic/m3e)** by **[matraic](https://matraic.github.io/m3e)**: Platform-native Material 3 Expressive Web Components and icons powering Fontify's UI.
 - **[zFont](https://github.com/zFont/Host)** & **[Khun Htetz Naing](https://zfont.app)**: Huge thanks to Khun Htetz Naing and the zFont project ([zFont GitHub](https://github.com/zFont), [zFont App](https://zfont.app), [zFont Host](https://github.com/zFont/Host)) for pioneering Android font and emoji packages, hosting, and curation.
 - **[MFFM Emoji](https://t.me/mffmemojis)** (`@mffmemojis`): For custom iOS, Samsung, and stylish vendor emoji packages and porting.
 - **RickyBush_** (`@EmojiReplacer`): Creator of Emoji Replacer and maintainer of curated Unicode emoji packages.
