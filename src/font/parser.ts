@@ -44,6 +44,26 @@ function createEmptyFontInfo(error?: string): FontInfo {
 
 export class FontParser {
   /**
+   * Checks whether an OpenType / TrueType font buffer contains the 'fvar' table.
+   */
+  public static hasFvarTable(buffer: ArrayBuffer | null | undefined): boolean {
+    if (!buffer || buffer.byteLength < 12) return false;
+    try {
+      const view = new DataView(buffer);
+      const numTables = view.getUint16(4);
+      let offset = 12;
+      for (let i = 0; i < numTables; i++) {
+        if (offset + 16 > buffer.byteLength) break;
+        if (this.readTag(view, offset) === 'fvar') return true;
+        offset += 16;
+      }
+    } catch (_) {
+      return false;
+    }
+    return false;
+  }
+
+  /**
    * Safely parses an ArrayBuffer into FontInfo.
    * Never throws; returns a FontInfo with valid=false and error on failure.
    */

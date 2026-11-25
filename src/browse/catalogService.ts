@@ -18,7 +18,11 @@ import {
   saveCachedFont,
   getAllCachedFontIds
 } from './fontCache';
-import { getGoogleVariableFontUrl, hasFvarTable } from './variableFonts';
+import { getGoogleVariableFontUrl } from './variableFonts';
+import { FontParser } from '../font/parser';
+import { CANONICAL_WEIGHT_LABELS, isVariableVariant, resolveVariant } from '../font/variants';
+
+export { resolveVariant };
 
 export const GOOGLE_FONTS_DIRECTORY_API = 'https://api.fontsource.org/v1/fonts';
 const DEFAULT_SYNC_URL = 'https://raw.githubusercontent.com/zFont/Host/main/data.json';
@@ -70,137 +74,6 @@ export function resetCatalog(): void {
  */
 export function getItemById(id: string): BrowseItem | undefined {
   return activeCatalog.find((item) => item.id === id);
-}
-
-/**
- * Resolves the best matching variant for a font family given target weight and style.
- * Supports both Variable fonts (continuous wght axis resolution) and static weights (closest distance).
- */
-export function resolveVariant(
-  item: BrowseItem,
-  targetWeight?: number | string,
-  targetStyle: 'normal' | 'italic' = 'normal'
-): FontVariant {
-  if (!item.variants || item.variants.length === 0) {
-    return {
-      name: 'Regular',
-      weight: 400,
-      style: targetStyle,
-      url: item.url || '',
-      isVariable: Boolean(item.isVariable),
-      ...(item.isVariable ? { axisValues: { wght: 400 } } : {})
-    };
-  }
-
-  if (targetWeight === undefined) {
-    const defaultVariant =
-      item.variants.find((v) => {
-        const w = typeof v.weight === 'string' ? parseInt(v.weight, 10) : v.weight;
-        return (w === 400 || v.name.toLowerCase().includes('regular')) && (v.style || 'normal') === targetStyle;
-      }) || item.variants[0];
-
-    return {
-      ...defaultVariant,
-      isVariable: Boolean(item.isVariable || defaultVariant.isVariable),
-      ...(item.isVariable
-        ? {
-            axisValues: {
-              wght: Number(defaultVariant.weight) || 400,
-              ...(defaultVariant.axisValues || {})
-            }
-          }
-        : {})
-    };
-  }
-
-  const numericTarget = typeof targetWeight === 'string' ? parseInt(targetWeight, 10) : targetWeight;
-
-  // 1. Exact match on weight and style
-  const exact = item.variants.find((v) => {
-    const vWeight = typeof v.weight === 'string' ? parseInt(v.weight, 10) : v.weight;
-    const vStyle = v.style || 'normal';
-    return vWeight === numericTarget && vStyle === targetStyle;
-  });
-  if (exact) {
-    return {
-      ...exact,
-      isVariable: Boolean(item.isVariable || exact.isVariable),
-      ...(item.isVariable
-        ? {
-            axisValues: {
-              wght: numericTarget,
-              ...(exact.axisValues || {})
-            }
-          }
-        : {})
-    };
-  }
-
-  // 2. Exact match on weight only
-  const weightMatch = item.variants.find((v) => {
-    const vWeight = typeof v.weight === 'string' ? parseInt(v.weight, 10) : v.weight;
-    return vWeight === numericTarget;
-  });
-  if (weightMatch) {
-    return {
-      ...weightMatch,
-      isVariable: Boolean(item.isVariable || weightMatch.isVariable),
-      ...(item.isVariable
-        ? {
-            axisValues: {
-              wght: numericTarget,
-              ...(weightMatch.axisValues || {})
-            }
-          }
-        : {})
-    };
-  }
-
-  // 3. Variable Font Resolution: If font is variable with wght axis support
-  if (item.isVariable && !isNaN(numericTarget)) {
-    const minWeight =
-      item.availableWeights && item.availableWeights.length > 0
-        ? Math.min(...item.availableWeights)
-        : 100;
-    const maxWeight =
-      item.availableWeights && item.availableWeights.length > 0
-        ? Math.max(...item.availableWeights)
-        : 900;
-    const clampedWeight = Math.min(Math.max(numericTarget, minWeight), maxWeight);
-
-    const baseVariant = item.variants.find((v) => v.isVariable) || item.variants[0];
-    return {
-      name: `${item.name} ${clampedWeight}`,
-      weight: clampedWeight,
-      style: targetStyle,
-      url: baseVariant.url || item.url || '',
-      sizeMb: baseVariant.sizeMb || item.sizeMb,
-      isVariable: true,
-      axisValues: {
-        ...(baseVariant.axisValues || {}),
-        wght: clampedWeight
-      }
-    };
-  }
-
-  // 4. Closest numerical weight distance for static fonts
-  if (!isNaN(numericTarget)) {
-    let closest = item.variants[0];
-    let minDiff = Infinity;
-    for (const v of item.variants) {
-      const vWeight = typeof v.weight === 'string' ? parseInt(v.weight, 10) : v.weight;
-      if (!isNaN(vWeight)) {
-        const diff = Math.abs(vWeight - numericTarget);
-        if (diff < minDiff) {
-          minDiff = diff;
-          closest = v;
-        }
-      }
-    }
-    return closest;
-  }
-
-  return item.variants[0];
 }
 
 /**
@@ -295,18 +168,6 @@ export function normalizeGoogleFontDirectoryItem(raw: {
   const slug = (raw.id || raw.family).toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
   const id = `gf-${slug}`;
 
-  const weightLabels: Record<number, string> = {
-    100: 'Thin',
-    200: 'ExtraLight',
-    300: 'Light',
-    400: 'Regular',
-    500: 'Medium',
-    600: 'SemiBold',
-    700: 'Bold',
-    800: 'ExtraBold',
-    900: 'Black'
-  };
-
   const defaultWeight = weights.includes(400) ? 400 : weights[0];
   const variableUrl = isVariable ? getGoogleVariableFontUrl(slug) : undefined;
   const defaultUrl = (isVariable && variableUrl)
@@ -327,7 +188,7 @@ export function normalizeGoogleFontDirectoryItem(raw: {
 
   for (const w of weights) {
     variants.push({
-      name: `${weightLabels[w] || 'Weight'} ${w}`,
+      name: `${CANONICAL_WEIGHT_LABELS[w] || 'Weight'} ${w}`,
       weight: w,
       style: 'normal',
       url: `https://cdn.jsdelivr.net/fontsource/fonts/${slug}@latest/latin-${w}-normal.ttf`,
@@ -638,11 +499,7 @@ export async function downloadAndCacheFont(
   variant?: FontVariant,
   onProgress?: (percent: number, message: string) => void
 ): Promise<ArrayBuffer> {
-  const isVarVariant = Boolean(
-    variant?.weight === '100-900' ||
-    variant?.name?.toLowerCase().includes('variable') ||
-    variant?.isVariable
-  );
+  const isVarVariant = isVariableVariant(variant);
   // Only download variable font if caller explicitly requested variable variant, or if no variant specified and item is variable
   const wantsVariable = variant ? isVarVariant : Boolean(item.isVariable && item.variableUrl);
 
@@ -654,7 +511,7 @@ export async function downloadAndCacheFont(
   const cached = await getCachedFont(cacheKey);
   if (cached && cached.buffer && cached.buffer.byteLength > 0) {
     const isRealFontFile = cached.buffer.byteLength >= 1000;
-    const bufferIsVariable = hasFvarTable(cached.buffer);
+    const bufferIsVariable = FontParser.hasFvarTable(cached.buffer);
     if (!isRealFontFile || (wantsVariable ? bufferIsVariable : !bufferIsVariable)) {
       onProgress?.(100, `Loaded ${item.name} from cache`);
       return cached.buffer;

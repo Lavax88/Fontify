@@ -10,6 +10,7 @@
 import type { BrowseItem, FontVariant } from './types';
 import { EMOJI_CATALOG } from '../ui/emojiCatalog';
 import { getGoogleVariableFontUrl } from './variableFonts';
+import { getWeightLabel } from '../font/variants';
 
 // Helper to construct Fontsource CDN URL for Google Fonts
 function fontsourceUrl(familySlug: string, weight: number): string {
@@ -18,18 +19,7 @@ function fontsourceUrl(familySlug: string, weight: number): string {
 
 // Helper to construct weight variant label
 function weightName(weight: number): string {
-  switch (weight) {
-    case 100: return 'Thin 100';
-    case 200: return 'ExtraLight 200';
-    case 300: return 'Light 300';
-    case 400: return 'Regular 400';
-    case 500: return 'Medium 500';
-    case 600: return 'SemiBold 600';
-    case 700: return 'Bold 700';
-    case 800: return 'ExtraBold 800';
-    case 900: return 'Black 900';
-    default: return `Weight ${weight}`;
-  }
+  return `${getWeightLabel(weight)} ${weight}`;
 }
 
 // Helper to construct offline SVG specimen thumbnail data URI (URL-encoded to prevent attribute corruption)

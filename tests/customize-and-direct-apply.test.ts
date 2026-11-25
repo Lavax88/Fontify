@@ -241,14 +241,15 @@ describe('Customize Reactive UI & Direct Apply Fixes', () => {
   });
 
   it('detects fvar table accurately in binary buffers and invalidates stale static caches', async () => {
-    const { hasFvarTable, getGoogleVariableFontUrl } = await import('../src/browse/variableFonts');
+    const { FontParser } = await import('../src/font/parser');
+    const { getGoogleVariableFontUrl } = await import('../src/browse/variableFonts');
     expect(getGoogleVariableFontUrl('inter')).toContain('Inter%5Bopsz%2Cwght%5D.ttf');
     expect(getGoogleVariableFontUrl('montserrat')).toContain('Montserrat%5Bwght%5D.ttf');
     expect(getGoogleVariableFontUrl('non-existent-font-slug-xyz')).toBeUndefined();
 
     // Buffer without fvar
     const emptyBuf = new ArrayBuffer(50);
-    expect(hasFvarTable(emptyBuf)).toBe(false);
+    expect(FontParser.hasFvarTable(emptyBuf)).toBe(false);
 
     // Synthesize minimal OpenType header with fvar table entry
     const sfntBuf = new ArrayBuffer(64);
@@ -260,7 +261,7 @@ describe('Customize Reactive UI & Direct Apply Fixes', () => {
     view.setUint8(13, 118); // 'v'
     view.setUint8(14, 97);  // 'a'
     view.setUint8(15, 114); // 'r'
-    expect(hasFvarTable(sfntBuf)).toBe(true);
+    expect(FontParser.hasFvarTable(sfntBuf)).toBe(true);
   });
 
   it('displays download progress directly inside the preview modal during direct apply', async () => {

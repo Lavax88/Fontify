@@ -7,6 +7,7 @@
 import { store } from '../state/store';
 import { FontParser } from '../font/parser';
 import { FontEngine } from '../font/engine';
+import { resolveAppliedFontName as resolveFamilyName } from '../font/variants';
 import { fontService } from '../bridge/service';
 import { showToast } from './components/toast';
 import { showConfirmDialog, runApplyWorkflow } from './components/dialog';
@@ -20,7 +21,7 @@ export function resolveAppliedFontName(
   _weightMode?: string,
   _axisValues?: Record<string, number>
 ): string {
-  return (fontData.familyName || fontData.fullName || 'Custom Font').trim();
+  return resolveFamilyName(fontData);
 }
 
 export async function applySelectedFont(): Promise<void> {

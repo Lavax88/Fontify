@@ -74,29 +74,3 @@ export function getGoogleVariableFontUrl(slug: string): string | undefined {
   const encodedPath = relPath.replace(/\[/g, '%5B').replace(/\]/g, '%5D').replace(/,/g, '%2C');
   return `https://cdn.jsdelivr.net/gh/google/fonts@main/${encodedPath}`;
 }
-
-/**
- * Checks whether an OpenType / TrueType font buffer contains the 'fvar' table.
- */
-export function hasFvarTable(buffer: ArrayBuffer | null | undefined): boolean {
-  if (!buffer || buffer.byteLength < 12) return false;
-  try {
-    const view = new DataView(buffer);
-    const numTables = view.getUint16(4);
-    let offset = 12;
-    for (let i = 0; i < numTables; i++) {
-      if (offset + 16 > buffer.byteLength) break;
-      const tag = String.fromCharCode(
-        view.getUint8(offset),
-        view.getUint8(offset + 1),
-        view.getUint8(offset + 2),
-        view.getUint8(offset + 3)
-      );
-      if (tag === 'fvar') return true;
-      offset += 16;
-    }
-  } catch (_) {
-    return false;
-  }
-  return false;
-}

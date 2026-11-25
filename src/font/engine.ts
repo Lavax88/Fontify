@@ -1,55 +1,64 @@
 /**
  * Fontify - Font Engine
- * Manages FontFace registration, Blob URL lifecycles, and requestAnimationFrame-debounced
+ * Manages keyed FontFace registrations, Blob URL lifecycles, and requestAnimationFrame-debounced
  * live variation settings.
  */
 
+interface LoadedFontSlot {
+  face: FontFace;
+  blobUrl: string;
+}
+
 export class FontEngine {
-  private static activeBlobUrl: string | null = null;
-  private static activeFontFace: FontFace | null = null;
+  private static loadedSlots: Map<string, LoadedFontSlot> = new Map();
   private static pendingRaf: number | null = null;
 
   /**
-   * Registers a new FontFace from an ArrayBuffer, revoking any prior font Blob URL.
+   * Registers a new FontFace from an ArrayBuffer under a named family slot,
+   * revoking any prior Blob URL and removing any prior FontFace for that slot.
    */
   public static async loadFontFace(
     familyName: string,
     buffer: ArrayBuffer
   ): Promise<FontFace> {
-    this.unloadActiveFont();
+    this.unloadActiveFont(familyName);
 
     if (typeof FontFace === 'undefined' || typeof document === 'undefined' || !document.fonts) {
       return {} as FontFace;
     }
 
     const blob = new Blob([buffer], { type: 'font/ttf' });
-    this.activeBlobUrl = URL.createObjectURL(blob);
+    const blobUrl = URL.createObjectURL(blob);
 
-    const fontFace = new FontFace(familyName, `url(${this.activeBlobUrl})`);
+    const fontFace = new FontFace(familyName, `url(${blobUrl})`);
     const loadedFace = await fontFace.load();
 
     document.fonts.add(loadedFace);
-    this.activeFontFace = loadedFace;
+    this.loadedSlots.set(familyName, { face: loadedFace, blobUrl });
 
     return loadedFace;
   }
 
   /**
-   * Cleans up currently loaded font resources.
+   * Cleans up loaded font resources for a specific family slot, or all slots if omitted.
    */
-  public static unloadActiveFont(): void {
-    if (this.activeFontFace) {
+  public static unloadActiveFont(familyName?: string): void {
+    const slotsToClean = familyName
+      ? (this.loadedSlots.has(familyName) ? [[familyName, this.loadedSlots.get(familyName)!] as const] : [])
+      : Array.from(this.loadedSlots.entries());
+
+    for (const [key, slot] of slotsToClean) {
       try {
-        document.fonts.delete(this.activeFontFace);
+        if (typeof document !== 'undefined' && document.fonts) {
+          document.fonts.delete(slot.face);
+        }
       } catch (_) {
         // Ignored if document.fonts.delete is unsupported in older WebViews
       }
-      this.activeFontFace = null;
-    }
-
-    if (this.activeBlobUrl) {
-      URL.revokeObjectURL(this.activeBlobUrl);
-      this.activeBlobUrl = null;
+      try {
+        URL.revokeObjectURL(slot.blobUrl);
+      } catch (_) {}
+      this.loadedSlots.delete(key);
     }
   }
 

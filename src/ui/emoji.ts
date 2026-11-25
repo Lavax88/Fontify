@@ -7,6 +7,7 @@
 
 import { store } from '../state/store';
 import { fontService } from '../bridge/service';
+import { FontEngine } from '../font/engine';
 import { showToast } from './components/toast';
 import { showConfirmDialog, runApplyWorkflow } from './components/dialog';
 import {
@@ -599,14 +600,10 @@ export function setupEmojiTab(): void {
   renderShowcaseCategories();
   renderShowcaseGlyphs();
 
-  // 4. Dynamic @font-face Registration
+  // 4. Dynamic @font-face Registration (managed via FontEngine slot)
   async function registerEmojiPreview(buffer: ArrayBuffer, fontName: string): Promise<void> {
     try {
-      if (typeof FontFace !== 'undefined' && document.fonts) {
-        const customFace = new FontFace('CustomEmojiPreview', buffer);
-        const loadedFace = await customFace.load();
-        document.fonts.add(loadedFace);
-      }
+      await FontEngine.loadFontFace('CustomEmojiPreview', buffer);
     } catch (err) {
       console.warn('FontFace preview load notice:', err);
     }

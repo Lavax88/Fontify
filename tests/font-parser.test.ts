@@ -146,4 +146,68 @@ describe('FontParser', () => {
     expect(info.isCollection).toBe(true);
     expect(info.format).toContain('Collection');
   });
+
+  it('parses name table strings (UTF-16BE and Latin-1) and fvar named instances', () => {
+    // 12 byte SFNT header + 2 table records ('name' + 'fvar') = 44 bytes
+    const nameOffset = 44;
+    const nameStr = 'Inter';
+    // 6 byte name header + 1 record (12 bytes) + 10 bytes UTF-16BE string = 28 bytes
+    const nameLen = 28;
+    const fvarOffset = nameOffset + nameLen;
+    // 16 byte fvar header + 1 axis (20 bytes) + 1 instance (8 bytes: nameID + coord) = 44 bytes
+    const fvarLen = 44;
+    const buffer = new ArrayBuffer(fvarOffset + fvarLen);
+    const view = new DataView(buffer);
+
+    const setTag = (offset: number, tag: string) => {
+      for (let i = 0; i < 4; i++) view.setUint8(offset + i, tag.charCodeAt(i));
+    };
+
+    view.setUint32(0, 0x00010000);
+    view.setUint16(4, 2);
+
+    setTag(12, 'name');
+    view.setUint32(20, nameOffset);
+    view.setUint32(24, nameLen);
+
+    setTag(28, 'fvar');
+    view.setUint32(36, fvarOffset);
+    view.setUint32(40, fvarLen);
+
+    // Name table: count=1, stringOffset=18
+    view.setUint16(nameOffset + 2, 1);
+    view.setUint16(nameOffset + 4, 18);
+    // Record 0: platform=3 (Windows UTF-16BE), encoding=1, lang=0x409, nameID=1 (family), len=10, offset=0
+    view.setUint16(nameOffset + 6, 3);
+    view.setUint16(nameOffset + 8, 1);
+    view.setUint16(nameOffset + 12, 1);
+    view.setUint16(nameOffset + 14, nameStr.length * 2);
+    view.setUint16(nameOffset + 16, 0);
+    for (let i = 0; i < nameStr.length; i++) {
+      view.setUint16(nameOffset + 18 + i * 2, nameStr.charCodeAt(i));
+    }
+
+    // fvar table: axesArrayOffset=16, axisCount=1, axisSize=20, instanceCount=1, instanceSize=8
+    view.setUint32(fvarOffset + 0, 0x00010000);
+    view.setUint16(fvarOffset + 4, 16);
+    view.setUint16(fvarOffset + 8, 1);
+    view.setUint16(fvarOffset + 10, 20);
+    view.setUint16(fvarOffset + 12, 1);
+    view.setUint16(fvarOffset + 14, 8);
+
+    setTag(fvarOffset + 16, 'wght');
+    view.setInt32(fvarOffset + 20, 100 * 65536);
+    view.setInt32(fvarOffset + 24, 400 * 65536);
+    view.setInt32(fvarOffset + 28, 900 * 65536);
+
+    // Instance 0 at fvarOffset + 36: nameID=256 (unmapped -> "Style 1"), wght=700
+    view.setUint16(fvarOffset + 36, 256);
+    view.setInt32(fvarOffset + 40, 700 * 65536);
+
+    const info = FontParser.parse(buffer);
+    expect(info.valid).toBe(true);
+    expect(info.familyName).toBe('Inter');
+    expect(info.instances).toEqual([{ name: 'Style 1', values: { wght: 700 } }]);
+    expect(FontParser.hasFvarTable(buffer)).toBe(true);
+  });
 });

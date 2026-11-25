@@ -9,6 +9,16 @@ import { store } from '../state/store';
 import { fontService } from '../bridge/service';
 import { FontParser } from '../font/parser';
 import { FontEngine } from '../font/engine';
+import {
+  deriveCustomizeSelection,
+  getStaticVariants,
+  getVariableVariant,
+  getWeightLabel,
+  isVariableItem,
+  isVariableVariant
+} from '../font/variants';
+
+export { getStaticVariants, getVariableVariant, isVariableItem, getWeightLabel as getWeightName };
 import { showToast } from './components/toast';
 import { runApplyWorkflow } from './components/dialog';
 import {
@@ -129,81 +139,6 @@ function updateDownloadProgress(visible: boolean, percent = 0, message = 'Downlo
       if (pct) pct.textContent = `${rounded}%`;
     }
   }
-}
-
-export function isVariableItem(item: BrowseItem): boolean {
-  return Boolean(
-    item.isVariable ||
-    item.tags?.includes('variable') ||
-    item.variants?.some((v) =>
-      v.name.toLowerCase().includes('variable') ||
-      String(v.weight).includes('100-900') ||
-      String(v.weight).includes('..') ||
-      v.weight === 'variable'
-    )
-  );
-}
-
-export function getVariableVariant(item: BrowseItem): FontVariant | null {
-  if (!isVariableItem(item)) return null;
-  const existing = item.variants?.find((v) =>
-    v.name.toLowerCase().includes('variable') ||
-    String(v.weight).includes('100-900') ||
-    v.weight === 'variable'
-  );
-  if (existing && existing.url) {
-    return existing;
-  }
-  const varUrl = item.variableUrl || (item.isVariable ? item.url : '') || (item.variants?.[0]?.url || '');
-  return {
-    name: 'Variable (100–900)',
-    weight: '100-900',
-    style: 'normal',
-    url: varUrl,
-    sizeMb: '0.8 MB',
-    isVariable: true
-  };
-}
-
-export function getWeightName(weight: number | string, fallbackName?: string): string {
-  const num = typeof weight === 'number' ? weight : parseInt(String(weight), 10);
-  switch (num) {
-    case 100: return 'Thin';
-    case 200: return 'Extra Light';
-    case 300: return 'Light';
-    case 400: return 'Regular';
-    case 500: return 'Medium';
-    case 600: return 'Semi Bold';
-    case 700: return 'Bold';
-    case 800: return 'Extra Bold';
-    case 900: return 'Black';
-    default:
-      if (fallbackName && isNaN(Number(fallbackName))) {
-        return fallbackName.replace(/\s*\d+$/, '');
-      }
-      return num ? `Weight ${num}` : (fallbackName || 'Regular');
-  }
-}
-
-export function getStaticVariants(item: BrowseItem): FontVariant[] {
-  const isVar = isVariableItem(item);
-  let statics = (item.variants || []).filter((v) => {
-    if (v.name.toLowerCase().includes('variable')) return false;
-    if (String(v.weight).includes('100-900') || String(v.weight).includes('..') || v.weight === 'variable') return false;
-    return true;
-  });
-
-  if (isVar && statics.length === 0) {
-    const weights = [100, 300, 400, 500, 700, 900];
-    statics = weights.map((w) => ({
-      name: getWeightName(w),
-      weight: w,
-      style: 'normal',
-      url: item.url || item.variants?.[0]?.url || ''
-    }));
-  }
-
-  return statics;
 }
 
 export const SUBSET_CHARS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789 .,;:!?\'"-/()[]{}@#%&*+=_';
@@ -374,7 +309,7 @@ function renderGridItems(): void {
       const isVar = isVariableItem(item);
       const variantCount = item.variants?.length || 1;
       const singleWeightName = item.variants?.[0]?.weight
-        ? getWeightName(item.variants[0].weight, item.variants[0].name)
+        ? getWeightLabel(item.variants[0].weight, item.variants[0].name)
         : item.variants?.[0]?.name || 'Regular';
       const variantLabel =
         item.type === 'emoji'
@@ -486,7 +421,7 @@ export function openPreviewSheet(item: BrowseItem): void {
     const staticChipsHtml = staticVariants
       .map((v) => {
         const isSelected = !isVar && (v.name === state.activeVariant?.name || v.weight === state.activeVariant?.weight);
-        const weightLabel = getWeightName(v.weight, v.name);
+        const weightLabel = getWeightLabel(v.weight, v.name);
         return `<m3e-filter-chip class="browse-variant-chip ${isSelected ? 'selected' : ''}" ${isSelected ? 'selected' : ''} data-variant-type="static" data-variant-name="${escapeHtml(v.name)}" data-variant-weight="${v.weight}">${escapeHtml(weightLabel)}</m3e-filter-chip>`;
       })
       .join('');
@@ -878,7 +813,7 @@ export async function handleApplyDirectly(item: BrowseItem, variant?: FontVarian
 
     const selectedVariant = variant || state.activeVariant || resolveVariant(item);
     const varVariant = getVariableVariant(item);
-    const isVarSelected = selectedVariant.weight === '100-900' || selectedVariant.name.toLowerCase().includes('variable');
+    const isVarSelected = isVariableVariant(selectedVariant);
     const downloadTarget = (isVarSelected && varVariant)
       ? varVariant
       : selectedVariant;
@@ -1022,37 +957,13 @@ export async function handleOpenInCustomize(item: BrowseItem, variant?: FontVari
       return;
     }
 
-    const isVariableFont = parsed.isVariable;
-    const isVarSelected = selectedVariant.weight === '100-900' || selectedVariant.name.toLowerCase().includes('variable');
-    const targetWeight = typeof selectedVariant.weight === 'number'
-      ? selectedVariant.weight
-      : parseInt(String(selectedVariant.weight), 10) || 400;
-
-    const axisValues: Record<string, number> = {};
-    let presetName = 'Auto (Stock)';
-    let weightMode: 'auto' | 'custom' | 'normal' = 'auto';
-
-    if (isVariableFont) {
-      if (!isVarSelected && targetWeight) {
-        axisValues['wght'] = targetWeight;
-        weightMode = 'custom';
-        const weightMap: Record<number, string> = {
-          100: 'Thin (100)',
-          300: 'Light (300)',
-          400: 'Regular (400)',
-          500: 'Medium (500)',
-          600: 'SemiBold (600)',
-          700: 'Bold (700)',
-          800: 'ExtraBold (800)',
-          900: 'Black (900)'
-        };
-        presetName = weightMap[targetWeight] || `${targetWeight}`;
-      } else {
-        axisValues['wght'] = 400;
-        presetName = 'Auto (Stock)';
-        weightMode = 'auto';
-      }
-    }
+    const {
+      axisValues,
+      selectedPreset: presetName,
+      weightMode,
+      targetWeight,
+      isVarSelected
+    } = deriveCustomizeSelection(parsed, selectedVariant);
 
     const file = new File([buffer], `${item.name}.ttf`, { type: 'font/ttf' });
 

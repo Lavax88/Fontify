@@ -4,6 +4,7 @@
 
 import type { FontInfo } from '../../font/types';
 import { FontEngine } from '../../font/engine';
+import { WEIGHT_PRESETS, buildStylePresets, type AxisPresetOption } from '../../font/variants';
 import { store } from '../../state/store';
 
 type FilterChipLike = HTMLElement & {
@@ -22,11 +23,6 @@ type SliderThumbLike = HTMLElement & {
 type SliderLike = HTMLElement & {
   thumb?: SliderThumbLike | null;
 };
-
-interface PresetOption {
-  name: string;
-  values: Record<string, number | string>;
-}
 
 function setActiveChip(chips: NodeListOf<FilterChipLike> | FilterChipLike[], activeChip: FilterChipLike | null): void {
   chips.forEach(c => {
@@ -85,36 +81,9 @@ export function renderVariableControls(
     weightMode: store.getState().weightMode || 'auto'
   });
 
-  // 1. Build Weight Presets
-  const weightPresets: PresetOption[] = [
-    { name: 'Auto (Stock)', values: { mode: 'auto' } },
-    { name: 'Thin (100)', values: { wght: 100 } },
-    { name: 'Light (300)', values: { wght: 300 } },
-    { name: 'Regular (400)', values: { wght: 400 } },
-    { name: 'Medium (500)', values: { wght: 500 } },
-    { name: 'SemiBold (600)', values: { wght: 600 } },
-    { name: 'Bold (700)', values: { wght: 700 } },
-    { name: 'ExtraBold (800)', values: { wght: 800 } },
-    { name: 'Black (900)', values: { wght: 900 } }
-  ];
-
-  // 2. Build Style Presets from named fvar instances or slant/italic axes
-  const stylePresets: PresetOption[] = [];
-  if (fontData.instances && fontData.instances.length > 0) {
-    for (const inst of fontData.instances) {
-      stylePresets.push({ name: inst.name, values: inst.values });
-    }
-  } else {
-    const italAxis = fontData.axes.find(a => a.tag === 'ital');
-    const slntAxis = fontData.axes.find(a => a.tag === 'slnt');
-    if (italAxis) {
-      stylePresets.push({ name: 'Roman', values: { ital: italAxis.min } });
-      stylePresets.push({ name: 'Italic', values: { ital: italAxis.max } });
-    } else if (slntAxis) {
-      stylePresets.push({ name: 'Upright', values: { slnt: 0 } });
-      stylePresets.push({ name: 'Slanted', values: { slnt: slntAxis.min < 0 ? slntAxis.min : slntAxis.max } });
-    }
-  }
+  // 1. Build Weight Presets & 2. Build Style Presets from FontVariants domain module
+  const weightPresets: AxisPresetOption[] = WEIGHT_PRESETS;
+  const stylePresets: AxisPresetOption[] = buildStylePresets(fontData);
 
   const selectedPresetFromStore = store.getState().selectedPreset;
 
@@ -124,7 +93,7 @@ export function renderVariableControls(
   const styleChipSet = document.createElement('m3e-filter-chip-set') as FilterChipSetLike;
   styleChipSet.setAttribute('aria-label', 'Font style presets');
 
-  const applyPreset = (preset: PresetOption) => {
+  const applyPreset = (preset: AxisPresetOption) => {
     const nextAxisValues = { ...store.getState().axisValues };
 
     if (preset.values.mode === 'auto') {
