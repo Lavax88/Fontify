@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en" class="nav-floating">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
@@ -10,7 +10,6 @@
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <title>Fontify</title>
-    <!-- Preconnect & DNS-Prefetch for Edge CDN Assets and Google Fonts -->
     <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
     <link rel="dns-prefetch" href="https://cdn.jsdelivr.net">
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -19,513 +18,377 @@
   <link rel="stylesheet" crossorigin href="./assets/index.css">
 </head>
 <body>
-    <!-- SVG Symbols for Material 3 Morphing Icons -->
-    <svg style="display: none;" aria-hidden="true">
-        <!-- Overview (Home) -->
-        <symbol id="icon-overview-outline" viewBox="0 0 24 24">
-            <path d="M12 5.69l5 4.5V18h-2v-6H9v6H7v-7.81l5-4.5M12 3L2 12h3v8h6v-6h2v6h6v-8h3L12 3z"/>
-        </symbol>
-        <symbol id="icon-overview-filled" viewBox="0 0 24 24">
-            <path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/>
-        </symbol>
+    <m3e-theme id="app-theme" color="#386a20" variant="expressive" motion="expressive" scheme="auto">
+        <!-- Top App Bar -->
+        <m3e-app-bar id="app-bar" size="small" scroll-behavior="elevate">
+            <span slot="title" class="app-bar-title">Fontify</span>
+            <m3e-icon-button id="btn-credits" slot="trailing" aria-label="Credits and Acknowledgments">
+                <m3e-icon name="info"></m3e-icon>
+            </m3e-icon-button>
+        </m3e-app-bar>
 
-        <!-- Browse -->
-        <symbol id="icon-browse-outline" viewBox="0 0 24 24">
-            <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm-5.5-2.5L14.19 14.19 17.5 6.5 9.81 9.81 6.5 17.5zm5.5-6.6c.61 0 1.1.49 1.1 1.1s-.49 1.1-1.1 1.1-1.1-.49-1.1-1.1.49-1.1 1.1-1.1z"/>
-        </symbol>
-        <symbol id="icon-browse-filled" viewBox="0 0 24 24">
-            <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm2.19 12.19L6.5 17.5l3.31-7.69L17.5 6.5l-3.31 7.69zM12 10.9c-.61 0-1.1.49-1.1 1.1s.49 1.1 1.1 1.1 1.1-.49 1.1-1.1-.49-1.1-1.1-1.1z"/>
-        </symbol>
+        <!-- Main Views Container (ViewPager) -->
+        <main class="page-container">
+            <div class="viewpager-container" id="viewpager-container">
+                <div class="viewpager-track" id="viewpager-track">
+                    <!-- ================= TAB 1: OVERVIEW (HOME) ================= -->
+                    <section class="tab-view active" id="view-overview" role="tabpanel" aria-labelledby="tab-overview">
+                        <!-- 1. Hero Status Card -->
+                        <m3e-card class="overview-banner is-stock" id="overview-banner" variant="filled">
+                            <div slot="content" class="banner-row">
+                                <div class="banner-icon-wrap" aria-hidden="true">
+                                    <m3e-icon id="banner-icon" name="check_circle" filled></m3e-icon>
+                                </div>
+                                <div class="banner-text">
+                                    <div class="banner-title" id="banner-title">Default Font</div>
+                                    <div class="banner-subtitle" id="banner-subtitle">Stock System Font</div>
+                                </div>
+                                <m3e-badge id="banner-badge">STOCK</m3e-badge>
+                            </div>
+                        </m3e-card>
 
-        <!-- Font / Customize -->
-        <symbol id="icon-font-outline" viewBox="0 0 24 24">
-            <path d="M9.93 13.5h4.14L12 7.98zM20 2H4c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm0 18H4V4h16v16zm-4.05-1.5l-1.14-3H9.17l-1.12 3H5.96l5.11-13h1.86l5.11 13h-2.09z"/>
-        </symbol>
-        <symbol id="icon-font-filled" viewBox="0 0 24 24">
-            <path d="M9.93 13.5h4.14L12 7.98zM20 2H4c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm-4.05 16.5l-1.14-3H9.17l-1.12 3H5.96l5.11-13h1.86l5.11 13h-2.09z"/>
-        </symbol>
+                        <!-- 1b. Reboot Required Callout -->
+                        <m3e-callout id="reboot-reminder-banner" variant="primary-container" shape="rounded" style="display: none;">
+                            <m3e-icon slot="icon" name="refresh"></m3e-icon>
+                            <span slot="label">Restart Required</span>
+                            <div id="reboot-reminder-subtitle">Restart your device to apply updated font/emoji overlays.</div>
+                            <div class="reboot-callout-actions">
+                                <m3e-button id="btn-banner-reboot" variant="filled" size="small" type="button">Reboot</m3e-button>
+                            </div>
+                        </m3e-callout>
 
-        <!-- Emoji -->
-        <symbol id="icon-emoji-outline" viewBox="0 0 24 24">
-            <path d="M11.99 2C6.47 2 2 6.48 2 12s4.47 10 9.99 10C17.52 22 22 17.52 22 12S17.52 2 11.99 2zM12 20c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8zm3.5-9c.83 0 1.5-.67 1.5-1.5S16.33 8 15.5 8 14 8.67 14 9.5s.67 1.5 1.5 1.5zm-7 0c.83 0 1.5-.67 1.5-1.5S9.33 8 8.5 8 7 8.67 7 9.5 7.67 11 8.5 11zm3.5 6.5c2.33 0 4.31-1.46 5.11-3.5H6.89c.8 2.04 2.78 3.5 5.11 3.5z"/>
-        </symbol>
-        <symbol id="icon-emoji-filled" viewBox="0 0 24 24">
-            <path d="M11.99 2C6.47 2 2 6.48 2 12s4.47 10 9.99 10C17.52 22 22 17.52 22 12S17.52 2 11.99 2zm-3.49 7c.83 0 1.5.67 1.5 1.5S9.33 12 8.5 12 7 11.33 7 10.5 7.67 9 8.5 9zm7 0c.83 0 1.5.67 1.5 1.5s-.67 1.5-1.5 1.5-1.5-.67-1.5-1.5.67-1.5 1.5-1.5zm-3.5 9.5c-2.33 0-4.31-1.46-5.11-3.5h10.22c-.8 2.04-2.78 3.5-5.11 3.5z"/>
-        </symbol>
+                        <!-- 2. Font & Module Configuration -->
+                        <m3e-card class="section-card" variant="outlined" aria-label="Font configuration">
+                            <div slot="header" class="section-card-header">
+                                <span class="section-card-title">Font Configuration</span>
+                            </div>
+                            <m3e-list class="info-list">
+                                <m3e-list-item>
+                                    Active Font
+                                    <span slot="trailing" class="info-val" id="info-active-font">Roboto / Google Sans</span>
+                                </m3e-list-item>
+                                <m3e-divider></m3e-divider>
+                                <m3e-list-item>
+                                    Active Emoji
+                                    <span slot="trailing" class="info-val" id="info-active-emoji">Stock (Google)</span>
+                                </m3e-list-item>
+                                <m3e-divider></m3e-divider>
+                                <m3e-list-item>
+                                    Overlay Target
+                                    <span slot="trailing" class="info-val">/system + /product</span>
+                                </m3e-list-item>
+                                <m3e-divider></m3e-divider>
+                                <m3e-list-item>
+                                    Stock Backup
+                                    <span slot="trailing" class="info-val" id="info-backup-status">Protected (/data/adb)</span>
+                                </m3e-list-item>
+                            </m3e-list>
+                        </m3e-card>
 
-        <!-- Info / Credits -->
-        <symbol id="icon-info-outline" viewBox="0 0 24 24">
-            <path d="M11 17h2v-6h-2v6zm1-15C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm-1-11h2V7h-2v2z"/>
-        </symbol>
-        <symbol id="icon-info-filled" viewBox="0 0 24 24">
-            <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z"/>
-        </symbol>
-    </svg>
+                        <!-- 3. Device & System Environment -->
+                        <m3e-card class="section-card" variant="outlined" aria-label="Device and system environment">
+                            <div slot="header" class="section-card-header">
+                                <span class="section-card-title">Device &amp; System</span>
+                            </div>
+                            <m3e-list class="info-list">
+                                <m3e-list-item>
+                                    Device
+                                    <span slot="trailing" class="info-val" id="info-device-name">POCO F7 (onyx)</span>
+                                </m3e-list-item>
+                                <m3e-divider></m3e-divider>
+                                <m3e-list-item>
+                                    System version
+                                    <span slot="trailing" class="info-val" id="info-system-ver">16 (API 36.1)</span>
+                                </m3e-list-item>
+                                <m3e-divider></m3e-divider>
+                                <m3e-list-item>
+                                    System ABI
+                                    <span slot="trailing" class="info-val" id="info-system-abi">arm64-v8a (4K)</span>
+                                </m3e-list-item>
+                            </m3e-list>
+                        </m3e-card>
+                    </section>
 
-    <!-- Top Header (LSPosed / Material 3 Large Title) -->
-    <header class="app-header">
-        <div class="header-inner">
-            <h1 class="brand-title">Fontify</h1>
+                    <!-- ================= TAB 2: BROWSE (ONLINE CATALOG) ================= -->
+                    <section class="tab-view" id="view-browse" role="tabpanel" aria-labelledby="tab-browse" aria-hidden="true">
+                        <!-- 1. M3E Search Bar -->
+                        <m3e-search-bar id="browse-search-bar" class="browse-search-bar" clearable clear-label="Clear search">
+                            <m3e-icon name="search" slot="leading"></m3e-icon>
+                            <input slot="input" type="text" id="browse-search-input" placeholder="Search fonts &amp; emojis..." autocomplete="off" spellcheck="false" aria-label="Search fonts and emojis">
+                        </m3e-search-bar>
+
+                        <!-- 2. Connected Filter Bar + Downloaded Filter Chip -->
+                        <div class="browse-filter-row" id="browse-filter-bar" aria-label="Catalog filters">
+                            <m3e-button-group variant="connected" size="small" id="browse-category-group">
+                                <m3e-button class="browse-chip active" variant="tonal" size="small" toggle selected data-filter="all-fonts">All Fonts</m3e-button>
+                                <m3e-button class="browse-chip" variant="tonal" size="small" toggle data-filter="variable">Variable</m3e-button>
+                                <m3e-button class="browse-chip" variant="tonal" size="small" toggle data-filter="emoji">Emojis</m3e-button>
+                            </m3e-button-group>
+                            <m3e-filter-chip id="chip-filter-downloaded" class="browse-chip" data-filter="downloaded">Downloaded</m3e-filter-chip>
+                        </div>
+
+                        <!-- 3. Download Progress Indicator (Wavy Expressive) -->
+                        <div id="browse-download-progress-box" class="browse-progress-box" style="display: none;">
+                            <div class="browse-progress-header">
+                                <span id="browse-download-progress-text">Downloading font...</span>
+                                <span id="browse-download-progress-pct">0%</span>
+                            </div>
+                            <m3e-linear-progress-indicator id="browse-download-progress-fill" variant="wavy" max="100" value="0"></m3e-linear-progress-indicator>
+                        </div>
+
+                        <!-- 4. Catalog Grid Container -->
+                        <div class="browse-grid" id="browse-grid" role="list" aria-label="Font and emoji catalog"></div>
+                    </section>
+
+                    <!-- ================= TAB 3: CUSTOMIZE ================= -->
+                    <section class="tab-view" id="view-customize" role="tabpanel" aria-labelledby="tab-customize" aria-hidden="true">
+                        <input type="file" id="file-input" accept=".ttf,.otf,.ttc,.woff,.woff2" style="display: none;" aria-label="Select font file">
+
+                        <!-- 1. Hero Font Picker Card -->
+                        <m3e-card class="picker-card" id="dropzone" variant="filled" actionable tabindex="0" aria-label="Import Font File: Tap to select or drop any .ttf or .otf font">
+                            <div slot="content" class="picker-card-row">
+                                <div class="picker-icon-box" aria-hidden="true">
+                                    <m3e-icon name="cloud_upload" filled></m3e-icon>
+                                </div>
+                                <div class="picker-text">
+                                    <h2 class="picker-title" id="picker-title">Import Font File</h2>
+                                    <p class="picker-subtitle" id="picker-subtitle">Tap to select or drop any .ttf or .otf font</p>
+                                </div>
+                                <m3e-button id="btn-select-file" variant="tonal" size="small" type="button">Select Font</m3e-button>
+                            </div>
+                        </m3e-card>
+
+                        <!-- 2. Loaded Font Properties Card -->
+                        <m3e-card class="section-card" id="font-info-row" variant="outlined" style="display: none;">
+                            <m3e-list class="info-list">
+                                <m3e-list-item>
+                                    Font Family
+                                    <span slot="trailing" class="info-val" id="font-name">Custom Font</span>
+                                </m3e-list-item>
+                                <m3e-divider></m3e-divider>
+                                <m3e-list-item>
+                                    Format
+                                    <span slot="trailing" class="info-val" id="font-format">TrueType Variable Font</span>
+                                </m3e-list-item>
+                                <m3e-divider></m3e-divider>
+                                <m3e-list-item>
+                                    Font Type
+                                    <m3e-badge slot="trailing" id="font-type-badge">Variable</m3e-badge>
+                                </m3e-list-item>
+                            </m3e-list>
+                        </m3e-card>
+
+                        <!-- 3. Variable Font Axis Tuning Card -->
+                        <m3e-card class="section-card" id="variable-controls-group" variant="filled" style="display: none;">
+                            <div slot="content">
+                                <div class="section-card-header">
+                                    <span class="section-card-title">Weight &amp; Style Presets</span>
+                                </div>
+                                <div class="m3-presets-scroll" id="presets-container" role="group" aria-label="Font variation presets"></div>
+                                <div class="tuning-card-body" id="sliders-container" role="group" aria-label="Font variation axis sliders"></div>
+                            </div>
+                        </m3e-card>
+
+                        <!-- 4. Font Preview Card -->
+                        <m3e-card class="section-card" variant="outlined">
+                            <div slot="content">
+                                <div class="section-card-header">
+                                    <span class="section-card-title">Font Preview</span>
+                                </div>
+                                <div class="preview-specimens-stage" id="playground-box">
+                                    <div class="specimen-hero preview-text" contenteditable="true" spellcheck="false" aria-label="Hero specimen preview">Fontify</div>
+                                    <div class="specimen-headline preview-text" contenteditable="true" spellcheck="false" aria-label="Headline specimen preview">The quick brown fox jumps over the lazy dog.</div>
+                                    <div class="specimen-body preview-text" contenteditable="true" spellcheck="false" aria-label="Body specimen preview">
+                                        Pack my box with five dozen liquor jugs. System UI elements, lock screen clocks, notifications, and settings will dynamically render using your customized font parameters.
+                                    </div>
+                                    <div class="specimen-glyphs preview-text" contenteditable="true" spellcheck="false" aria-label="Glyphs specimen preview">0123456789 • &amp;@#*+-=:;!?</div>
+                                </div>
+                            </div>
+                        </m3e-card>
+                    </section>
+
+                    <!-- ================= TAB 4: EMOJI ================= -->
+                    <section class="tab-view" id="view-emoji" role="tabpanel" aria-labelledby="tab-emoji" aria-hidden="true">
+                        <input type="file" id="emoji-file-input" accept=".ttf,.otf" style="display: none;" aria-label="Select emoji font file">
+
+                        <!-- 1. Hero Emoji Picker Card -->
+                        <m3e-card class="picker-card" id="emoji-dropzone" variant="filled" actionable tabindex="0" aria-label="Import Emoji Font File: Tap to select or drop any .ttf emoji font">
+                            <div slot="content" class="picker-card-row">
+                                <div class="picker-icon-box" aria-hidden="true">
+                                    <m3e-icon name="mood" filled></m3e-icon>
+                                </div>
+                                <div class="picker-text">
+                                    <h2 class="picker-title" id="emoji-picker-title">Import Emoji Font</h2>
+                                    <p class="picker-subtitle" id="emoji-picker-subtitle">Tap to select or drop any .ttf emoji font</p>
+                                </div>
+                                <m3e-button id="btn-select-emoji-file" variant="tonal" size="small" type="button">Select Emoji Font</m3e-button>
+                            </div>
+                        </m3e-card>
+
+                        <!-- 2. Curated Emoji Packs Section -->
+                        <div class="curated-emoji-section">
+                            <h3 class="curated-section-title">Curated Emoji Packs</h3>
+
+                            <div id="emoji-download-progress-box" class="browse-progress-box" style="display: none; margin-bottom: 12px;">
+                                <div class="browse-progress-header">
+                                    <span id="emoji-download-progress-text">Downloading...</span>
+                                </div>
+                                <m3e-linear-progress-indicator id="emoji-download-progress-fill" variant="wavy" max="100" value="0"></m3e-linear-progress-indicator>
+                            </div>
+
+                            <div class="curated-emoji-grid" id="curated-emoji-grid" role="list" aria-label="Curated emoji packs"></div>
+                        </div>
+
+                        <!-- 3. Loaded Emoji Information Card -->
+                        <m3e-card class="section-card" id="emoji-info-row" variant="outlined" style="display: none;">
+                            <m3e-list class="info-list">
+                                <m3e-list-item>
+                                    Emoji Family
+                                    <span slot="trailing" class="info-val" id="emoji-font-name">Custom Emoji</span>
+                                </m3e-list-item>
+                                <m3e-divider></m3e-divider>
+                                <m3e-list-item>
+                                    File Size
+                                    <span slot="trailing" class="info-val" id="emoji-font-size">--</span>
+                                </m3e-list-item>
+                                <m3e-divider></m3e-divider>
+                                <m3e-list-item>
+                                    Source
+                                    <m3e-badge slot="trailing" id="emoji-source-badge">Custom</m3e-badge>
+                                </m3e-list-item>
+                            </m3e-list>
+                        </m3e-card>
+
+                        <!-- 4. Interactive Emoji Preview Stage -->
+                        <m3e-card class="section-card" variant="outlined">
+                            <div slot="content">
+                                <div class="section-card-header">
+                                    <span class="section-card-title">Emoji Preview</span>
+                                </div>
+                                <div class="emoji-specimen-box">
+                                    <div class="emoji-category-bar" id="emoji-category-bar" role="tablist" aria-label="Emoji categories"></div>
+                                    <div class="emoji-showcase-grid" id="emoji-showcase-grid" aria-label="Emoji showcase glyphs"></div>
+                                    <div class="emoji-specimen-hero" id="emoji-specimen-hero" contenteditable="true" spellcheck="false" aria-label="Interactive emoji specimen preview">😀 🥳 😎 👍 🔥 ❤️ 🚀 ✨ 💯 🐱 🍕 ☕</div>
+                                </div>
+                            </div>
+                        </m3e-card>
+                    </section>
+                </div>
+            </div>
+        </main>
+
+        <!-- Dual M3E FAB Pair (Customize & Emoji tabs) -->
+        <div class="floating-action-cluster hidden" id="floating-action-cluster" aria-label="Quick Actions">
+            <m3e-fab id="fab-reset" size="small" variant="secondary-container" aria-label="Revert to Stock" title="Revert to Stock">
+                <m3e-icon name="restart_alt"></m3e-icon>
+            </m3e-fab>
+            <m3e-fab id="fab-apply" variant="primary" extended disabled aria-label="Apply">
+                <m3e-icon name="check"></m3e-icon>
+                <span slot="label" id="fab-apply-label">Apply</span>
+            </m3e-fab>
         </div>
-    </header>
 
-    <!-- Main Views Container (ViewPager) -->
-    <main class="page-container">
-        <div class="viewpager-container" id="viewpager-container">
-            <div class="viewpager-track" id="viewpager-track">
-                <!-- ================= TAB 1: OVERVIEW (HOME) ================= -->
-                <section class="tab-view active" id="view-overview" role="tabpanel" aria-labelledby="tab-overview">
-            <!-- 1. Hero Status Card (LSPosed Banner Style) -->
-            <div class="m3-banner-card is-stock" id="overview-banner">
-                <div class="banner-icon-container" id="banner-icon-box" aria-hidden="true">
-                    <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor" id="banner-icon">
-                        <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
-                    </svg>
-                </div>
-                <div class="banner-text-content">
-                    <div class="banner-title" id="banner-title">Default Font</div>
-                    <div class="banner-subtitle" id="banner-subtitle">Stock System Font</div>
-                </div>
-                <div class="banner-badge-chip" id="banner-badge">Stock</div>
+        <!-- M3E Docked Bottom Navigation Bar -->
+        <m3e-nav-bar id="main-nav-bar" mode="auto" aria-label="Main Navigation">
+            <m3e-nav-item id="tab-overview" data-tab="overview" selected>
+                <m3e-icon slot="icon" name="home"></m3e-icon>
+                Overview
+            </m3e-nav-item>
+            <m3e-nav-item id="tab-browse" data-tab="browse">
+                <m3e-icon slot="icon" name="explore"></m3e-icon>
+                Browse
+            </m3e-nav-item>
+            <m3e-nav-item id="tab-customize" data-tab="customize">
+                <m3e-icon slot="icon" name="font_download"></m3e-icon>
+                Font
+            </m3e-nav-item>
+            <m3e-nav-item id="tab-emoji" data-tab="emoji">
+                <m3e-icon slot="icon" name="mood"></m3e-icon>
+                Emoji
+            </m3e-nav-item>
+        </m3e-nav-bar>
+
+        <!-- M3E Confirmation / Progress / Reboot Dialog -->
+        <m3e-dialog id="app-dialog" aria-labelledby="modal-title">
+            <div slot="header" class="dialog-header-row">
+                <m3e-icon id="dialog-icon" name="check_circle" filled></m3e-icon>
+                <span id="modal-title">Confirmation</span>
             </div>
 
-            <!-- 1b. Reboot Required Notice Banner (M3 Warning Pill) -->
-            <div class="m3-banner-card is-reboot-required" id="reboot-reminder-banner" style="display: none;">
-                <div class="banner-icon-container" aria-hidden="true">
-                    <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor">
-                        <path d="M17.65 6.35C16.2 4.9 14.21 4 12 4c-4.42 0-7.99 3.58-7.99 8s3.57 8 7.99 8c3.73 0 6.84-2.55 7.73-6h-2.08c-.82 2.33-3.04 4-5.65 4-3.31 0-6-2.69-6-6s2.69-6 6-6c1.66 0 3.14.69 4.22 1.78L13 11h7V4l-2.35 2.35z"/>
-                    </svg>
-                </div>
-                <div class="banner-text-content">
-                    <div class="banner-title">Restart Required</div>
-                    <div class="banner-subtitle">Restart your device to apply updated font/emoji overlays.</div>
-                </div>
-                <button class="m3-pill-btn" id="btn-banner-reboot" type="button" style="margin-left: auto;">Reboot</button>
-            </div>
+            <div id="modal-body">Description</div>
 
-            <!-- 2. Font & Module Configuration (M3 Expressive Split Cards) -->
-            <div class="m3-split-group" role="group" aria-label="Font configuration">
-                <div class="m3-card-tile info-prop-row">
-                    <div class="prop-label">Active Font</div>
-                    <div class="prop-val" id="info-active-font">Roboto / Google Sans</div>
-                </div>
-                <div class="m3-card-tile info-prop-row">
-                    <div class="prop-label">Active Emoji</div>
-                    <div class="prop-val" id="info-active-emoji">Stock (Google)</div>
-                </div>
-                <div class="m3-card-tile info-prop-row">
-                    <div class="prop-label">Overlay Target</div>
-                    <div class="prop-val">/system + /product</div>
-                </div>
-                <div class="m3-card-tile info-prop-row">
-                    <div class="prop-label">Stock Backup</div>
-                    <div class="prop-val" id="info-backup-status">Protected (/data/adb)</div>
-                </div>
-            </div>
-
-            <!-- 3. Device & System Environment (M3 Expressive Split Cards) -->
-            <div class="m3-split-group" role="group" aria-label="Device and system environment">
-                <div class="m3-card-tile info-prop-row">
-                    <div class="prop-label">Device</div>
-                    <div class="prop-val" id="info-device-name">POCO F7 (onyx)</div>
-                </div>
-                <div class="m3-card-tile info-prop-row">
-                    <div class="prop-label">System version</div>
-                    <div class="prop-val" id="info-system-ver">16 (API 36.1)</div>
-                </div>
-                <div class="m3-card-tile info-prop-row">
-                    <div class="prop-label">System ABI</div>
-                    <div class="prop-val" id="info-system-abi">arm64-v8a (4K)</div>
-                </div>
-            </div>
-        </section>
-
-        <!-- ================= TAB 2: BROWSE (ONLINE CATALOG) ================= -->
-        <section class="tab-view" id="view-browse" role="tabpanel" aria-labelledby="tab-browse" aria-hidden="true">
-            <!-- 1. Search Box -->
-            <div class="browse-search-container">
-                <div class="browse-search-box">
-                    <svg class="browse-search-icon" width="20" height="20" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-                        <path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/>
-                    </svg>
-                    <input type="text" id="browse-search-input" class="browse-search-input" placeholder="Search fonts &amp; emojis..." autocomplete="off" spellcheck="false" aria-label="Search fonts and emojis">
-                    <button id="browse-search-clear" class="browse-search-clear" type="button" aria-label="Clear search" style="display: none;">&times;</button>
-                </div>
-            </div>
-
-            <!-- 2. Compact 1-Row Segmented Filter Bar -->
-            <div class="browse-chip-row browse-filter-bar" id="browse-filter-bar" role="radiogroup" aria-label="Catalog filters">
-                <button class="browse-chip active" type="button" data-filter="all-fonts" aria-pressed="true">All Fonts</button>
-                <button class="browse-chip" type="button" data-filter="variable" aria-pressed="false">Variable</button>
-                <button class="browse-chip" type="button" data-filter="emoji" aria-pressed="false">Emojis</button>
-                <button class="browse-chip" type="button" data-filter="downloaded" id="chip-filter-downloaded" aria-pressed="false">Downloaded</button>
-            </div>
-
-            <!-- 3. Download Progress Indicator -->
-            <div id="browse-download-progress-box" class="browse-progress-box" style="display: none;">
-                <div class="browse-progress-header">
-                    <span class="browse-progress-title" id="browse-download-progress-text">Downloading font...</span>
-                    <span class="browse-progress-pct" id="browse-download-progress-pct">0%</span>
-                </div>
-                <div class="download-progress-bar-container">
-                    <div class="download-progress-fill" id="browse-download-progress-fill"></div>
-                </div>
-            </div>
-
-            <!-- 4. Catalog Grid Container -->
-            <div class="browse-grid" id="browse-grid" role="list" aria-label="Font and emoji catalog">
-                <!-- Populated dynamically -->
-            </div>
-        </section>
-
-        <!-- ================= TAB 3: CUSTOMIZE ================= -->
-        <section class="tab-view" id="view-customize" role="tabpanel" aria-labelledby="tab-customize" aria-hidden="true">
-            <input type="file" id="file-input" accept=".ttf,.otf,.ttc,.woff,.woff2" style="display: none;" aria-label="Select font file">
-            
-            <!-- 1. Hero Font Picker Card -->
-            <div class="m3-hero-picker-card" id="dropzone" role="button" tabindex="0" aria-label="Import Font File: Tap to select or drop any .ttf or .otf font">
-                <div class="picker-icon-box" aria-hidden="true">
-                    <svg width="32" height="32" viewBox="0 0 24 24" fill="currentColor">
-                        <path d="M19.35 10.04C18.67 6.59 15.64 4 12 4 9.11 4 6.6 5.64 5.35 8.04 2.34 8.36 0 10.91 0 14c0 3.31 2.69 6 6 6h13c2.76 0 5-2.24 5-5 0-2.64-2.05-4.78-4.65-4.96zM14 13v4h-4v-4H7l5-5 5 5h-3z"/>
-                    </svg>
-                </div>
-                <div class="picker-text">
-                    <h2 class="picker-title" id="picker-title">Import Font File</h2>
-                    <p class="picker-subtitle" id="picker-subtitle">Tap to select or drop any .ttf or .otf font</p>
-                </div>
-                <button class="m3-pill-btn" id="btn-select-file" type="button">Select Font</button>
-            </div>
-
-            <!-- 2. Loaded Font Properties Card -->
-            <div class="m3-info-card" id="font-info-row" style="display: none;">
-                <div class="info-prop-row">
-                    <div class="prop-label">Font Family</div>
-                    <div class="prop-val" id="font-name">Custom Font</div>
-                </div>
-                <div class="info-prop-row">
-                    <div class="prop-label">Format</div>
-                    <div class="prop-val" id="font-format">TrueType Variable Font</div>
-                </div>
-                <div class="info-prop-row">
-                    <div class="prop-label">Font Type</div>
-                    <div class="prop-val"><span class="m3-mini-badge" id="font-type-badge">Variable</span></div>
-                </div>
-            </div>
-
-            <!-- 3. Variable Font Axis Tuning Card -->
-            <div class="m3-tuning-card" id="variable-controls-group" style="display: none;">
-                <div class="tuning-card-header">
-                    <h3 class="card-title">Weight & Style Presets</h3>
-                    <div class="m3-presets-scroll" id="presets-container" role="group" aria-label="Font variation presets">
-                        <!-- Populated dynamically -->
-                    </div>
-                </div>
-
-                <div class="tuning-card-body" id="sliders-container" role="group" aria-label="Font variation axis sliders">
-                    <!-- Populated dynamically -->
-                </div>
-            </div>
-
-            <!-- 4. Font Preview Card -->
-            <div class="m3-preview-card">
-                <div class="card-header-row">
-                    <h3 class="card-title">Font Preview</h3>
-                </div>
-
-                <div class="preview-specimens-stage" id="playground-box">
-                    <div class="specimen-hero preview-text" contenteditable="true" spellcheck="false" aria-label="Hero specimen preview">Fontify</div>
-                    <div class="specimen-headline preview-text" contenteditable="true" spellcheck="false" aria-label="Headline specimen preview">The quick brown fox jumps over the lazy dog.</div>
-                    <div class="specimen-body preview-text" contenteditable="true" spellcheck="false" aria-label="Body specimen preview">
-                        Pack my box with five dozen liquor jugs. System UI elements, lock screen clocks, notifications, and settings will dynamically render using your customized font parameters.
-                    </div>
-                    <div class="specimen-glyphs preview-text" contenteditable="true" spellcheck="false" aria-label="Glyphs specimen preview">0123456789 • &@#%*+-=:;!?</div>
-                </div>
-            </div>
-        </section>
-
-        <!-- ================= TAB 3: EMOJI ================= -->
-        <section class="tab-view" id="view-emoji" role="tabpanel" aria-labelledby="tab-emoji" aria-hidden="true">
-            <input type="file" id="emoji-file-input" accept=".ttf,.otf" style="display: none;" aria-label="Select emoji font file">
-
-            <!-- 1. Hero Emoji Picker Card (at Top) -->
-            <div class="m3-hero-picker-card" id="emoji-dropzone" role="button" tabindex="0" aria-label="Import Emoji Font File: Tap to select or drop any .ttf emoji font">
-                <div class="emoji-picker-icon-box" aria-hidden="true">
-                    <svg width="28" height="28" viewBox="0 0 24 24" fill="currentColor">
-                        <path d="M11.99 2C6.47 2 2 6.48 2 12s4.47 10 9.99 10C17.52 22 22 17.52 22 12S17.52 2 11.99 2zM12 20c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8zm3.5-9c.83 0 1.5-.67 1.5-1.5S16.33 8 15.5 8 14 8.67 14 9.5s.67 1.5 1.5 1.5zm-7 0c.83 0 1.5-.67 1.5-1.5S9.33 8 8.5 8 7 8.67 7 9.5 7.67 11 8.5 11zm3.5 6.5c2.33 0 4.31-1.46 5.11-3.5H6.89c.8 2.04 2.78 3.5 5.11 3.5z"/>
-                    </svg>
-                </div>
-                <div class="picker-text">
-                    <h2 class="picker-title" id="emoji-picker-title">Import Emoji Font</h2>
-                    <p class="picker-subtitle" id="emoji-picker-subtitle">Tap to select or drop any .ttf emoji font</p>
-                </div>
-                <button class="m3-pill-btn" id="btn-select-emoji-file" type="button">Select Emoji Font</button>
-            </div>
-
-            <!-- 2. Curated Emoji Packs Section (iOS 26, iOS 18, Fluent, OneUI, Twitter, Google) -->
-            <div class="curated-emoji-section">
-                <h3 class="curated-section-title">Curated Emoji Packs</h3>
-
-                <!-- Download Progress Bar -->
-                <div id="emoji-download-progress-box" style="display: none; margin-top: 8px; margin-bottom: 12px;">
-                    <div style="font-size: 0.8125rem; font-weight: 600; color: var(--md-sys-color-primary); margin-bottom: 6px;" id="emoji-download-progress-text">Downloading...</div>
-                    <div class="download-progress-bar-container">
-                        <div class="download-progress-fill" id="emoji-download-progress-fill"></div>
-                    </div>
-                </div>
-
-                <!-- 2-Column Curated Emoji Grid -->
-                <div class="curated-emoji-grid" id="curated-emoji-grid" role="list" aria-label="Curated emoji packs">
-                    <!-- Populated dynamically -->
-                </div>
-            </div>
-
-            <!-- 3. Loaded Emoji Information Card -->
-            <div class="m3-info-card" id="emoji-info-row" style="display: none;">
-                <div class="info-prop-row">
-                    <div class="prop-label">Emoji Family</div>
-                    <div class="prop-val" id="emoji-font-name">Custom Emoji</div>
-                </div>
-                <div class="info-prop-row">
-                    <div class="prop-label">File Size</div>
-                    <div class="prop-val" id="emoji-font-size">--</div>
-                </div>
-                <div class="info-prop-row">
-                    <div class="prop-label">Source</div>
-                    <div class="prop-val"><span class="m3-mini-badge" id="emoji-source-badge">Custom</span></div>
-                </div>
-            </div>
-
-            <!-- 4. Interactive Emoji Preview Stage -->
-            <div class="m3-preview-card">
-                <div class="card-header-row">
-                    <h3 class="card-title">Emoji Preview</h3>
-                </div>
-
-                <div class="emoji-specimen-box">
-                    <div class="emoji-category-bar" id="emoji-category-bar" role="tablist" aria-label="Emoji categories">
-                        <!-- Populated dynamically -->
-                    </div>
-
-                    <div class="emoji-showcase-grid" id="emoji-showcase-grid" aria-label="Emoji showcase glyphs">
-                        <!-- Populated dynamically -->
-                    </div>
-
-                    <div class="emoji-specimen-hero" id="emoji-specimen-hero" contenteditable="true" spellcheck="false" aria-label="Interactive emoji specimen preview">😀 🥳 😎 👍 🔥 ❤️ 🚀 ✨ 💯 🐱 🍕 ☕</div>
-                </div>
-            </div>
-        </section>
-            </div>
-        </div>
-    </main>
-
-    <!-- Bottom Navigation Bar (Material 3 Expressive Floating Pill) -->
-    <nav class="bottom-nav" role="tablist" aria-label="Main Navigation">
-        <div class="nav-highlighter" id="nav-highlighter" aria-hidden="true"></div>
-        <button class="nav-tab active" id="tab-overview" data-target="overview" data-tab="overview" role="tab" aria-selected="true" aria-controls="view-overview" tabindex="0" type="button">
-            <div class="icon-wrapper">
-                <svg class="icon-outline" aria-hidden="true"><use href="#icon-overview-outline"></use></svg>
-                <svg class="icon-filled" aria-hidden="true"><use href="#icon-overview-filled"></use></svg>
-            </div>
-            <span class="tab-label">Overview</span>
-        </button>
-
-        <button class="nav-tab" id="tab-browse" data-target="browse" data-tab="browse" role="tab" aria-selected="false" aria-controls="view-browse" tabindex="-1" type="button">
-            <div class="icon-wrapper">
-                <svg class="icon-outline" aria-hidden="true"><use href="#icon-browse-outline"></use></svg>
-                <svg class="icon-filled" aria-hidden="true"><use href="#icon-browse-filled"></use></svg>
-            </div>
-            <span class="tab-label">Browse</span>
-        </button>
-
-        <button class="nav-tab" id="tab-customize" data-target="customize" data-tab="customize" role="tab" aria-selected="false" aria-controls="view-customize" tabindex="-1" type="button">
-            <div class="icon-wrapper">
-                <svg class="icon-outline" aria-hidden="true"><use href="#icon-font-outline"></use></svg>
-                <svg class="icon-filled" aria-hidden="true"><use href="#icon-font-filled"></use></svg>
-            </div>
-            <span class="tab-label">Font</span>
-        </button>
-
-        <button class="nav-tab" id="tab-emoji" data-target="emoji" data-tab="emoji" role="tab" aria-selected="false" aria-controls="view-emoji" tabindex="-1" type="button">
-            <div class="icon-wrapper">
-                <svg class="icon-outline" aria-hidden="true"><use href="#icon-emoji-outline"></use></svg>
-                <svg class="icon-filled" aria-hidden="true"><use href="#icon-emoji-filled"></use></svg>
-            </div>
-            <span class="tab-label">Emoji</span>
-        </button>
-    </nav>
-
-    <!-- Dual Floating Action Cluster (M3 Expressive: Reset + Apply at Bottom-Right) -->
-    <div class="floating-action-cluster hidden" id="floating-action-cluster" aria-label="Quick Actions">
-        <!-- Reset Button: 48px Tonal Circular FAB -->
-        <button class="fab-circle-btn fab-tonal" id="fab-reset" type="button" aria-label="Revert to Stock" title="Revert to Stock">
-            <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-                <path d="M13 3c-4.97 0-9 4.03-9 9H1l3.89 3.89.07.14L9 12H6c0-3.87 3.13-7 7-7s7 3.13 7 7-3.13 7-7 7c-1.93 0-3.68-.79-4.94-2.06l-1.42 1.42C8.27 19.99 10.51 21 13 21c4.97 0 9-4.03 9-9s-4.03-9-9-9zm-1 5v5l4.28 2.54.72-1.21-3.5-2.08V8H12z"/>
-            </svg>
-        </button>
-
-        <!-- Apply Button: 56px Primary Extended Pill FAB -->
-        <button class="fab-pill-btn fab-primary" id="fab-apply" type="button" disabled aria-label="Apply">
-            <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-                <path d="M9 16.2L4.8 12l-1.4 1.4L9 19 21 7l-1.4-1.4L9 16.2z"/>
-            </svg>
-            <span class="fab-pill-label" id="fab-apply-label">Apply</span>
-        </button>
-    </div>
-
-    <!-- Material 3 Expressive Dialog Modal -->
-    <div class="modal-backdrop" id="modal-overlay" aria-hidden="true">
-        <div class="m3-dialog" role="dialog" aria-modal="true" aria-labelledby="modal-title" aria-describedby="modal-body">
-            <div class="dialog-header-group">
-                <div class="dialog-icon-container" id="dialog-icon-box" aria-hidden="true">
-                    <svg width="26" height="26" viewBox="0 0 24 24" fill="currentColor" id="dialog-icon-svg">
-                        <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
-                    </svg>
-                </div>
-                <h3 class="dialog-title" id="modal-title">Confirmation</h3>
-            </div>
-            
-            <!-- Standard text description -->
-            <div class="dialog-body" id="modal-body">Description</div>
-
-            <!-- Live Circular Progress Stage (morphed during apply) -->
-            <div class="dialog-progress-stage" id="dialog-progress-stage" style="display: none;">
-                <div class="circular-progress-wrap">
-                    <svg class="circular-progress-svg" viewBox="0 0 88 88" width="88" height="88" aria-hidden="true">
-                        <circle class="circular-progress-bg" cx="44" cy="44" r="36" />
-                        <circle class="circular-progress-bar" id="dialog-progress-bar" cx="44" cy="44" r="36" />
-                    </svg>
-                    <div class="circular-progress-center">
-                        <span class="circular-progress-pct" id="dialog-progress-pct">0%</span>
-                    </div>
-                </div>
+            <div class="dialog-stage" id="dialog-progress-stage" style="display: none;">
+                <m3e-circular-progress-indicator id="dialog-progress-bar" variant="wavy" max="100" value="0">
+                    <span class="dialog-progress-pct" id="dialog-progress-pct">0%</span>
+                </m3e-circular-progress-indicator>
                 <div class="dialog-progress-msg" id="dialog-progress-msg">Preparing payload...</div>
             </div>
 
-            <!-- Auto-Reboot Countdown Stage (morphed upon success) -->
-            <div class="dialog-countdown-stage" id="dialog-countdown-stage" style="display: none;">
-                <div class="countdown-timer-wrap">
-                    <svg class="countdown-svg" viewBox="0 0 88 88" width="88" height="88" aria-hidden="true">
-                        <circle class="circular-progress-bg" cx="44" cy="44" r="36" />
-                        <circle class="countdown-progress-bar" id="dialog-countdown-bar" cx="44" cy="44" r="36" />
-                    </svg>
-                    <div class="countdown-center">
-                        <span class="countdown-sec" id="dialog-countdown-sec">5</span>
-                    </div>
-                </div>
-                <div class="dialog-countdown-msg" id="dialog-countdown-msg">Restarting in 5s to reload fonts...</div>
+            <div class="dialog-stage" id="dialog-countdown-stage" style="display: none;">
+                <m3e-circular-progress-indicator id="dialog-countdown-bar" variant="wavy" max="5" value="5">
+                    <span class="dialog-progress-pct" id="dialog-countdown-sec">5</span>
+                </m3e-circular-progress-indicator>
+                <div class="dialog-progress-msg" id="dialog-countdown-msg">Restarting in 5s to reload fonts...</div>
             </div>
 
-            <div class="dialog-actions" id="dialog-actions">
-                <button class="m3-dialog-btn m3-dialog-btn-tonal" id="modal-cancel-btn" type="button">Cancel</button>
-                <button class="m3-dialog-btn m3-dialog-btn-filled" id="modal-confirm-btn" type="button">Confirm</button>
+            <div slot="actions" id="dialog-actions">
+                <m3e-button id="modal-cancel-btn" variant="tonal" type="button">Cancel</m3e-button>
+                <m3e-button id="modal-confirm-btn" variant="filled" type="button">Confirm</m3e-button>
             </div>
-        </div>
-    </div>
+        </m3e-dialog>
 
-    <!-- Material 3 Expressive Credits Modal -->
-    <div class="modal-backdrop" id="credits-modal-overlay" aria-hidden="true">
-        <div class="m3-dialog credits-dialog" id="credits-dialog" role="dialog" aria-modal="true" aria-labelledby="credits-title" aria-describedby="credits-body">
-            <div class="dialog-header-group">
-                <div class="dialog-icon-container" aria-hidden="true">
-                    <svg width="26" height="26" viewBox="0 0 24 24" fill="currentColor">
-                        <use href="#icon-info-filled"></use>
-                    </svg>
-                </div>
-                <h3 class="dialog-title" id="credits-title">Credits &amp; Acknowledgments</h3>
-            </div>
-            
-            <div class="dialog-body credits-body" id="credits-body">
-                <div class="credits-section">
-                    <div class="credits-section-title">
-                        <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-                            <use href="#icon-browse-filled"></use>
-                        </svg>
-                        zFont &amp; Khun Htetz Naing
-                    </div>
-                    <div class="credits-section-desc">
-                        Pioneering Android font and emoji packages, hosting, and curation. Visit <a class="credits-link" href="https://github.com/zFont" target="_blank" rel="noopener noreferrer">zFont GitHub</a>, <a class="credits-link" href="https://zfont.app" target="_blank" rel="noopener noreferrer">zFont App</a>, and <a class="credits-link" href="https://github.com/zFont/Host" target="_blank" rel="noopener noreferrer">zFont Host</a>.
-                    </div>
-                </div>
-
-                <div class="credits-section">
-                    <div class="credits-section-title">
-                        <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-                            <use href="#icon-emoji-filled"></use>
-                        </svg>
-                        MFFM Emoji (@mffmemojis)
-                    </div>
-                    <div class="credits-section-desc">
-                        Creator and porter of high-fidelity iOS, Samsung, and stylish vendor emoji packages for Android.
-                    </div>
-                </div>
-
-                <div class="credits-section">
-                    <div class="credits-section-title">
-                        <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-                            <use href="#icon-emoji-filled"></use>
-                        </svg>
-                        RickyBush_ (@EmojiReplacer)
-                    </div>
-                    <div class="credits-section-desc">
-                        Creator of the Emoji Replacer root modules and maintainer of modern Unicode emoji packages.
-                    </div>
-                </div>
-
-                <div class="credits-section">
-                    <div class="credits-section-title">
-                        <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-                            <use href="#icon-font-filled"></use>
-                        </svg>
-                        Fontsource
-                    </div>
-                    <div class="credits-section-desc">
-                        High-quality open-source typeface repository and package distributions (<a class="credits-link" href="https://fontsource.org" target="_blank" rel="noopener noreferrer">fontsource.org</a>).
-                    </div>
-                </div>
-
-                <div class="credits-section">
-                    <div class="credits-section-title">
-                        <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-                            <use href="#icon-font-filled"></use>
-                        </svg>
-                        Google Fonts
-                    </div>
-                    <div class="credits-section-desc">
-                        World-class open-source typography library including Roboto, Inter, Poppins, Montserrat, JetBrains Mono, and Noto Color Emoji (<a class="credits-link" href="https://fonts.google.com" target="_blank" rel="noopener noreferrer">fonts.google.com</a>).
-                    </div>
-                </div>
-
-                <div class="credits-section">
-                    <div class="credits-section-title">
-                        <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-                            <use href="#icon-overview-filled"></use>
-                        </svg>
-                        Vendor Typeface &amp; Emoji Designers
-                    </div>
-                    <div class="credits-section-desc">
-                        Apple, Microsoft, Samsung, Twemoji (X / Twitter), Google, and independent type design studios for their respective font and emoji designs.
-                    </div>
-                </div>
+        <!-- M3E Credits Dialog -->
+        <m3e-dialog id="credits-dialog" dismissible aria-labelledby="credits-title">
+            <div slot="header" class="dialog-header-row">
+                <m3e-icon name="info" filled></m3e-icon>
+                <span id="credits-title">Credits &amp; Acknowledgments</span>
             </div>
 
-            <div class="dialog-actions">
-                <button class="m3-dialog-btn m3-dialog-btn-filled" id="credits-close-btn" type="button">Close</button>
+            <m3e-list id="credits-body">
+                <m3e-list-item>
+                    zFont &amp; Khun Htetz Naing
+                    <span slot="supporting-text">
+                        Pioneering Android font and emoji packages, hosting, and curation.
+                        <a class="credits-link" href="https://github.com/zFont" target="_blank" rel="noopener noreferrer">zFont GitHub</a> ·
+                        <a class="credits-link" href="https://zfont.app" target="_blank" rel="noopener noreferrer">zFont App</a>
+                    </span>
+                </m3e-list-item>
+                <m3e-divider></m3e-divider>
+                <m3e-list-item>
+                    MFFM Emoji (@mffmemojis)
+                    <span slot="supporting-text">Creator and porter of iOS, Samsung, and vendor emoji packages for Android.</span>
+                </m3e-list-item>
+                <m3e-divider></m3e-divider>
+                <m3e-list-item>
+                    RickyBush_ (@EmojiReplacer)
+                    <span slot="supporting-text">Creator of Emoji Replacer root modules and modern Unicode emoji packages.</span>
+                </m3e-list-item>
+                <m3e-divider></m3e-divider>
+                <m3e-list-item>
+                    Fontsource &amp; Google Fonts
+                    <span slot="supporting-text">
+                        Open-source typeface libraries (<a class="credits-link" href="https://fontsource.org" target="_blank" rel="noopener noreferrer">fontsource.org</a>, <a class="credits-link" href="https://fonts.google.com" target="_blank" rel="noopener noreferrer">fonts.google.com</a>).
+                    </span>
+                </m3e-list-item>
+                <m3e-divider></m3e-divider>
+                <m3e-list-item>
+                    Vendor Typeface &amp; Emoji Designers
+                    <span slot="supporting-text">Apple, Microsoft, Samsung, Twemoji, Google, and independent type studios.</span>
+                </m3e-list-item>
+            </m3e-list>
+
+            <div slot="actions" end>
+                <m3e-button variant="filled" id="credits-close-btn" type="button">
+                    <m3e-dialog-action return-value="close">Close</m3e-dialog-action>
+                </m3e-button>
             </div>
-        </div>
-    </div>
+        </m3e-dialog>
 
-    <!-- Browse Font Preview Bottom Sheet Modal (Material 3 Expressive) -->
-    <div class="modal-backdrop" id="browse-preview-backdrop" style="display: none;" aria-hidden="true">
-        <div class="browse-bottom-sheet" id="browse-preview-sheet" role="dialog" aria-modal="true" aria-labelledby="browse-preview-title">
-            <div class="browse-preview-container" id="browse-preview-container">
-                <!-- Populated dynamically -->
-            </div>
-        </div>
-    </div>
+        <!-- M3E Browse Preview Bottom Sheet -->
+        <m3e-bottom-sheet id="browse-preview-sheet" modal handle hideable detents="fit half full" detent="1" aria-labelledby="browse-preview-title">
+            <div class="browse-preview-container" id="browse-preview-container"></div>
+        </m3e-bottom-sheet>
+    </m3e-theme>
 
-    <!-- Floating Toast Container -->
-    <div class="toast-stack" id="toast-container" role="status" aria-live="polite" aria-atomic="true"></div>
-
-    <!-- Application Script Module -->
 </body>
 </html>

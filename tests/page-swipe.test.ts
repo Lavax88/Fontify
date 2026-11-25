@@ -146,7 +146,7 @@ describe('Page Swipe ViewPager Mechanics', () => {
       cancelable: true,
       preventDefault: vi.fn()
     });
-    expect(mockBottomNav.classList.add).not.toHaveBeenCalledWith('nav-swiping');
+    expect(onProgress).not.toHaveBeenCalled();
 
     // 4. Test horizontal swipe from overview towards browse (swipe left, dx < 0)
     containerListeners['touchstart']({
@@ -161,14 +161,12 @@ describe('Page Swipe ViewPager Mechanics', () => {
       preventDefault: preventDefaultSpy
     });
 
-    expect(mockBottomNav.classList.add).toHaveBeenCalledWith('nav-swiping');
     expect(preventDefaultSpy).toHaveBeenCalled();
     expect(onProgress).toHaveBeenCalledWith('overview', 'browse', expect.any(Number));
 
     // Release drag beyond distance threshold (>35% of 360 = 126px; dx is -150px)
     containerListeners['touchend']();
 
-    expect(mockBottomNav.classList.remove).toHaveBeenCalledWith('nav-swiping');
     expect(onAnimateHighlighter).toHaveBeenCalledWith('browse');
     expect(onSettle).toHaveBeenCalledWith('browse');
     expect(onResetSprings).toHaveBeenCalled();

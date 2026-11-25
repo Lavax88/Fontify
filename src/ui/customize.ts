@@ -1,7 +1,7 @@
 /**
- * Fontify - Customize Tab Controller
+ * Fontify - Customize Tab Controller (M3E Expressive)
  * Handles font file import, font parsing, variable controls, live preview,
- * Apply Font, Revert, and Reboot actions.
+ * Apply Font, and Revert actions.
  */
 
 import { store } from '../state/store';
@@ -92,10 +92,6 @@ export function setupCustomizeTab(): void {
   const fontTypeBadge = document.getElementById('font-type-badge');
   const variableControlsGroup = document.getElementById('variable-controls-group');
 
-  const btnApply = document.getElementById('btn-apply') as HTMLButtonElement | null;
-  const btnRestore = document.getElementById('btn-restore') as HTMLButtonElement | null;
-  const btnSoftReboot = document.getElementById('btn-soft-reboot') as HTMLButtonElement | null;
-
   const previewElements = Array.from(document.querySelectorAll<HTMLElement>('.preview-text'));
 
   // 1. File Selection Handlers
@@ -147,7 +143,7 @@ export function setupCustomizeTab(): void {
     });
   }
 
-  // 2. Sync Customize UI from Store State (Single Source of Truth)
+  // 2. Sync Customize UI from Store State
   function syncCustomizeUIFromStore(): void {
     const state = store.getState();
     const fontData = state.fontData;
@@ -162,28 +158,24 @@ export function setupCustomizeTab(): void {
         if (pickerTitle) pickerTitle.textContent = 'Import Font File';
         if (pickerSubtitle) pickerSubtitle.textContent = 'Tap to select or drop any .ttf or .otf font';
       }
-      if (btnApply) btnApply.disabled = true;
       return;
     }
 
-    // Update Picker Card State
     if (pickerTitle) pickerTitle.textContent = fontData.fullName;
     if (pickerSubtitle) {
       pickerSubtitle.textContent = `${fontData.format} (${fontData.numGlyphs || 0} glyphs)`;
     }
 
-    // Update Font Info Row
-    if (fontInfoRow) fontInfoRow.style.display = 'flex';
+    if (fontInfoRow) fontInfoRow.style.display = 'block';
     if (fontNameElem) fontNameElem.textContent = fontData.fullName;
     if (fontFormatElem) {
       const ver = fontData.version ? (fontData.version.toLowerCase().startsWith('v') ? fontData.version : `v${fontData.version}`) : 'v1.0';
       fontFormatElem.textContent = `${fontData.format} ${ver}`;
     }
 
-    // Render variable sliders and preset chips if font is variable
     if (fontData.isVariable) {
       if (fontTypeBadge) fontTypeBadge.textContent = 'Variable';
-      if (variableControlsGroup) variableControlsGroup.style.display = 'flex';
+      if (variableControlsGroup) variableControlsGroup.style.display = 'block';
       renderVariableControls(fontData, previewElements);
     } else {
       if (fontTypeBadge) fontTypeBadge.textContent = 'Static';
@@ -191,9 +183,6 @@ export function setupCustomizeTab(): void {
       FontEngine.scheduleVariationUpdate(previewElements, {});
     }
 
-    if (btnApply) btnApply.disabled = false;
-
-    // Load font face asynchronously for live preview specimen rendering
     if (state.fontBuffer) {
       FontEngine.loadFontFace('CustomImportedFont', state.fontBuffer).catch((err) => {
         console.error('FontFace registration error:', err);
@@ -201,7 +190,6 @@ export function setupCustomizeTab(): void {
     }
   }
 
-  // Subscribe to store updates for fontData and tab changes
   store.subscribe(s => s.fontData, () => {
     syncCustomizeUIFromStore();
   });
@@ -212,7 +200,6 @@ export function setupCustomizeTab(): void {
     }
   });
 
-  // Initial check on startup
   syncCustomizeUIFromStore();
 
   // 3. Process Imported Font File
@@ -238,41 +225,9 @@ export function setupCustomizeTab(): void {
       });
 
       showToast(`Loaded "${fontData.fullName}"`);
-      await syncCustomizeUIFromStore();
+      syncCustomizeUIFromStore();
     };
 
     reader.readAsArrayBuffer(file);
-  }
-
-  // 4. Fallback handlers for legacy buttons if present
-  if (btnApply) {
-    btnApply.addEventListener('click', applySelectedFont);
-  }
-  if (btnRestore) {
-    btnRestore.addEventListener('click', restoreStockFont);
-  }
-  if (btnSoftReboot) {
-    btnSoftReboot.addEventListener('click', async () => {
-      const isFull = store.getState().rebootType === 'full';
-      if (isFull) {
-        await showConfirmDialog({
-          title: 'Full Reboot Required',
-          body: 'A full device reboot is required to cleanly restore stock system fonts and prevent bootloops.<br><br>Reboot now?',
-          confirmText: 'Full Reboot',
-          cancelText: 'Cancel',
-          iconType: 'reboot',
-          onConfirm: () => fontService.fullReboot()
-        });
-      } else {
-        await showConfirmDialog({
-          title: 'Reboot Device',
-          body: 'Restart system to load updated fonts?',
-          confirmText: 'Reboot',
-          cancelText: 'Cancel',
-          iconType: 'reboot',
-          onConfirm: () => fontService.reboot('soft')
-        });
-      }
-    });
   }
 }

@@ -1,7 +1,8 @@
 /**
- * Fontify - Application Bootstrap Entrypoint
+ * Fontify - Application Bootstrap Entrypoint (M3E Expressive)
  */
 
+import './ui/m3e';
 import './styles/style.css';
 
 import { store } from './state/store';
@@ -13,10 +14,19 @@ import { setupCustomizeTab } from './ui/customize';
 import { setupEmojiTab } from './ui/emoji';
 import { initFloatingActions } from './ui/floatingActions';
 import { FontEngine } from './font/engine';
-import { initFloatingNav, type FloatingNavController, type FontifyTab } from './ui/components/floatingNav';
-import { initPageSwipe, slideToTab } from './ui/components/pageSwipe';
+import { initPageSwipe, slideToTab, type FontifyTab } from './ui/components/pageSwipe';
 
-let floatingNavController: FloatingNavController | null = null;
+interface AppBarAttachable extends HTMLElement {
+  attach?: (control: HTMLElement) => void;
+}
+
+interface NavBarElement extends HTMLElement {
+  selected?: HTMLElement | null;
+}
+
+interface NavItemElement extends HTMLElement {
+  selected?: boolean;
+}
 
 export function switchTab(tabId: FontifyTab, skipSlide = false): void {
   document.querySelectorAll<HTMLElement>('.tab-view').forEach(view => {
@@ -29,17 +39,22 @@ export function switchTab(tabId: FontifyTab, skipSlide = false): void {
     }
   });
 
-  document.querySelectorAll<HTMLButtonElement>('.nav-tab').forEach(tab => {
-    const tabName = (tab.getAttribute('data-tab') || tab.getAttribute('data-target')) as FontifyTab | null;
+  document.querySelectorAll<NavItemElement>('m3e-nav-item').forEach(item => {
+    const tabName = item.getAttribute('data-tab') as FontifyTab | null;
     const isTarget = tabName === tabId;
-    tab.classList.toggle('active', isTarget);
-    tab.setAttribute('aria-selected', isTarget ? 'true' : 'false');
-    tab.setAttribute('tabindex', isTarget ? '0' : '-1');
+    item.selected = isTarget;
+    if (isTarget) {
+      item.setAttribute('selected', '');
+    } else {
+      item.removeAttribute('selected');
+    }
   });
 
   const targetView = document.getElementById(`view-${tabId}`);
+  const appBar = document.getElementById('app-bar') as AppBarAttachable | null;
   if (targetView) {
     targetView.scrollTo({ top: 0, behavior: 'smooth' });
+    appBar?.attach?.(targetView);
   }
 
   store.setState({ currentTab: tabId });
@@ -48,9 +63,6 @@ export function switchTab(tabId: FontifyTab, skipSlide = false): void {
     slideToTab(tabId);
   }
 
-  // Update floating highlighter position smoothly
-  floatingNavController?.updatePosition(false);
-
   // Lazy refresh font preview when customize tab becomes visible
   if (tabId === 'customize') {
     const previewElements = Array.from(document.querySelectorAll<HTMLElement>('.preview-text'));
@@ -58,14 +70,13 @@ export function switchTab(tabId: FontifyTab, skipSlide = false): void {
   }
 }
 
-// Attach to window for legacy onclick handlers if present in DOM
+// Attach to window for legacy callers if present
 window.switchTab = switchTab;
 
 async function reconcileDiskStatus(): Promise<void> {
   try {
     await fontService.refreshStatus();
   } catch (err) {
-    // Graceful fallback: cached state remains rendered on screen
     console.warn('Background status sync error:', err);
   }
 }
@@ -78,73 +89,39 @@ function init(): void {
   setupEmojiTab();
   initFloatingActions();
 
-  // Attach nav tab click listeners directly
-  document.querySelectorAll<HTMLButtonElement>('.nav-tab').forEach(btn => {
-    const tabName = (btn.getAttribute('data-tab') || btn.getAttribute('data-target')) as FontifyTab | null;
-    if (tabName) {
-      btn.addEventListener('click', () => switchTab(tabName));
-    }
-  });
+  const navBar = document.getElementById('main-nav-bar') as NavBarElement | null;
+  if (navBar) {
+    navBar.addEventListener('change', () => {
+      const selectedTab = navBar.selected?.getAttribute('data-tab') as FontifyTab | null;
+      if (selectedTab && selectedTab !== store.getState().currentTab) {
+        switchTab(selectedTab);
+      }
+    });
+  }
 
-  // Initialize floating navigation bar controller
-  floatingNavController = initFloatingNav((target) => {
-    switchTab(target);
+  document.querySelectorAll<NavItemElement>('m3e-nav-item').forEach(item => {
+    const tabName = item.getAttribute('data-tab') as FontifyTab | null;
+    if (tabName) {
+      item.addEventListener('click', () => switchTab(tabName));
+    }
   });
 
   // Initialize page swipe ViewPager
   initPageSwipe({
     onSettle: (settledTab) => {
       switchTab(settledTab, true);
-    },
-    onAnimateHighlighter: (targetTab) => {
-      floatingNavController?.animateToTab(targetTab);
-    },
-    onProgress: (fromTab, toTab, progress) => {
-      floatingNavController?.setProgress(fromTab, toTab, progress);
-    },
-    onOverscroll: (overscrollPx) => {
-      floatingNavController?.setOverscroll(overscrollPx);
-    },
-    onResetSprings: () => {
-      floatingNavController?.resetCapsuleSpring();
     }
   });
 
-  // Ensure ViewPager starts aligned to current active tab
-  slideToTab(store.getState().currentTab, true);
-
-  // WAI-ARIA tablist keyboard interactions (Arrow navigation, Home, End)
-  const tablist = document.querySelector<HTMLElement>('[role="tablist"]');
-  if (tablist) {
-    tablist.addEventListener('keydown', (e: KeyboardEvent) => {
-      const tabs = Array.from(tablist.querySelectorAll<HTMLButtonElement>('[role="tab"]'));
-      const activeIdx = tabs.findIndex(tab => tab === document.activeElement);
-      if (activeIdx === -1) return;
-
-      let nextIdx = activeIdx;
-      if (e.key === 'ArrowRight' || e.key === 'ArrowDown') {
-        nextIdx = (activeIdx + 1) % tabs.length;
-      } else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') {
-        nextIdx = (activeIdx - 1 + tabs.length) % tabs.length;
-      } else if (e.key === 'Home') {
-        nextIdx = 0;
-      } else if (e.key === 'End') {
-        nextIdx = tabs.length - 1;
-      } else {
-        return;
-      }
-
-      e.preventDefault();
-      const target = tabs[nextIdx];
-      if (target) {
-        target.focus();
-        const tabName = (target.getAttribute('data-tab') || target.getAttribute('data-target')) as FontifyTab | null;
-        if (tabName) switchTab(tabName);
-      }
-    });
+  // Ensure ViewPager & app bar start aligned to current active tab
+  const initialTab = store.getState().currentTab;
+  slideToTab(initialTab, true);
+  const initialView = document.getElementById(`view-${initialTab}`);
+  const appBar = document.getElementById('app-bar') as AppBarAttachable | null;
+  if (initialView) {
+    appBar?.attach?.(initialView);
   }
 
-  // Reconcile cached state with files on disk in background
   reconcileDiskStatus();
 }
 

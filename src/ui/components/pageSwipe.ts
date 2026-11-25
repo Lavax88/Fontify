@@ -1,5 +1,6 @@
 import { store } from '../../state/store';
-import type { FontifyTab } from './floatingNav';
+
+export type FontifyTab = 'overview' | 'browse' | 'customize' | 'emoji';
 
 export const TAB_ORDER: FontifyTab[] = [
   'overview',
@@ -16,10 +17,10 @@ export function getTabOffset(targetTab: FontifyTab, containerWidth: number): num
 
 export interface PageSwipeOptions {
   onSettle: (tab: FontifyTab) => void;
-  onAnimateHighlighter: (tab: FontifyTab) => void;
-  onProgress: (fromTab: FontifyTab, toTab: FontifyTab, progress: number) => void;
-  onOverscroll: (overscrollPx: number) => void;
-  onResetSprings: () => void;
+  onAnimateHighlighter?: (tab: FontifyTab) => void;
+  onProgress?: (fromTab: FontifyTab, toTab: FontifyTab, progress: number) => void;
+  onOverscroll?: (overscrollPx: number) => void;
+  onResetSprings?: () => void;
 }
 
 let activeSlideToTab: ((targetTab: FontifyTab, immediate?: boolean) => void) | null = null;
@@ -78,10 +79,10 @@ export function initPageSwipe(options: PageSwipeOptions): () => void {
     const target = e.target as HTMLElement | null;
     if (!target) return;
 
-    // Skip horizontal page gestures on interactive controls, modal sheets/dialogs, sliders, and editable playgrounds
+    // Skip horizontal page gestures on interactive M3E controls, dialogs, sheets, sliders, and editable playgrounds
     if (
       target.closest(
-        '.m3-bottom-sheet, .m3-dialog, .m3-sheet-backdrop, .m3-dialog-backdrop, input[type="range"], .m3-slider, [contenteditable="true"], .emoji-category-bar, .emoji-showcase-grid, #browse-search-input, .chip-row, .filter-chip-row, #browse-preview-sheet, .specimen-box'
+        'm3e-bottom-sheet, m3e-dialog, m3e-slider, m3e-slider-thumb, m3e-search-bar, m3e-button-group, m3e-filter-chip-set, input[type="range"], [contenteditable="true"], .emoji-category-bar, .emoji-showcase-grid, .m3-presets-scroll, #browse-search-input, .browse-filter-row, #browse-preview-sheet, .specimen-box'
       )
     ) {
       isPointerDown = false;
@@ -98,18 +99,18 @@ export function initPageSwipe(options: PageSwipeOptions): () => void {
     }
 
     isPointerDown = true;
-    isTracking = true;
+    isTracking = false;
     gestureType = 'none';
     startX = touch.clientX;
     startY = touch.clientY;
-    lastX = touch.clientX;
+    lastX = startX;
     lastTime = performance.now();
     velocity = 0;
     currentDeltaX = 0;
   }
 
   function handleTouchMove(e: TouchEvent) {
-    if (!isTracking || !isPointerDown || e.touches.length !== 1) return;
+    if (!isPointerDown || e.touches.length !== 1 || !container || !track) return;
 
     const touch = e.touches[0];
     if (!touch) return;
@@ -117,184 +118,130 @@ export function initPageSwipe(options: PageSwipeOptions): () => void {
     const dx = touch.clientX - startX;
     const dy = touch.clientY - startY;
 
-    const now = performance.now();
-    const dt = Math.max(1, now - lastTime);
-    const instantVelocity = (touch.clientX - lastX) / dt;
-    velocity = velocity * 0.65 + instantVelocity * 0.35;
-    lastX = touch.clientX;
-    lastTime = now;
-
-    // Slope check on initial drag (horizontal dominant vs vertical scrolling)
     if (gestureType === 'none') {
       const absX = Math.abs(dx);
       const absY = Math.abs(dy);
 
-      if (absX > 8 || absY > 8) {
-        if (absX > absY * 1.2) {
-          gestureType = 'horizontal';
-          document.querySelector('.bottom-nav')?.classList.add('nav-swiping');
-        } else {
-          // Vertical dominant -> surrender gesture to native vertical scroll
-          gestureType = 'vertical';
-          isTracking = false;
-          return;
-        }
+      if (absX < 8 && absY < 8) return;
+
+      if (absX > absY * 1.2) {
+        gestureType = 'horizontal';
+        isTracking = true;
       } else {
+        gestureType = 'vertical';
+        isPointerDown = false;
+        isTracking = false;
         return;
       }
     }
 
-    if (gestureType !== 'horizontal') return;
+    if (!isTracking) return;
 
-    // Lock horizontal gesture: prevent native vertical scrolling while swiping
-    if (e.cancelable) e.preventDefault();
-
-    const containerWidth = container!.offsetWidth;
-    const currentTab = store.getState().currentTab;
-    const currentIndex = TAB_ORDER.indexOf(currentTab);
-
-    // Elastic rubber-band resistance at boundaries
-    let effectiveDeltaX = dx;
-    let isOverscrolling = false;
-
-    if (currentIndex === 0 && dx > 0) {
-      isOverscrolling = true;
-      effectiveDeltaX = Math.pow(dx, 0.78) * 1.8;
-    } else if (currentIndex === TAB_ORDER.length - 1 && dx < 0) {
-      isOverscrolling = true;
-      effectiveDeltaX = -Math.pow(Math.abs(dx), 0.78) * 1.8;
+    if (e.cancelable) {
+      e.preventDefault();
     }
 
-    currentDeltaX = effectiveDeltaX;
+    const now = performance.now();
+    const dt = now - lastTime;
+    if (dt > 0) {
+      const instantV = (touch.clientX - lastX) / dt;
+      velocity = velocity * 0.4 + instantV * 0.6;
+    }
+    lastX = touch.clientX;
+    lastTime = now;
 
-    // Update ViewPager track live
-    const baseOffset = -currentIndex * containerWidth;
-    track!.style.transition = 'none';
-    track!.style.transform = `translate3d(${baseOffset + effectiveDeltaX}px, 0, 0)`;
+    const currentTab = store.getState().currentTab;
+    const currentIndex = TAB_ORDER.indexOf(currentTab);
+    const width = container.offsetWidth;
+    const baseOffset = -currentIndex * width;
 
-    // Update Floating Navbar live
-    if (isOverscrolling) {
-      options.onOverscroll(effectiveDeltaX);
+    let effectiveDx = dx;
+    let isOverscroll = false;
+
+    if (currentIndex === 0 && dx > 0) {
+      isOverscroll = true;
+      effectiveDx = Math.pow(dx, 0.78) * 1.8;
+    } else if (currentIndex === TAB_ORDER.length - 1 && dx < 0) {
+      isOverscroll = true;
+      effectiveDx = -Math.pow(-dx, 0.78) * 1.8;
+    }
+
+    currentDeltaX = effectiveDx;
+    track.style.transform = `translate3d(${baseOffset + effectiveDx}px, 0, 0)`;
+
+    if (isOverscroll) {
+      options.onOverscroll?.(effectiveDx);
     } else {
-      options.onOverscroll(0);
-      const fromTab = TAB_ORDER[currentIndex] || currentTab;
-      let toTab: FontifyTab = fromTab;
-      let progress = 0;
-
+      options.onOverscroll?.(0);
+      const progress = Math.min(1, Math.max(0, Math.abs(dx) / width));
       if (dx < 0 && currentIndex < TAB_ORDER.length - 1) {
-        toTab = TAB_ORDER[currentIndex + 1] ?? fromTab;
-        progress = Math.min(1, Math.abs(dx) / containerWidth);
+        options.onProgress?.(currentTab, TAB_ORDER[currentIndex + 1], progress);
       } else if (dx > 0 && currentIndex > 0) {
-        toTab = TAB_ORDER[currentIndex - 1] ?? fromTab;
-        progress = Math.min(1, Math.abs(dx) / containerWidth);
+        options.onProgress?.(currentTab, TAB_ORDER[currentIndex - 1], progress);
+      } else {
+        options.onProgress?.(currentTab, currentTab, 0);
       }
-
-      options.onProgress(fromTab, toTab, progress);
     }
   }
 
   function handleTouchEnd() {
-    document.querySelector('.bottom-nav')?.classList.remove('nav-swiping');
-
-    if (!isPointerDown) return;
+    if (!isPointerDown || !container || !track) return;
     isPointerDown = false;
 
-    if (gestureType !== 'horizontal') {
-      isTracking = false;
-      gestureType = 'none';
-      options.onResetSprings();
-      return;
-    }
-
+    if (!isTracking) return;
     isTracking = false;
-    gestureType = 'none';
 
-    const containerWidth = container!.offsetWidth;
     const currentTab = store.getState().currentTab;
     const currentIndex = TAB_ORDER.indexOf(currentTab);
-
-    const dx = currentDeltaX;
-    const isFlick = Math.abs(velocity) > 0.35;
-    const distanceThreshold = containerWidth * 0.35;
+    const width = container.offsetWidth;
 
     let targetIndex = currentIndex;
+    const flickThreshold = 0.35;
+    const distThreshold = width * 0.35;
 
-    if (currentIndex === 0 && dx > 0) {
-      targetIndex = 0;
-    } else if (currentIndex === TAB_ORDER.length - 1 && dx < 0) {
-      targetIndex = TAB_ORDER.length - 1;
-    } else if (isFlick) {
-      if (velocity < -0.35 && currentIndex < TAB_ORDER.length - 1) {
+    if (Math.abs(velocity) > flickThreshold) {
+      if (velocity < 0 && currentIndex < TAB_ORDER.length - 1) {
         targetIndex = currentIndex + 1;
-      } else if (velocity > 0.35 && currentIndex > 0) {
+      } else if (velocity > 0 && currentIndex > 0) {
         targetIndex = currentIndex - 1;
       }
-    } else if (Math.abs(dx) > distanceThreshold) {
-      if (dx < 0 && currentIndex < TAB_ORDER.length - 1) {
+    } else if (Math.abs(currentDeltaX) > distThreshold) {
+      if (currentDeltaX < 0 && currentIndex < TAB_ORDER.length - 1) {
         targetIndex = currentIndex + 1;
-      } else if (dx > 0 && currentIndex > 0) {
+      } else if (currentDeltaX > 0 && currentIndex > 0) {
         targetIndex = currentIndex - 1;
       }
     }
 
-    const targetTab = TAB_ORDER[targetIndex] || currentTab;
+    const targetTab = TAB_ORDER[targetIndex];
+    options.onResetSprings?.();
+    moveToTab(targetTab, false);
 
-    // Immediately animate highlighter to target tab in sync with track
-    options.onAnimateHighlighter(targetTab);
-
-    // Animate track to target tab
-    track!.style.transition = 'transform 0.35s cubic-bezier(0.28, 1.18, 0.5, 1)';
-    track!.style.transform = `translate3d(${-targetIndex * containerWidth}px, 0, 0)`;
-
-    // Spring capsule back to rest
-    options.onResetSprings();
-
-    // Settle store and active classes
-    options.onSettle(targetTab);
-
-    setTimeout(() => {
-      if (!isPointerDown && track) track.style.transition = '';
-    }, 360);
+    if (targetTab !== currentTab) {
+      options.onAnimateHighlighter?.(targetTab);
+      options.onSettle(targetTab);
+    }
   }
 
-  function handleTouchCancel() {
-    document.querySelector('.bottom-nav')?.classList.remove('nav-swiping');
-    if (!isPointerDown) return;
-    isPointerDown = false;
-    isTracking = false;
-    gestureType = 'none';
-
+  function handleResize() {
     const currentTab = store.getState().currentTab;
-    const currentIndex = TAB_ORDER.indexOf(currentTab);
-    const containerWidth = container!.offsetWidth;
-
-    track!.style.transition = 'transform 0.35s cubic-bezier(0.28, 1.18, 0.5, 1)';
-    track!.style.transform = `translate3d(${-currentIndex * containerWidth}px, 0, 0)`;
-    options.onAnimateHighlighter(currentTab);
-    options.onResetSprings();
-
-    setTimeout(() => {
-      if (!isPointerDown && track) track.style.transition = '';
-    }, 360);
+    moveToTab(currentTab, true);
   }
 
   container.addEventListener('touchstart', handleTouchStart, { passive: true });
   container.addEventListener('touchmove', handleTouchMove, { passive: false });
   container.addEventListener('touchend', handleTouchEnd, { passive: true });
-  container.addEventListener('touchcancel', handleTouchCancel, { passive: true });
-
-  const handleResize = () => {
-    const activeTab = store.getState().currentTab;
-    moveToTab(activeTab, true);
-  };
-  window.addEventListener('resize', handleResize);
+  container.addEventListener('touchcancel', handleTouchEnd, { passive: true });
+  window.addEventListener('resize', handleResize, { passive: true });
 
   return () => {
     container.removeEventListener('touchstart', handleTouchStart);
     container.removeEventListener('touchmove', handleTouchMove);
     container.removeEventListener('touchend', handleTouchEnd);
-    container.removeEventListener('touchcancel', handleTouchCancel);
+    container.removeEventListener('touchcancel', handleTouchEnd);
     window.removeEventListener('resize', handleResize);
-    activeSlideToTab = null;
+    if (activeSlideToTab === moveToTab) {
+      activeSlideToTab = null;
+    }
   };
 }

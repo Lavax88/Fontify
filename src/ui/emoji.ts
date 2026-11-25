@@ -310,18 +310,14 @@ export function setupEmojiTab(): void {
 
   const curatedGridContainer = document.getElementById('curated-emoji-grid');
   const downloadProgressContainer = document.getElementById('emoji-download-progress-box');
-  const downloadProgressFill = document.getElementById('emoji-download-progress-fill');
+  const downloadProgressFill = document.getElementById('emoji-download-progress-fill') as (HTMLElement & { value?: number }) | null;
   const downloadProgressText = document.getElementById('emoji-download-progress-text');
 
   const categoryBar = document.getElementById('emoji-category-bar');
   const showcaseGrid = document.getElementById('emoji-showcase-grid');
   const specimenHero = document.getElementById('emoji-specimen-hero');
 
-  const btnApplyEmoji = document.getElementById('btn-apply-emoji') as HTMLButtonElement | null;
-  const btnRestoreEmoji = document.getElementById('btn-restore-emoji') as HTMLButtonElement | null;
-  const btnEmojiReboot = document.getElementById('btn-emoji-reboot') as HTMLButtonElement | null;
-
-  // 1. Render Curated 2-Column Emoji Grid
+  // 1. Render Curated 2-Column Emoji Grid (<m3e-card>)
   function renderCuratedGrid(): void {
     if (!curatedGridContainer) return;
     curatedGridContainer.innerHTML = '';
@@ -345,17 +341,20 @@ export function setupEmojiTab(): void {
         }
       }
 
-      const card = document.createElement('div');
+      const card = document.createElement('m3e-card');
       card.className = `curated-emoji-card ${isSelected ? 'selected' : ''}`;
-      card.setAttribute('role', 'button');
+      card.setAttribute('variant', 'filled');
+      card.setAttribute('actionable', '');
       card.setAttribute('tabindex', '0');
       card.setAttribute('data-id', pack.id);
       card.setAttribute('aria-label', `${pack.title}: ${pack.description}`);
 
       card.innerHTML = `
-        <div class="curated-card-icon" aria-hidden="true">${pack.icon}</div>
-        <div class="curated-card-title">${pack.title}</div>
-        <div class="curated-card-desc">${pack.description}</div>
+        <div slot="content">
+          <div class="curated-card-icon" aria-hidden="true">${pack.icon}</div>
+          <div class="curated-card-title">${pack.title}</div>
+          <div class="curated-card-desc">${pack.description}</div>
+        </div>
       `;
 
       card.addEventListener('click', async () => {
@@ -484,7 +483,10 @@ export function setupEmojiTab(): void {
             lastTick = now;
             if (totalBytes > 0) {
               const percent = Math.min(100, Math.round((receivedBytes / totalBytes) * 100));
-              if (downloadProgressFill) downloadProgressFill.style.width = `${percent}%`;
+              if (downloadProgressFill) {
+                downloadProgressFill.value = percent;
+                downloadProgressFill.setAttribute('value', String(percent));
+              }
               if (downloadProgressText) {
                 const mbNow = (receivedBytes / (1024 * 1024)).toFixed(1);
                 const mbTotal = (totalBytes / (1024 * 1024)).toFixed(1);
@@ -515,7 +517,10 @@ export function setupEmojiTab(): void {
       // Save to IndexedDB cache
       await saveCachedEmoji(pack.id, pack.name, combinedBuffer);
 
-      if (downloadProgressFill) downloadProgressFill.style.width = '100%';
+      if (downloadProgressFill) {
+        downloadProgressFill.value = 100;
+        downloadProgressFill.setAttribute('value', '100');
+      }
       if (downloadProgressText) downloadProgressText.textContent = `Downloaded ${pack.title}!`;
 
       setTimeout(() => {
@@ -545,24 +550,28 @@ export function setupEmojiTab(): void {
     }
   }
 
-  // 3. Specimen Showcase Glyphs & Categories
+  // 3. Specimen Showcase Glyphs & Categories (<m3e-filter-chip-set>)
   function renderShowcaseCategories(): void {
     if (!categoryBar) return;
     categoryBar.innerHTML = '';
+    const chipSet = document.createElement('m3e-filter-chip-set');
     Object.keys(EMOJI_CATEGORIES).forEach(key => {
       const cat = EMOJI_CATEGORIES[key];
       if (!cat) return;
-      const btn = document.createElement('button');
-      btn.type = 'button';
-      btn.className = `m3-chip ${key === activeShowcaseCategory ? 'active' : ''}`;
-      btn.innerHTML = `<span aria-hidden="true">${cat.icon}</span> <span>${cat.label}</span>`;
-      btn.addEventListener('click', () => {
+      const chip = document.createElement('m3e-filter-chip') as HTMLElement & { selected?: boolean };
+      const isActive = key === activeShowcaseCategory;
+      chip.className = `m3-chip ${isActive ? 'active' : ''}`;
+      chip.selected = isActive;
+      if (isActive) chip.setAttribute('selected', '');
+      chip.innerHTML = `<span aria-hidden="true">${cat.icon}</span> <span>${cat.label}</span>`;
+      chip.addEventListener('click', () => {
         activeShowcaseCategory = key;
         renderShowcaseCategories();
         renderShowcaseGlyphs();
       });
-      categoryBar.appendChild(btn);
+      chipSet.appendChild(chip);
     });
+    categoryBar.appendChild(chipSet);
   }
 
   function renderShowcaseGlyphs(): void {
@@ -608,7 +617,6 @@ export function setupEmojiTab(): void {
       const mb = (buffer.byteLength / (1024 * 1024)).toFixed(1);
       emojiSizeElem.textContent = `${mb} MB`;
     }
-    if (btnApplyEmoji) btnApplyEmoji.disabled = false;
   }
 
   // 5. Custom File Upload Handling
@@ -693,41 +701,7 @@ export function setupEmojiTab(): void {
     reader.readAsArrayBuffer(file);
   }
 
-  // 6. Action button listeners
-  if (btnApplyEmoji) {
-    btnApplyEmoji.addEventListener('click', applySelectedEmoji);
-  }
-
-  if (btnRestoreEmoji) {
-    btnRestoreEmoji.addEventListener('click', restoreStockEmoji);
-  }
-
-  if (btnEmojiReboot) {
-    btnEmojiReboot.addEventListener('click', async () => {
-      const isFull = store.getState().rebootType === 'full';
-      if (isFull) {
-        await showConfirmDialog({
-          title: 'Full Reboot Required',
-          body: 'A full device reboot is required to safely restore stock emojis and prevent bootloops.<br><br>Reboot now?',
-          confirmText: 'Full Reboot',
-          cancelText: 'Cancel',
-          iconType: 'reboot',
-          onConfirm: () => fontService.fullReboot()
-        });
-      } else {
-        await showConfirmDialog({
-          title: 'Reboot Device',
-          body: 'Restart system to load updated emoji overlays?',
-          confirmText: 'Reboot',
-          cancelText: 'Cancel',
-          iconType: 'reboot',
-          onConfirm: () => fontService.reboot('soft')
-        });
-      }
-    });
-  }
-
-  // 7. Subscribe to state changes to update grid highlights
+  // 6. Subscribe to state changes to update grid highlights
   store.subscribe(s => s.selectedEmojiPreset, () => {
     renderCuratedGrid();
   });

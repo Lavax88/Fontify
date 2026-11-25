@@ -93,7 +93,7 @@ describe('Customize Reactive UI & Direct Apply Fixes', () => {
             addEventListener: vi.fn(),
             setAttribute: vi.fn()
           })),
-          appendChild: vi.fn()
+          appendChild: vi.fn((child: any) => el.children.push(child))
         };
         return el;
       }),
@@ -149,18 +149,19 @@ describe('Customize Reactive UI & Direct Apply Fixes', () => {
     // Reactive subscription should automatically populate UI:
     expect(mockPickerTitle.textContent).toBe('Roboto Flex');
     expect(mockPickerSubtitle.textContent).toContain('1200 glyphs');
-    expect(mockFontInfoRow.style.display).toBe('flex');
+    expect(mockFontInfoRow.style.display).toBe('block');
     expect(mockFontName.textContent).toBe('Roboto Flex');
     expect(mockFontTypeBadge.textContent).toBe('Variable');
 
     // Variable controls group must automatically open
-    expect(mockVariableControlsGroup.style.display).toBe('flex');
-    expect(mockBtnApply.disabled).toBe(false);
+    expect(mockVariableControlsGroup.style.display).toBe('block');
 
-    // Presets must have the Bold (700) chip active
-    const boldChip = mockPresetsContainer.children.find((c: any) => c.textContent === 'Bold (700)');
+    // Presets must have the Bold (700) m3e-filter-chip selected inside m3e-filter-chip-set
+    const chipSet = mockPresetsContainer.children[0];
+    expect(chipSet).toBeDefined();
+    const boldChip = chipSet.children.find((c: any) => c.textContent === 'Bold (700)');
     expect(boldChip).toBeDefined();
-    expect(boldChip.className).toContain('active');
+    expect(boldChip.selected).toBe(true);
   });
 
   it('handleOpenInCustomize configures matching variant preset and switches tab', async () => {
@@ -313,7 +314,7 @@ describe('Customize Reactive UI & Direct Apply Fixes', () => {
     await handleApplyDirectly(dummyEmojiItem);
 
     // Verify progress elements inside modal were updated during streaming
-    expect(mockModalFill.style.width).toBe('100%');
+    expect(mockModalFill.value).toBe(100);
     expect(mockModalText.textContent).toBe('Verifying package payload...');
     expect(mockModalPct.textContent).toBe('100%');
   });
@@ -323,11 +324,11 @@ describe('Customize Reactive UI & Direct Apply Fixes', () => {
 
     const domMap: Record<string, any> = {
       'modal-download-progress-box': { style: { display: 'none' } },
-      'modal-download-progress-fill': { style: { width: '0%' } },
+      'modal-download-progress-fill': { value: 0, setAttribute: vi.fn(), style: { width: '0%' } },
       'modal-download-progress-text': { textContent: '' },
       'modal-download-progress-pct': { textContent: '' },
       'btn-preview-apply': { disabled: false, innerHTML: 'Apply Directly' },
-      'browse-preview-backdrop': { style: { display: 'flex' }, classList: { remove: vi.fn() }, setAttribute: vi.fn() }
+      'browse-preview-sheet': { hide: vi.fn(), style: { display: 'block' }, setAttribute: vi.fn() }
     };
 
     globalThis.document = {

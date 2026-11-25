@@ -1,8 +1,14 @@
 /**
  * Fontify - Deep Theme & Window Insets Manager
- * Encapsulates dark/light system mode detection, media queries,
- * KernelSU/MMRL status bar tinting, and user custom stylesheets.
+ * Coordinates <m3e-theme> with KernelSU/MMRL Android Monet colors,
+ * dark/light system mode detection, status bar tinting, and user custom CSS.
  */
+
+export const DEFAULT_SEED_COLOR = '#386a20';
+
+function isHexColor(val: string): boolean {
+  return /^#(?:[0-9a-fA-F]{3}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})$/.test(val.trim());
+}
 
 export class ThemeManager {
   private mediaQuery: MediaQueryList | null = null;
@@ -11,6 +17,7 @@ export class ThemeManager {
   public init(): void {
     this.setupThemeWatcher();
     this.injectUserStyles();
+    this.syncM3eTheme();
     this.updateDecor();
   }
 
@@ -21,11 +28,47 @@ export class ThemeManager {
     return window.matchMedia('(prefers-color-scheme: dark)').matches;
   }
 
+  /**
+   * Reads KernelSU/MMRL host Monet `--primary` when available and syncs it
+   * into `<m3e-theme id="app-theme">`, falling back to Fontify's sage green.
+   */
+  public syncM3eTheme(): void {
+    if (typeof document === 'undefined' || typeof getComputedStyle !== 'function') return;
+
+    const appTheme = document.getElementById('app-theme');
+    if (!appTheme) return;
+
+    try {
+      const rootStyles = getComputedStyle(document.documentElement);
+      const hostPrimary = rootStyles.getPropertyValue('--primary').trim();
+
+      if (hostPrimary && isHexColor(hostPrimary)) {
+        appTheme.setAttribute('color', hostPrimary);
+        appTheme.classList.add('ksu-monet');
+      } else {
+        appTheme.setAttribute('color', DEFAULT_SEED_COLOR);
+        appTheme.classList.remove('ksu-monet');
+      }
+    } catch (_) {
+      appTheme.setAttribute('color', DEFAULT_SEED_COLOR);
+    }
+  }
+
   public updateDecor(): void {
     if (typeof document === 'undefined') return;
 
     const dark = this.isDark();
-    const themeColor = dark ? '#11140e' : '#f8faf0';
+    let themeColor = dark ? '#11140e' : '#f8faf0';
+
+    try {
+      if (typeof getComputedStyle === 'function') {
+        const appTheme = document.getElementById('app-theme') ?? document.documentElement;
+        const computedSurface = getComputedStyle(appTheme).getPropertyValue('--md-sys-color-surface').trim();
+        if (computedSurface && isHexColor(computedSurface)) {
+          themeColor = computedSurface;
+        }
+      }
+    } catch (_) {}
 
     // 1. Meta theme-color
     let metaTheme = document.getElementById('meta-theme-color') as HTMLMetaElement | null;
@@ -67,7 +110,10 @@ export class ThemeManager {
 
     try {
       this.mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
-      this.changeListener = () => this.updateDecor();
+      this.changeListener = () => {
+        this.syncM3eTheme();
+        this.updateDecor();
+      };
 
       if (typeof this.mediaQuery.addEventListener === 'function') {
         this.mediaQuery.addEventListener('change', this.changeListener);

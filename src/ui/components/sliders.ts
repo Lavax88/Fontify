@@ -1,17 +1,52 @@
 /**
- * Fontify - Variable Font Preset Chips & Axis Sliders Component
+ * Fontify - Variable Font Preset Chips (<m3e-filter-chip-set>) & Axis Sliders (<m3e-slider>)
  */
 
 import type { FontInfo } from '../../font/types';
 import { FontEngine } from '../../font/engine';
 import { store } from '../../state/store';
 
-function setActiveChip(chips: NodeListOf<HTMLButtonElement> | HTMLButtonElement[], activeChip: HTMLButtonElement | null): void {
+type FilterChipLike = HTMLElement & {
+  selected?: boolean;
+  value?: string;
+};
+
+type SliderThumbLike = HTMLElement & {
+  value: number | null;
+};
+
+type SliderLike = HTMLElement & {
+  thumb?: SliderThumbLike | null;
+};
+
+function setActiveChip(chips: NodeListOf<FilterChipLike> | FilterChipLike[], activeChip: FilterChipLike | null): void {
   chips.forEach(c => {
     const isActive = c === activeChip;
-    c.classList.toggle('active', isActive);
+    c.selected = isActive;
+    if (isActive) {
+      c.setAttribute('selected', '');
+    } else {
+      c.removeAttribute('selected');
+    }
     c.setAttribute('aria-pressed', isActive ? 'true' : 'false');
   });
+}
+
+function updateSliderValue(tag: string, val: number): void {
+  const slider = document.getElementById(`slider-${tag}`) as SliderLike | null;
+  const thumb = slider?.querySelector('m3e-slider-thumb') as SliderThumbLike | null;
+  const badge = document.getElementById(`badge-${tag}`);
+
+  if (thumb) {
+    thumb.value = val;
+    thumb.setAttribute('value', String(val));
+  }
+  if (slider) {
+    slider.setAttribute('aria-valuenow', String(val));
+  }
+  if (badge) {
+    badge.textContent = String(val);
+  }
 }
 
 export function renderVariableControls(
@@ -24,7 +59,7 @@ export function renderVariableControls(
 
   if (!variableControlsGroup || !slidersContainer || !presetsContainer) return;
 
-  variableControlsGroup.style.display = 'flex';
+  variableControlsGroup.style.display = 'block';
   slidersContainer.innerHTML = '';
   presetsContainer.innerHTML = '';
 
@@ -38,7 +73,7 @@ export function renderVariableControls(
     weightMode: store.getState().weightMode || 'auto'
   });
 
-  // 1. Build Presets
+  // 1. Build Presets inside <m3e-filter-chip-set>
   const presets: { name: string; values: Record<string, number | string> }[] = [
     { name: 'Auto (Stock)', values: { mode: 'auto' } },
     { name: 'Thin (100)', values: { wght: 100 } },
@@ -57,7 +92,6 @@ export function renderVariableControls(
     }
   }
 
-  // Determine active preset chip based on store selectedPreset or matching wght value
   const selectedPresetFromStore = store.getState().selectedPreset;
   let matchedPresetIndex = -1;
   if (selectedPresetFromStore) {
@@ -67,20 +101,26 @@ export function renderVariableControls(
     matchedPresetIndex = presets.findIndex(p => p.values.wght === initialAxisValues['wght']);
   }
   if (matchedPresetIndex === -1) {
-    matchedPresetIndex = 0; // Fallback to Auto (Stock)
+    matchedPresetIndex = 0;
   }
+
+  const chipSet = document.createElement('m3e-filter-chip-set');
+  chipSet.setAttribute('aria-label', 'Font variation presets');
 
   presets.forEach((preset, idx) => {
     const isInitialActive = idx === matchedPresetIndex;
-    const chip = document.createElement('button');
-    chip.type = 'button';
-    chip.className = `m3-chip ${isInitialActive ? 'active' : ''}`;
+    const chip = document.createElement('m3e-filter-chip') as FilterChipLike;
+    chip.className = 'm3-chip';
     chip.textContent = preset.name;
-    chip.setAttribute('role', 'button');
+    chip.value = preset.name;
+    chip.selected = isInitialActive;
+    if (isInitialActive) {
+      chip.setAttribute('selected', '');
+    }
     chip.setAttribute('aria-pressed', isInitialActive ? 'true' : 'false');
 
     chip.addEventListener('click', () => {
-      setActiveChip(presetsContainer.querySelectorAll<HTMLButtonElement>('.m3-chip'), chip);
+      setActiveChip(chipSet.querySelectorAll<FilterChipLike>('m3e-filter-chip'), chip);
 
       const nextAxisValues = { ...store.getState().axisValues };
 
@@ -88,26 +128,14 @@ export function renderVariableControls(
         store.setState({ weightMode: 'auto', selectedPreset: preset.name });
         for (const axis of fontData.axes) {
           nextAxisValues[axis.tag] = axis.default;
-          const slider = document.getElementById(`slider-${axis.tag}`) as HTMLInputElement | null;
-          const badge = document.getElementById(`badge-${axis.tag}`);
-          if (slider) {
-            slider.value = String(axis.default);
-            slider.setAttribute('aria-valuenow', String(axis.default));
-          }
-          if (badge) badge.textContent = String(axis.default);
+          updateSliderValue(axis.tag, axis.default);
         }
       } else {
         store.setState({ weightMode: 'custom', selectedPreset: preset.name });
         for (const [tag, val] of Object.entries(preset.values)) {
           if (typeof val === 'number') {
             nextAxisValues[tag] = val;
-            const slider = document.getElementById(`slider-${tag}`) as HTMLInputElement | null;
-            const badge = document.getElementById(`badge-${tag}`);
-            if (slider) {
-              slider.value = String(val);
-              slider.setAttribute('aria-valuenow', String(val));
-            }
-            if (badge) badge.textContent = String(val);
+            updateSliderValue(tag, val);
           }
         }
       }
@@ -116,12 +144,16 @@ export function renderVariableControls(
       FontEngine.scheduleVariationUpdate(previewElements, nextAxisValues);
     });
 
-    presetsContainer.appendChild(chip);
+    chipSet.appendChild(chip);
   });
 
-  // 2. Build Sliders
+  presetsContainer.appendChild(chipSet);
+
+  // 2. Build M3E Expressive Sliders (<m3e-slider size="medium" labelled>)
   for (const axis of fontData.axes) {
     const currentVal = initialAxisValues[axis.tag] ?? axis.default;
+    const step = axis.max - axis.min > 100 ? 10 : 1;
+
     const unit = document.createElement('div');
     unit.className = 'slider-unit-box';
     unit.innerHTML = `
@@ -129,31 +161,35 @@ export function renderVariableControls(
         <label class="axis-name" for="slider-${axis.tag}">${axis.name} (${axis.tag})</label>
         <span class="axis-val-chip" id="badge-${axis.tag}" aria-hidden="true">${currentVal}</span>
       </div>
-      <input type="range" id="slider-${axis.tag}" min="${axis.min}" max="${axis.max}" step="${
-      axis.max - axis.min > 100 ? 10 : 1
-    }" value="${currentVal}" aria-label="${axis.name} (${axis.tag})" aria-valuemin="${axis.min}" aria-valuemax="${axis.max}" aria-valuenow="${currentVal}">
+      <m3e-slider id="slider-${axis.tag}" size="medium" labelled min="${axis.min}" max="${axis.max}" step="${step}" aria-label="${axis.name} (${axis.tag})" aria-valuemin="${axis.min}" aria-valuemax="${axis.max}" aria-valuenow="${currentVal}">
+        <m3e-slider-thumb value="${currentVal}"></m3e-slider-thumb>
+      </m3e-slider>
     `;
 
-    const slider = unit.querySelector('input') as HTMLInputElement | null;
+    const slider = unit.querySelector('m3e-slider') as SliderLike | null;
+    const thumb = unit.querySelector('m3e-slider-thumb') as SliderThumbLike | null;
     const badge = unit.querySelector('.axis-val-chip');
 
-    if (slider && badge) {
-      slider.addEventListener('input', (e: Event) => {
-        const val = parseFloat((e.target as HTMLInputElement).value);
+    if (slider && thumb && badge) {
+      const handleSliderChange = () => {
+        const raw = thumb.value ?? Number(thumb.getAttribute('value') ?? currentVal);
+        const val = Number.isFinite(raw) ? raw : currentVal;
         badge.textContent = String(val);
         slider.setAttribute('aria-valuenow', String(val));
 
         const currentAxes = { ...store.getState().axisValues, [axis.tag]: val };
         store.setState({ axisValues: currentAxes, weightMode: 'custom', selectedPreset: 'Custom' });
 
-        setActiveChip(presetsContainer.querySelectorAll<HTMLButtonElement>('.m3-chip'), null);
+        setActiveChip(chipSet.querySelectorAll<FilterChipLike>('m3e-filter-chip'), null);
         FontEngine.scheduleVariationUpdate(previewElements, currentAxes);
-      });
+      };
+
+      slider.addEventListener('input', handleSliderChange);
+      slider.addEventListener('change', handleSliderChange);
     }
 
     slidersContainer.appendChild(unit);
   }
 
-  // Schedule immediate variation update for preview elements
   FontEngine.scheduleVariationUpdate(previewElements, initialAxisValues);
 }

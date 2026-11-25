@@ -28,7 +28,7 @@ import type {
   BrowseFilterState,
   FontVariant
 } from '../browse/types';
-import type { FontifyTab } from './components/floatingNav';
+import type { FontifyTab } from './components/pageSwipe';
 
 const PAGE_SIZE = 24;
 
@@ -75,13 +75,24 @@ function escapeHtml(str: string): string {
     .replace(/'/g, '&#039;');
 }
 
+type ProgressIndicatorLike = HTMLElement & { value?: number };
+type BottomSheetLike = HTMLElement & {
+  open?: boolean;
+  show?: (detent?: number) => void;
+  hide?: () => void;
+};
+type DialogLike = HTMLElement & {
+  show?: () => void;
+  hide?: () => void;
+};
+
 function updateDownloadProgress(visible: boolean, percent = 0, message = 'Downloading...') {
   const clamped = Math.min(100, Math.max(0, percent));
   const rounded = Math.round(clamped);
 
   // 1. In-modal progress elements (visible directly inside the active preview bottom sheet)
   const modalBox = document.getElementById('modal-download-progress-box');
-  const modalFill = document.getElementById('modal-download-progress-fill');
+  const modalFill = document.getElementById('modal-download-progress-fill') as ProgressIndicatorLike | null;
   const modalText = document.getElementById('modal-download-progress-text');
   const modalPct = document.getElementById('modal-download-progress-pct');
 
@@ -90,7 +101,10 @@ function updateDownloadProgress(visible: boolean, percent = 0, message = 'Downlo
       modalBox.style.display = 'none';
     } else {
       modalBox.style.display = 'block';
-      if (modalFill) modalFill.style.width = `${clamped}%`;
+      if (modalFill) {
+        modalFill.value = clamped;
+        modalFill.setAttribute?.('value', String(clamped));
+      }
       if (modalText) modalText.textContent = message;
       if (modalPct) modalPct.textContent = `${rounded}%`;
     }
@@ -98,7 +112,7 @@ function updateDownloadProgress(visible: boolean, percent = 0, message = 'Downlo
 
   // 2. Background Browse UI progress elements (visible in view-browse behind modal or when closed)
   const box = document.getElementById('browse-download-progress-box');
-  const fill = document.getElementById('browse-download-progress-fill');
+  const fill = document.getElementById('browse-download-progress-fill') as ProgressIndicatorLike | null;
   const text = document.getElementById('browse-download-progress-text');
   const pct = document.getElementById('browse-download-progress-pct');
 
@@ -107,7 +121,10 @@ function updateDownloadProgress(visible: boolean, percent = 0, message = 'Downlo
       box.style.display = 'none';
     } else {
       box.style.display = 'block';
-      if (fill) fill.style.width = `${clamped}%`;
+      if (fill) {
+        fill.value = clamped;
+        fill.setAttribute?.('value', String(clamped));
+      }
       if (text) text.textContent = message;
       if (pct) pct.textContent = `${rounded}%`;
     }
@@ -339,9 +356,7 @@ function renderGridItems(): void {
   if (state.items.length === 0) {
     grid.innerHTML = `
       <div class="browse-empty-state">
-        <svg class="browse-empty-icon" viewBox="0 0 24 24" fill="currentColor">
-          <path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/>
-        </svg>
+        <m3e-icon name="search" aria-hidden="true"></m3e-icon>
         <div class="browse-empty-title">No fonts or emojis found</div>
         <div class="browse-empty-desc">Try clearing your search query or adjusting your filters.</div>
       </div>
@@ -355,7 +370,6 @@ function renderGridItems(): void {
     .map((item) => {
       const isCached = state.cachedIds.has(item.id);
       const isGoogle = item.source === 'google';
-      const sourceClass = isGoogle ? 'browse-badge-source-google' : 'browse-badge-source-zfont';
       const sourceLabel = isGoogle ? 'Google' : 'zFont';
       const isVar = isVariableItem(item);
       const variantCount = item.variants?.length || 1;
@@ -381,35 +395,35 @@ function renderGridItems(): void {
             )}</div>`;
 
       return `
-        <div class="browse-card" data-id="${escapeHtml(item.id)}" ${item.type === 'font' && isGoogle ? `data-font-family="${escapeHtml(item.name)}"` : ''} role="listitem" tabindex="0">
-          <div class="browse-card-header">
-            <div class="browse-card-title-group">
-              <div class="browse-card-title">${escapeHtml(item.name)}</div>
-              <div class="browse-card-meta">${escapeHtml(
-                item.author || (isGoogle ? 'Google Fonts' : 'zFont')
-              )}${item.sizeMb ? ` • ${escapeHtml(item.sizeMb)}` : ''}</div>
+        <m3e-card class="browse-card" variant="filled" actionable data-id="${escapeHtml(item.id)}" ${item.type === 'font' && isGoogle ? `data-font-family="${escapeHtml(item.name)}"` : ''} role="listitem" tabindex="0">
+          <div slot="content">
+            <div class="browse-card-header">
+              <div class="browse-card-title-group">
+                <div class="browse-card-title">${escapeHtml(item.name)}</div>
+                <div class="browse-card-meta">${escapeHtml(
+                  item.author || (isGoogle ? 'Google Fonts' : 'zFont')
+                )}${item.sizeMb ? ` • ${escapeHtml(item.sizeMb)}` : ''}</div>
+              </div>
+              <div class="browse-card-badges">
+                ${isVar ? '<m3e-badge class="browse-badge-variable">Variable</m3e-badge>' : ''}
+                <m3e-badge>${sourceLabel}</m3e-badge>
+                ${isCached ? '<m3e-badge class="browse-badge-downloaded">Downloaded</m3e-badge>' : ''}
+              </div>
             </div>
-            <div class="browse-card-badges">
-              ${isVar ? '<span class="browse-badge browse-badge-variable">Variable</span>' : ''}
-              <span class="browse-badge ${sourceClass}">${sourceLabel}</span>
-              ${isCached ? '<span class="browse-badge browse-badge-downloaded">Downloaded</span>' : ''}
+            <div class="browse-specimen-box">
+              ${previewHtml}
             </div>
-          </div>
-          <div class="browse-specimen-box">
-            ${previewHtml}
-          </div>
-          <div class="browse-card-footer">
-            <span style="font-size: 0.75rem; font-weight: 600; color: var(--md-sys-color-on-surface-variant);">${escapeHtml(variantLabel)}</span>
-            <div style="display: flex; gap: 8px; align-items: center;">
+            <div class="browse-card-footer">
+              <span style="font-size: 0.75rem; font-weight: 600; color: var(--md-sys-color-on-surface-variant); margin-right: auto;">${escapeHtml(variantLabel)}</span>
               ${
                 isCached
-                  ? `<button class="browse-action-btn browse-btn-delete" type="button" data-action="delete" data-id="${escapeHtml(item.id)}" title="Delete downloaded font" aria-label="Delete ${escapeHtml(item.name)} download">Delete</button>`
+                  ? `<m3e-button class="browse-btn-delete" variant="outlined" size="small" type="button" data-action="delete" data-id="${escapeHtml(item.id)}" aria-label="Delete ${escapeHtml(item.name)} download">Delete</m3e-button>`
                   : ''
               }
-              <button class="browse-action-btn browse-btn-preview" type="button" data-action="preview" data-id="${escapeHtml(item.id)}">Preview</button>
+              <m3e-button class="browse-btn-preview" variant="tonal" size="small" type="button" data-action="preview" data-id="${escapeHtml(item.id)}">Preview</m3e-button>
             </div>
           </div>
-        </div>
+        </m3e-card>
       `;
     })
     .join('');
@@ -442,15 +456,13 @@ function renderGridItems(): void {
 }
 
 export function openPreviewSheet(item: BrowseItem): void {
-  const backdrop = document.getElementById('browse-preview-backdrop');
-  const sheet = document.getElementById('browse-preview-sheet');
+  const sheet = document.getElementById('browse-preview-sheet') as BottomSheetLike | null;
   const container = document.getElementById('browse-preview-container');
   if (!container) return;
 
   state.activeItem = item;
 
   const isGoogle = item.source === 'google';
-  const sourceClass = isGoogle ? 'browse-badge-source-google' : 'browse-badge-source-zfont';
   const sourceLabel = isGoogle ? 'Google Fonts' : 'zFont';
   const isEmoji = item.type === 'emoji';
   const isVar = isVariableItem(item);
@@ -459,58 +471,59 @@ export function openPreviewSheet(item: BrowseItem): void {
   const variableVariant = getVariableVariant(item);
   const staticVariants = getStaticVariants(item);
 
-  // Set default active variant: variable variant if variable, else resolveVariant
   state.activeVariant = isVar && variableVariant ? variableVariant : resolveVariant(item);
 
   const defaultSpecimen = isEmoji
     ? '😀 🥳 😎 👍 🔥 ❤️ 🚀 ✨ 💯 🐱 🍕 ☕ 🌺 🥑 🏝️ ⚡'
     : 'Sphinx of black quartz, judge my vow. 1234567890\nThe quick brown fox jumps over the lazy dog.';
 
-  // Variants row: prominent [✨ Variable (100–900)] chip alongside static weights [300, 400, 500, 700...]
   let variantsHtml = '';
   if (isVar || staticVariants.length > 1) {
     const varChipHtml = isVar && variableVariant
-      ? `<button class="browse-variant-chip browse-variant-chip-variable selected" type="button" data-variant-type="variable" data-variant-name="${escapeHtml(variableVariant.name)}" data-variant-weight="100-900">Variable (100–900)</button>`
+      ? `<m3e-filter-chip class="browse-variant-chip browse-variant-chip-variable selected" selected data-variant-type="variable" data-variant-name="${escapeHtml(variableVariant.name)}" data-variant-weight="100-900">Variable (100–900)</m3e-filter-chip>`
       : '';
 
     const staticChipsHtml = staticVariants
       .map((v) => {
         const isSelected = !isVar && (v.name === state.activeVariant?.name || v.weight === state.activeVariant?.weight);
         const weightLabel = getWeightName(v.weight, v.name);
-        return `<button class="browse-variant-chip ${isSelected ? 'selected' : ''}" type="button" data-variant-type="static" data-variant-name="${escapeHtml(v.name)}" data-variant-weight="${v.weight}">${escapeHtml(weightLabel)}</button>`;
+        return `<m3e-filter-chip class="browse-variant-chip ${isSelected ? 'selected' : ''}" ${isSelected ? 'selected' : ''} data-variant-type="static" data-variant-name="${escapeHtml(v.name)}" data-variant-weight="${v.weight}">${escapeHtml(weightLabel)}</m3e-filter-chip>`;
       })
       .join('');
 
     variantsHtml = `
-      <div style="display: flex; flex-direction: column; gap: 6px;">
+      <div style="display: flex; flex-direction: column; gap: 6px; margin-top: 8px;">
         <span style="font-size: 0.75rem; font-weight: 700; color: var(--md-sys-color-on-surface-variant);">Weights &amp; Styles</span>
-        <div class="browse-variants-row" id="preview-variant-chips">
+        <m3e-filter-chip-set class="browse-variants-row" id="preview-variant-chips">
           ${varChipHtml}
           ${staticChipsHtml}
-        </div>
+        </m3e-filter-chip-set>
       </div>
     `;
   }
 
   container.innerHTML = `
-    <div style="display: flex; align-items: flex-start; justify-content: space-between; gap: 12px;">
+    <div class="preview-sheet-header">
       <div style="display: flex; flex-direction: column; min-width: 0;">
         <h3 id="browse-preview-title" style="font-size: 1.25rem; font-weight: 700; color: var(--md-sys-color-on-surface); margin: 0;">${escapeHtml(item.name)}</h3>
         <span style="font-size: 0.8125rem; color: var(--md-sys-color-on-surface-variant); margin-top: 2px;">
           ${escapeHtml(item.author || sourceLabel)}${item.sizeMb ? ` • ${escapeHtml(item.sizeMb)}` : ''}
         </span>
       </div>
-      <div style="display: flex; align-items: center; gap: 8px;">
-        ${isVar ? '<span class="browse-badge browse-badge-variable">Variable</span>' : ''}
-        <span class="browse-badge ${sourceClass}">${sourceLabel}</span>
-        ${isCached ? '<span class="browse-badge browse-badge-downloaded">Downloaded</span>' : ''}
-        <button id="preview-close-btn" class="header-icon-btn" type="button" aria-label="Close preview" style="width: 36px; height: 36px;">✕</button>
-      </div>
+      <m3e-icon-button id="preview-close-btn" aria-label="Close preview">
+        <m3e-icon name="close"></m3e-icon>
+      </m3e-icon-button>
+    </div>
+
+    <div class="preview-sheet-badges">
+      ${isVar ? '<m3e-badge class="browse-badge-variable">Variable</m3e-badge>' : ''}
+      <m3e-badge>${sourceLabel}</m3e-badge>
+      ${isCached ? '<m3e-badge class="browse-badge-downloaded">Downloaded</m3e-badge>' : ''}
     </div>
 
     ${variantsHtml}
 
-    <div style="display: flex; flex-direction: column; gap: 6px;">
+    <div style="display: flex; flex-direction: column; gap: 6px; margin-top: 10px;">
       <div style="display: flex; justify-content: space-between; align-items: center;">
         <span style="font-size: 0.75rem; font-weight: 700; color: var(--md-sys-color-on-surface-variant);">${isEmoji ? 'Emoji Specimen' : 'Live Specimen (Editable)'}</span>
         <span id="preview-load-status" style="font-size: 0.75rem; color: var(--md-sys-color-primary);">Loading preview...</span>
@@ -518,8 +531,8 @@ export function openPreviewSheet(item: BrowseItem): void {
       ${
         isEmoji && item.thumbnailUrl
           ? `<div class="browse-emoji-specimen-wrap">
-              <div id="preview-emoji-spinner" class="browse-emoji-spinner" style="display: flex; align-items: center; justify-content: center; height: 90px;">
-                <span style="font-size: 0.8125rem; color: var(--md-sys-color-on-surface-variant);">Loading specimen...</span>
+              <div id="preview-emoji-spinner" style="display: flex; align-items: center; justify-content: center; height: 90px;">
+                <m3e-loading-indicator variant="contained"></m3e-loading-indicator>
               </div>
               <img id="preview-emoji-img" class="browse-emoji-specimen-img" src="${escapeHtml(item.thumbnailUrl)}" alt="${escapeHtml(item.name)}" style="display: none;" onerror="if(this.dataset.fb!=='1'){this.dataset.fb='1';this.src=this.src.replace('cdn.jsdelivr.net/gh/zFont/Host@main','raw.githubusercontent.com/zFont/Host/main');}" />
               <span style="font-size: 0.75rem; color: var(--md-sys-color-on-surface-variant); margin-top: 8px;">Authentic ${escapeHtml(item.name)} glyph rendering</span>
@@ -528,61 +541,49 @@ export function openPreviewSheet(item: BrowseItem): void {
       }
       <div
         id="preview-specimen-box"
-        class="${isEmoji ? 'browse-specimen-emoji' : 'browse-specimen-text'}"
+        class="browse-preview-specimen ${isEmoji ? 'browse-specimen-emoji' : 'browse-specimen-text'}"
         contenteditable="true"
         spellcheck="false"
-        style="min-height: 80px; max-height: 180px; overflow-y: auto; padding: 14px; background: var(--md-sys-color-surface-container-lowest); border-radius: var(--md-sys-shape-corner-medium); border: 1px solid var(--md-sys-color-outline-variant); font-size: 1.25rem; line-height: 1.4;"
       >${escapeHtml(defaultSpecimen)}</div>
     </div>
 
-    <!-- In-Modal Download Progress Bar (shown prominently inside the sheet when downloading) -->
-    <div id="modal-download-progress-box" class="download-progress-box" style="display: none; margin-top: 6px; margin-bottom: 2px; width: 100%;">
-      <div style="display: flex; justify-content: space-between; align-items: center; font-size: 0.8125rem; font-weight: 600; color: var(--md-sys-color-primary); margin-bottom: 6px;">
+    <!-- In-Modal Download Progress Bar (Wavy Expressive) -->
+    <div id="modal-download-progress-box" class="browse-progress-box" style="display: none; margin-top: 6px; margin-bottom: 2px; width: 100%;">
+      <div class="browse-progress-header">
         <span id="modal-download-progress-text">Downloading...</span>
         <span id="modal-download-progress-pct">0%</span>
       </div>
-      <div class="download-progress-bar-container" style="height: 6px; background: var(--md-sys-color-surface-container-high); border-radius: 9999px; overflow: hidden;">
-        <div id="modal-download-progress-fill" class="download-progress-fill" style="width: 0%; height: 100%; background: var(--md-sys-color-primary); transition: width 0.15s ease;"></div>
-      </div>
+      <m3e-linear-progress-indicator id="modal-download-progress-fill" variant="wavy" max="100" value="0"></m3e-linear-progress-indicator>
     </div>
 
-    <div style="display: flex; gap: 10px; margin-top: 4px; flex-wrap: wrap;">
-      <button class="browse-action-btn browse-btn-apply" id="btn-preview-apply" type="button" style="flex: 1; justify-content: center; min-height: 44px;">
+    <div class="preview-sheet-actions">
+      <m3e-button variant="filled" id="btn-preview-apply" type="button">
         Apply Directly
-      </button>
+      </m3e-button>
       ${
         !isEmoji
-          ? `<button class="browse-action-btn browse-btn-preview" id="btn-preview-customize" type="button" style="flex: 1; justify-content: center; min-height: 44px;">
+          ? `<m3e-button variant="tonal" id="btn-preview-customize" type="button">
               Open in Customize
-            </button>`
+            </m3e-button>`
           : ''
       }
       ${
         isCached
-          ? `<button class="browse-action-btn browse-btn-delete" id="btn-preview-delete" type="button" style="flex: 1; justify-content: center; min-height: 44px;">
+          ? `<m3e-button variant="outlined" id="btn-preview-delete" type="button">
               Delete Download
-            </button>`
+            </m3e-button>`
           : ''
       }
     </div>
   `;
 
-  if (backdrop) {
-    backdrop.style.display = 'flex';
-    if (typeof requestAnimationFrame === 'function') {
-      requestAnimationFrame(() => {
-        backdrop.classList.add('active');
-        backdrop.classList.add('open');
-        backdrop.removeAttribute('aria-hidden');
-      });
+  if (sheet) {
+    if (typeof sheet.show === 'function') {
+      sheet.show(1);
     } else {
-      backdrop.classList.add('active');
-      backdrop.classList.add('open');
-      backdrop.removeAttribute('aria-hidden');
+      sheet.style.display = 'block';
+      sheet.removeAttribute('aria-hidden');
     }
-  } else if (sheet) {
-    sheet.style.display = 'block';
-    sheet.removeAttribute('aria-hidden');
   }
 
   // Wire close button
@@ -680,20 +681,14 @@ export function openPreviewSheet(item: BrowseItem): void {
 }
 
 export function closePreviewSheet(): void {
-  const backdrop = document.getElementById('browse-preview-backdrop');
-  const sheet = document.getElementById('browse-preview-sheet');
-  if (backdrop) {
-    backdrop.classList.remove('active');
-    backdrop.classList.remove('open');
-    backdrop.setAttribute('aria-hidden', 'true');
-    setTimeout(() => {
-      if (!backdrop.classList.contains('active') && !backdrop.classList.contains('open')) {
-        backdrop.style.display = 'none';
-      }
-    }, 280);
-  } else if (sheet) {
-    sheet.style.display = 'none';
-    sheet.setAttribute('aria-hidden', 'true');
+  const sheet = document.getElementById('browse-preview-sheet') as BottomSheetLike | null;
+  if (sheet) {
+    if (typeof sheet.hide === 'function') {
+      sheet.hide();
+    } else {
+      sheet.style.display = 'none';
+      sheet.setAttribute('aria-hidden', 'true');
+    }
   }
   state.activeItem = null;
   state.activeVariant = null;
@@ -1118,54 +1113,26 @@ export async function handleOpenInCustomize(item: BrowseItem, variant?: FontVari
 
 function setupCreditsDialog(): void {
   const btnCredits = document.getElementById('btn-credits');
-  const modalOverlay = document.getElementById('credits-modal-overlay');
-  const btnClose = document.getElementById('credits-close-btn');
+  const creditsDialog = document.getElementById('credits-dialog') as DialogLike | null;
 
-  if (!btnCredits || !modalOverlay) return;
+  if (!btnCredits || !creditsDialog) return;
 
-  const openCredits = () => {
-    modalOverlay.classList.add('active');
-    modalOverlay.removeAttribute('aria-hidden');
-  };
-
-  const closeCredits = () => {
-    modalOverlay.classList.remove('active');
-    modalOverlay.setAttribute('aria-hidden', 'true');
-  };
-
-  btnCredits.addEventListener('click', openCredits);
-  btnClose?.addEventListener('click', closeCredits);
-
-  modalOverlay.addEventListener('click', (e) => {
-    if (e.target === modalOverlay) {
-      closeCredits();
-    }
+  btnCredits.addEventListener('click', () => {
+    creditsDialog.show?.();
   });
-
-  if (typeof window !== 'undefined' && typeof window.addEventListener === 'function') {
-    window.addEventListener('keydown', (e: KeyboardEvent) => {
-      if (e.key === 'Escape' && modalOverlay.classList.contains('active')) {
-        closeCredits();
-      }
-    });
-  }
 }
 
 export function setupBrowseTab(): void {
+  const searchBar = document.getElementById('browse-search-bar');
   const searchInput = document.getElementById('browse-search-input') as HTMLInputElement | null;
-  const searchClear = document.getElementById('browse-search-clear') as HTMLButtonElement | null;
   const filterBar = document.getElementById('browse-filter-bar');
-  const previewBackdrop = document.getElementById('browse-preview-backdrop');
   const gridContainer = document.getElementById('browse-grid');
   const viewBrowse = document.getElementById('view-browse');
 
-  // 1. Search input with debouncing and clear button
+  // 1. Search input with debouncing and <m3e-search-bar> clear event
   if (searchInput) {
     searchInput.addEventListener('input', () => {
       const val = searchInput.value.trim();
-      if (searchClear) {
-        searchClear.style.display = val.length > 0 ? 'inline-flex' : 'none';
-      }
 
       if (debounceTimer) clearTimeout(debounceTimer);
       debounceTimer = setTimeout(() => {
@@ -1175,20 +1142,18 @@ export function setupBrowseTab(): void {
     });
   }
 
-  if (searchClear && searchInput) {
-    searchClear.addEventListener('click', () => {
-      searchInput.value = '';
-      searchClear.style.display = 'none';
+  if (searchBar) {
+    searchBar.addEventListener('clear', () => {
+      if (searchInput) searchInput.value = '';
       state.filters.query = '';
       refreshCatalogGrid(true);
-      searchInput.focus();
     });
   }
 
-  // 2. Compact 1-Row Filter Bar ([All Fonts] [Variable] [Emojis] [Downloaded])
+  // 2. Connected Filter Bar ([All Fonts] [Variable] [Emojis]) + [Downloaded] chip
   if (filterBar) {
     filterBar.addEventListener('click', (e) => {
-      const target = (e.target as HTMLElement).closest<HTMLButtonElement>('.browse-chip');
+      const target = (e.target as HTMLElement).closest<HTMLElement & { selected?: boolean }>('.browse-chip');
       if (!target) return;
 
       const filterType = target.getAttribute('data-filter');
@@ -1196,6 +1161,12 @@ export function setupBrowseTab(): void {
         const currentlyActive = target.classList.contains('active');
         const nextState = !currentlyActive;
         target.classList.toggle('active', nextState);
+        target.selected = nextState;
+        if (nextState) {
+          target.setAttribute?.('selected', '');
+        } else {
+          target.removeAttribute?.('selected');
+        }
         target.setAttribute('aria-pressed', nextState ? 'true' : 'false');
         state.filters.downloadedOnly = nextState;
         refreshCatalogGrid(true);
@@ -1203,12 +1174,16 @@ export function setupBrowseTab(): void {
       }
 
       // Single select among category filters: all-fonts, variable, emoji
-      filterBar.querySelectorAll<HTMLButtonElement>('.browse-chip:not([data-filter="downloaded"])').forEach((c) => {
+      filterBar.querySelectorAll<HTMLElement & { selected?: boolean }>('.browse-chip:not([data-filter="downloaded"])').forEach((c) => {
         c.classList.remove('active');
+        c.selected = false;
+        c.removeAttribute?.('selected');
         c.setAttribute('aria-pressed', 'false');
       });
 
       target.classList.add('active');
+      target.selected = true;
+      target.setAttribute?.('selected', '');
       target.setAttribute('aria-pressed', 'true');
 
       if (filterType === 'variable') {
@@ -1222,7 +1197,6 @@ export function setupBrowseTab(): void {
         state.filters.category = 'all';
         delete state.filters.isVariable;
       } else {
-        // 'all-fonts'
         state.filters.type = 'font';
         state.filters.source = 'all';
         state.filters.category = 'all';
@@ -1233,27 +1207,10 @@ export function setupBrowseTab(): void {
     });
   }
 
-  // 3. Modal Backdrop Click and Escape key handlers
-  if (previewBackdrop) {
-    previewBackdrop.addEventListener('click', (e) => {
-      if (e.target === previewBackdrop) {
-        closePreviewSheet();
-      }
-    });
-  }
-
-  if (typeof window !== 'undefined' && typeof window.addEventListener === 'function') {
-    window.addEventListener('keydown', (e: KeyboardEvent) => {
-      if (e.key === 'Escape' && previewBackdrop?.classList.contains('active')) {
-        closePreviewSheet();
-      }
-    });
-  }
-
-  // 5. Card click / tap delegation -> open preview bottom sheet or delete download
+  // 3. Card click / tap delegation -> open preview bottom sheet or delete download
   if (gridContainer) {
     gridContainer.addEventListener('click', (e) => {
-      const deleteBtn = (e.target as HTMLElement).closest<HTMLButtonElement>('button[data-action="delete"]');
+      const deleteBtn = (e.target as HTMLElement).closest<HTMLElement>('[data-action="delete"]');
       if (deleteBtn) {
         e.stopPropagation();
         const itemId = deleteBtn.getAttribute('data-id');
@@ -1280,7 +1237,7 @@ export function setupBrowseTab(): void {
 
     gridContainer.addEventListener('keydown', (e: KeyboardEvent) => {
       if (e.key === 'Enter' || e.key === ' ') {
-        const deleteBtn = (e.target as HTMLElement).closest<HTMLButtonElement>('button[data-action="delete"]');
+        const deleteBtn = (e.target as HTMLElement).closest<HTMLElement>('[data-action="delete"]');
         if (deleteBtn) {
           e.preventDefault();
           e.stopPropagation();

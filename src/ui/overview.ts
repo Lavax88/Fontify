@@ -1,6 +1,6 @@
 /**
- * Fontify - Overview Tab Controller
- * Subscribes to system status and renders Hero Banner and Device Info properties.
+ * Fontify - Overview Tab Controller (M3E Expressive)
+ * Subscribes to system status and renders Hero Status Card, Reboot Callout, and Device Info lists.
  */
 
 import { store } from '../state/store';
@@ -12,6 +12,7 @@ export function setupOverviewTab(): void {
   const bannerTitle = document.getElementById('banner-title');
   const bannerSubtitle = document.getElementById('banner-subtitle');
   const bannerBadge = document.getElementById('banner-badge');
+  const bannerIcon = document.getElementById('banner-icon');
   const infoActiveFont = document.getElementById('info-active-font');
   const infoActiveEmoji = document.getElementById('info-active-emoji');
   const infoSystemVer = document.getElementById('info-system-ver');
@@ -19,6 +20,7 @@ export function setupOverviewTab(): void {
   const infoSystemAbi = document.getElementById('info-system-abi');
   const infoBackupStatus = document.getElementById('info-backup-status');
   const rebootReminderBanner = document.getElementById('reboot-reminder-banner');
+  const rebootReminderSubtitle = document.getElementById('reboot-reminder-subtitle');
   const btnBannerReboot = document.getElementById('btn-banner-reboot');
 
   if (btnBannerReboot) {
@@ -29,18 +31,16 @@ export function setupOverviewTab(): void {
   }
 
   function updateRebootReminder(required: boolean): void {
-    if (rebootReminderBanner) {
-      rebootReminderBanner.style.display = required ? 'flex' : 'none';
-      const isFull = store.getState().rebootType === 'full';
-      if (btnBannerReboot) {
-        btnBannerReboot.textContent = isFull ? 'Full Reboot' : 'Reboot';
-      }
-      const bannerSub = rebootReminderBanner.querySelector('.banner-subtitle');
-      if (bannerSub) {
-        bannerSub.textContent = isFull
-          ? 'A full device reboot is required to restore stock system mounts safely.'
-          : 'Restart your device to apply updated font/emoji overlays.';
-      }
+    if (!rebootReminderBanner) return;
+    rebootReminderBanner.style.display = required ? 'block' : 'none';
+    const isFull = store.getState().rebootType === 'full';
+    if (btnBannerReboot) {
+      btnBannerReboot.textContent = isFull ? 'Full Reboot' : 'Reboot';
+    }
+    if (rebootReminderSubtitle) {
+      rebootReminderSubtitle.textContent = isFull
+        ? 'A full device reboot is required to restore stock system mounts safely.'
+        : 'Restart your device to apply updated font/emoji overlays.';
     }
   }
 
@@ -50,15 +50,17 @@ export function setupOverviewTab(): void {
 
     if (overviewBanner && bannerTitle && bannerSubtitle && bannerBadge) {
       if (isActive) {
-        overviewBanner.className = 'm3-banner-card is-active';
+        overviewBanner.className = 'overview-banner is-active';
         bannerTitle.textContent = 'Activated';
         bannerSubtitle.textContent = `${fontName} (Active)`;
         bannerBadge.textContent = 'CUSTOM';
+        bannerIcon?.setAttribute('name', 'check_circle');
       } else {
-        overviewBanner.className = 'm3-banner-card is-stock';
+        overviewBanner.className = 'overview-banner is-stock';
         bannerTitle.textContent = 'Default Font';
         bannerSubtitle.textContent = 'Stock System Font';
         bannerBadge.textContent = 'STOCK';
+        bannerIcon?.setAttribute('name', 'check_circle');
       }
     }
 
@@ -91,12 +93,9 @@ export function setupOverviewTab(): void {
     }
   }
 
-  // Initial render with cached/default store data
   renderStatus(store.getState().status);
   updateRebootReminder(store.getState().rebootRequired);
 
-  // Subscribe to store updates for status and rebootRequired slice
   store.subscribe(state => state.status, renderStatus);
   store.subscribe(state => state.rebootRequired, updateRebootReminder);
-  store.subscribe(state => state.rebootType, () => updateRebootReminder(store.getState().rebootRequired));
 }

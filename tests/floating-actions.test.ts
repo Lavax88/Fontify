@@ -40,6 +40,7 @@ describe('Dual Floating Action Cluster (M3 Expressive)', () => {
     const mockFabReset: any = {
       attributes: {} as Record<string, string>,
       setAttribute: (k: string, v: string) => { mockFabReset.attributes[k] = v; },
+      removeAttribute: (k: string) => { delete mockFabReset.attributes[k]; },
       addEventListener: vi.fn(),
       removeEventListener: vi.fn()
     };
@@ -48,6 +49,7 @@ describe('Dual Floating Action Cluster (M3 Expressive)', () => {
       disabled: true,
       attributes: {} as Record<string, string>,
       setAttribute: (k: string, v: string) => { mockFabApply.attributes[k] = v; },
+      removeAttribute: (k: string) => { delete mockFabApply.attributes[k]; },
       addEventListener: vi.fn(),
       removeEventListener: vi.fn()
     };
