@@ -152,14 +152,14 @@
                         <input type="file" id="file-input" accept=".ttf,.otf,.ttc,.woff,.woff2" style="display: none;" aria-label="Select font file">
 
                         <!-- 1. Hero Font Picker Card -->
-                        <m3e-card class="picker-card" id="dropzone" variant="filled" actionable tabindex="0" aria-label="Import Font File: Tap to select or drop any .ttf or .otf font">
+                        <m3e-card class="picker-card" id="dropzone" variant="filled" actionable tabindex="0" aria-label="Import Font File">
                             <div slot="content" class="picker-card-row">
                                 <div class="picker-icon-box" aria-hidden="true">
                                     <m3e-icon name="cloud_upload" filled></m3e-icon>
                                 </div>
                                 <div class="picker-text">
                                     <h2 class="picker-title" id="picker-title">Import Font File</h2>
-                                    <p class="picker-subtitle" id="picker-subtitle">Tap to select or drop any .ttf or .otf font</p>
+                                    <p class="picker-subtitle" id="picker-subtitle" style="display: none;"></p>
                                 </div>
                                 <m3e-button id="btn-select-file" variant="tonal" size="small" type="button">Select Font</m3e-button>
                             </div>
@@ -190,7 +190,7 @@
                                 <div class="m3-presets-scroll" id="presets-container" role="group" aria-label="Font weight presets"></div>
                                 <div id="style-presets-section" style="display: none; margin-top: 10px;">
                                     <div class="section-card-header">
-                                        <span class="section-card-title">Style</span>
+                                        <span class="section-card-title">Styles</span>
                                     </div>
                                     <div class="m3-presets-scroll" id="style-presets-container" role="group" aria-label="Font style presets"></div>
                                 </div>
@@ -221,14 +221,13 @@
                         <input type="file" id="emoji-file-input" accept=".ttf,.otf" style="display: none;" aria-label="Select emoji font file">
 
                         <!-- 1. Hero Emoji Picker Card -->
-                        <m3e-card class="picker-card" id="emoji-dropzone" variant="filled" actionable tabindex="0" aria-label="Import Emoji Font File: Tap to select or drop any .ttf emoji font">
+                        <m3e-card class="picker-card" id="emoji-dropzone" variant="filled" actionable tabindex="0" aria-label="Import Emoji Font">
                             <div slot="content" class="picker-card-row">
                                 <div class="picker-icon-box" aria-hidden="true">
                                     <m3e-icon name="mood" filled></m3e-icon>
                                 </div>
                                 <div class="picker-text">
                                     <h2 class="picker-title" id="emoji-picker-title">Import Emoji Font</h2>
-                                    <p class="picker-subtitle" id="emoji-picker-subtitle">Tap to select or drop any .ttf emoji font</p>
                                 </div>
                                 <m3e-button id="btn-select-emoji-file" variant="tonal" size="small" type="button">Select Emoji Font</m3e-button>
                             </div>

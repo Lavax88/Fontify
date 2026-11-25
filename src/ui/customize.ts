@@ -153,10 +153,16 @@ export function setupCustomizeTab(): void {
       if (variableControlsGroup) variableControlsGroup.style.display = 'none';
       if (state.status.active) {
         if (pickerTitle) pickerTitle.textContent = `${state.status.active_font_name} (Active)`;
-        if (pickerSubtitle) pickerSubtitle.textContent = 'Custom font applied. Tap or drop any font to customize.';
+        if (pickerSubtitle) {
+          pickerSubtitle.textContent = '';
+          if (pickerSubtitle.style) pickerSubtitle.style.display = 'none';
+        }
       } else {
         if (pickerTitle) pickerTitle.textContent = 'Import Font File';
-        if (pickerSubtitle) pickerSubtitle.textContent = 'Tap to select or drop any .ttf or .otf font';
+        if (pickerSubtitle) {
+          pickerSubtitle.textContent = '';
+          if (pickerSubtitle.style) pickerSubtitle.style.display = 'none';
+        }
       }
       return;
     }
@@ -164,6 +170,7 @@ export function setupCustomizeTab(): void {
     if (pickerTitle) pickerTitle.textContent = fontData.fullName;
     if (pickerSubtitle) {
       pickerSubtitle.textContent = `${fontData.format} (${fontData.numGlyphs || 0} glyphs)`;
+      if (pickerSubtitle.style) pickerSubtitle.style.display = 'block';
     }
 
     if (fontInfoRow) fontInfoRow.style.display = 'flex';

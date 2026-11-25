@@ -493,7 +493,7 @@ export function openPreviewSheet(item: BrowseItem): void {
 
     variantsHtml = `
       <div style="display: flex; flex-direction: column; gap: 6px; margin-top: 8px;">
-        <span style="font-size: 0.75rem; font-weight: 700; color: var(--md-sys-color-on-surface-variant);">Weights &amp; Styles</span>
+        <span style="font-size: 0.75rem; font-weight: 700; color: var(--md-sys-color-on-surface-variant);">Styles</span>
         <m3e-filter-chip-set class="browse-variants-row" id="preview-variant-chips">
           ${varChipHtml}
           ${staticChipsHtml}

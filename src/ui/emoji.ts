@@ -353,7 +353,6 @@ export function setupEmojiTab(): void {
         <div slot="content">
           <div class="curated-card-icon" aria-hidden="true">${pack.icon}</div>
           <div class="curated-card-title">${pack.title}</div>
-          <div class="curated-card-desc">${pack.description}</div>
         </div>
       `;
 
