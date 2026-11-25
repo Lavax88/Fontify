@@ -53,7 +53,6 @@ export function switchTab(tabId: FontifyTab, skipSlide = false): void {
   const targetView = document.getElementById(`view-${tabId}`);
   const appBar = document.getElementById('app-bar') as AppBarAttachable | null;
   if (targetView) {
-    targetView.scrollTo({ top: 0, behavior: 'smooth' });
     appBar?.attach?.(targetView);
   }
 
@@ -102,7 +101,11 @@ function init(): void {
   document.querySelectorAll<NavItemElement>('m3e-nav-item').forEach(item => {
     const tabName = item.getAttribute('data-tab') as FontifyTab | null;
     if (tabName) {
-      item.addEventListener('click', () => switchTab(tabName));
+      item.addEventListener('click', () => {
+        if (tabName === store.getState().currentTab) {
+          document.getElementById(`view-${tabName}`)?.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+      });
     }
   });
 
