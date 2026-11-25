@@ -10,10 +10,10 @@ import { fontService } from '../bridge/service';
 import { FontEngine } from '../font/engine';
 import { showToast } from './components/toast';
 import { showConfirmDialog, runApplyWorkflow } from './components/dialog';
-import {
-  getCachedEmoji,
-  saveCachedEmoji
-} from '../state/emojiCache';
+import { getCachedFontBuffer, saveCachedFont } from '../browse/fontCache';
+import { streamAssetDownload } from '../browse/catalogService';
+import { EMOJI_CATALOG } from '../browse/emojiCatalog';
+import type { BrowseItem } from '../browse/types';
 
 export interface EmojiPreset {
   id: string;
@@ -37,163 +37,59 @@ export interface CuratedEmojiPack {
   url: string;
 }
 
+const EMOJI_PRESET_META: Record<string, { title: string; icon: string; category: string; description: string }> = {
+  'ios-26': { title: 'iOS 26 (Apple)', icon: '🍎', category: 'apple', description: 'Clean Apple Unicode 17' },
+  'ios': { title: 'iOS 18 (Apple)', icon: '🍎', category: 'apple', description: 'Clean Apple emoji styling' },
+  'fluent': { title: 'Fluent 3D', icon: '🪟', category: 'fluent', description: 'Modern Microsoft Fluent design' },
+  'samsung': { title: 'Samsung One UI', icon: '📱', category: 'samsung', description: 'Vibrant Galaxy emoji style' },
+  'twemoji': { title: 'Twemoji (Twitter)', icon: '🐦', category: 'twemoji', description: 'Flat, colorful Twitter/X design' },
+  'whatsapp': { title: 'WhatsApp 2.26', icon: '💬', category: 'whatsapp', description: 'WhatsApp modern emoji set' },
+  'facebook': { title: 'Facebook 16.0', icon: '👥', category: 'facebook', description: 'Facebook system emojis' },
+  'joypixels': { title: 'JoyPixels 10', icon: '✨', category: 'joypixels', description: 'JoyPixels color emojis' },
+  'noto': { title: 'Google Noto (Stock)', icon: '🤖', category: 'noto', description: 'Standard Android system emojis' }
+};
+
+function buildPresetFromCatalog(id: string): CuratedEmojiPack & EmojiPreset {
+  const entry = EMOJI_CATALOG.find(e => e.id === id);
+  const meta = EMOJI_PRESET_META[id];
+  if (!entry || !meta) {
+    throw new Error(`Missing emoji catalog entry for preset "${id}"`);
+  }
+  return {
+    id: entry.id,
+    name: entry.name,
+    title: meta.title,
+    icon: meta.icon,
+    category: meta.category,
+    description: meta.description,
+    author: entry.author,
+    sizeMb: entry.sizeMb,
+    url: entry.url
+  };
+}
+
 // 6 Curated Emoji Packs requested by user (iOS 26, iOS 18, Fluent, OneUI, Twitter, Google)
 export const CURATED_EMOJI_PACKS: CuratedEmojiPack[] = [
-  {
-    id: 'ios-26',
-    name: 'iOS 26.4 (Unicode 17)',
-    title: 'iOS 26 (Apple)',
-    icon: '🍎',
-    description: 'Clean Apple Unicode 17',
-    author: 'Apple / MFFM',
-    sizeMb: '33.7 MB',
-    url: 'https://raw.githubusercontent.com/zFont/Host/main/Font/2026/04/iOS%2026.4%20(Unicode%2017).ttf'
-  },
-  {
-    id: 'ios',
-    name: 'iOS 18.4 (Apple)',
-    title: 'iOS 18 (Apple)',
-    icon: '🍎',
-    description: 'Clean Apple emoji styling',
-    author: 'Apple',
-    sizeMb: '41.1 MB',
-    url: 'https://raw.githubusercontent.com/zFont/Host/main/Font/Emoji/2025/iOS18.4.ttf'
-  },
-  {
-    id: 'fluent',
-    name: 'Microsoft FluentUI 3D',
-    title: 'Fluent 3D',
-    icon: '🪟',
-    description: 'Modern Microsoft Fluent design',
-    author: 'Microsoft',
-    sizeMb: '24.0 MB',
-    url: 'https://raw.githubusercontent.com/zFont/Host/main/Font/2026/04/FluentUI%20Unicode%2016.0.ttf'
-  },
-  {
-    id: 'samsung',
-    name: 'Samsung One UI 7 Beta',
-    title: 'Samsung One UI',
-    icon: '📱',
-    description: 'Vibrant Galaxy emoji style',
-    author: 'Samsung / MFFM',
-    sizeMb: '18.5 MB',
-    url: 'https://raw.githubusercontent.com/zFont/Host/main/Font/Emoji/2025/SamsungOneUI7Beta_Unicode16_No_Space.ttf'
-  },
-  {
-    id: 'twemoji',
-    name: 'Twemoji 15.0.3 (Twitter/X)',
-    title: 'Twemoji (Twitter)',
-    icon: '🐦',
-    description: 'Flat, colorful Twitter/X design',
-    author: 'Twemoji / X',
-    sizeMb: '3.2 MB',
-    url: 'https://raw.githubusercontent.com/zFont/Host/main/Font/Emoji/2024/Twemoji-v15.0.3.ttf'
-  },
-  {
-    id: 'noto',
-    name: 'Google Noto Color (Stock)',
-    title: 'Google Noto (Stock)',
-    icon: '🤖',
-    description: 'Standard Android system emojis',
-    author: 'Google',
-    sizeMb: '2.9 MB',
-    url: 'https://raw.githubusercontent.com/googlefonts/noto-emoji/main/fonts/NotoColorEmoji.ttf'
-  }
-];
+  'ios-26',
+  'ios',
+  'fluent',
+  'samsung',
+  'twemoji',
+  'noto'
+].map(buildPresetFromCatalog);
 
 // Presets exported for backward compatibility & test verification
 export const FLAGSHIP_PRESETS: EmojiPreset[] = [
-  {
-    id: 'ios-26',
-    name: 'iOS 26.4 (Unicode 17)',
-    icon: '🍎',
-    category: 'apple',
-    description: 'Clean Apple Unicode 17',
-    author: 'Apple / MFFM',
-    sizeMb: '33.7 MB',
-    url: 'https://raw.githubusercontent.com/zFont/Host/main/Font/2026/04/iOS%2026.4%20(Unicode%2017).ttf'
-  },
-  {
-    id: 'ios',
-    name: 'iOS 18.4 (Apple)',
-    icon: '🍎',
-    category: 'apple',
-    description: 'Clean Apple emoji styling',
-    author: 'Apple',
-    sizeMb: '41.1 MB',
-    url: 'https://raw.githubusercontent.com/zFont/Host/main/Font/Emoji/2025/iOS18.4.ttf'
-  },
-  {
-    id: 'samsung',
-    name: 'Samsung One UI 7 Beta',
-    icon: '📱',
-    category: 'samsung',
-    description: 'Vibrant Galaxy emoji style',
-    author: 'Samsung / MFFM',
-    sizeMb: '18.5 MB',
-    url: 'https://raw.githubusercontent.com/zFont/Host/main/Font/Emoji/2025/SamsungOneUI7Beta_Unicode16_No_Space.ttf'
-  },
-  {
-    id: 'fluent',
-    name: 'Microsoft FluentUI 3D',
-    icon: '🪟',
-    category: 'fluent',
-    description: 'Modern Microsoft Fluent design',
-    author: 'Microsoft',
-    sizeMb: '24.0 MB',
-    url: 'https://raw.githubusercontent.com/zFont/Host/main/Font/2026/04/FluentUI%20Unicode%2016.0.ttf'
-  },
-  {
-    id: 'twemoji',
-    name: 'Twemoji 15.0.3 (Twitter/X)',
-    icon: '🐦',
-    category: 'twemoji',
-    description: 'Flat, colorful Twitter/X design',
-    author: 'Twemoji / X',
-    sizeMb: '3.2 MB',
-    url: 'https://raw.githubusercontent.com/zFont/Host/main/Font/Emoji/2024/Twemoji-v15.0.3.ttf'
-  },
-  {
-    id: 'whatsapp',
-    name: 'WhatsApp 2.26',
-    icon: '💬',
-    category: 'whatsapp',
-    description: 'WhatsApp modern emoji set',
-    author: 'WhatsApp',
-    sizeMb: '33.7 MB',
-    url: 'https://raw.githubusercontent.com/zFont/Host/main/Font/2026/04/WhatsApp%202.26.8.72.ttf'
-  },
-  {
-    id: 'facebook',
-    name: 'Facebook 16.0',
-    icon: '👥',
-    category: 'facebook',
-    description: 'Facebook system emojis',
-    author: 'Meta',
-    sizeMb: '37.6 MB',
-    url: 'https://raw.githubusercontent.com/zFont/Host/main/Font/2026/04/Facebook%2016.0.ttf'
-  },
-  {
-    id: 'joypixels',
-    name: 'JoyPixels 10',
-    icon: '✨',
-    category: 'joypixels',
-    description: 'JoyPixels color emojis',
-    author: 'JoyPixels',
-    sizeMb: '26.3 MB',
-    url: 'https://raw.githubusercontent.com/zFont/Host/main/Font/2026/04/JoyPixel%2010.ttf'
-  },
-  {
-    id: 'noto',
-    name: 'Google Noto Color (Stock)',
-    icon: '🤖',
-    category: 'noto',
-    description: 'Standard Android system emojis',
-    author: 'Google',
-    sizeMb: '2.9 MB',
-    url: 'https://raw.githubusercontent.com/googlefonts/noto-emoji/main/fonts/NotoColorEmoji.ttf'
-  }
-];
+  'ios-26',
+  'ios',
+  'samsung',
+  'fluent',
+  'twemoji',
+  'whatsapp',
+  'facebook',
+  'joypixels',
+  'noto'
+].map(buildPresetFromCatalog);
 
 export const EMOJI_PRESETS: EmojiPreset[] = FLAGSHIP_PRESETS;
 
@@ -380,8 +276,9 @@ export function setupEmojiTab(): void {
       return;
     }
 
-    // Check if already in IndexedDB cache
-    const cachedBuffer = await getCachedEmoji(pack.id);
+    // Check if already in unified IndexedDB cache
+    const cacheId = `emoji-${pack.id}`;
+    const cachedBuffer = await getCachedFontBuffer(cacheId);
     if (cachedBuffer) {
       store.setState({
         emojiFile: null,
@@ -435,88 +332,29 @@ export function setupEmojiTab(): void {
     if (downloadProgressText) downloadProgressText.textContent = `Connecting to ${pack.title}...`;
 
     try {
-      const primaryUrl = pack.url.startsWith('https://raw.githubusercontent.com/')
-        ? `https://ghfast.top/${pack.url}`
-        : pack.url;
-      const fallbackUrl = pack.url;
-
-      let response: Response;
-      try {
-        response = await fetch(primaryUrl);
-      } catch (_) {
-        response = await fetch(fallbackUrl);
-      }
-
-      if (!response.ok && fallbackUrl !== primaryUrl) {
-        try {
-          const fb = await fetch(fallbackUrl);
-          if (fb.ok) response = fb;
-        } catch (_) {}
-      }
-
-      if (!response.ok) {
-        throw new Error(`HTTP error ${response.status}: ${response.statusText}`);
-      }
-
-      const contentLength = response.headers?.get ? response.headers.get('content-length') : null;
-      const totalBytes = contentLength ? parseInt(contentLength, 10) : 0;
-
-      let combinedBuffer: ArrayBuffer;
-
-      if (!response.body || totalBytes === 0) {
-        combinedBuffer = await response.arrayBuffer();
-      } else {
-        const reader = response.body.getReader();
-        let receivedBytes = 0;
-        const chunks: Uint8Array[] = [];
-        const startTime = typeof performance !== 'undefined' ? performance.now() : Date.now();
-        let lastTick = startTime;
-
-        while (true) {
-          const { done, value } = await reader.read();
-          if (done) break;
-
-          chunks.push(value);
-          receivedBytes += value.length;
-
-          const now = typeof performance !== 'undefined' ? performance.now() : Date.now();
-          if (now - lastTick >= 80 || receivedBytes === totalBytes) {
-            lastTick = now;
-            if (totalBytes > 0) {
-              const percent = Math.min(100, Math.round((receivedBytes / totalBytes) * 100));
-              if (downloadProgressFill) {
-                downloadProgressFill.value = percent;
-                downloadProgressFill.setAttribute('value', String(percent));
-              }
-              if (downloadProgressText) {
-                const mbNow = (receivedBytes / (1024 * 1024)).toFixed(1);
-                const mbTotal = (totalBytes / (1024 * 1024)).toFixed(1);
-                const elapsedSec = (now - startTime) / 1000;
-                const speedMBs = elapsedSec > 0 ? (receivedBytes / (1024 * 1024)) / elapsedSec : 0;
-                const speedStr = speedMBs >= 1 ? `${speedMBs.toFixed(1)} MB/s` : `${Math.round(speedMBs * 1024)} KB/s`;
-                let etaStr = '';
-                if (speedMBs > 0) {
-                  const rem = (totalBytes - receivedBytes) / (1024 * 1024);
-                  const eta = Math.round(rem / speedMBs);
-                  etaStr = eta > 0 ? ` • ETA: ${eta}s` : ' • Finishing...';
-                }
-                downloadProgressText.textContent = `Downloading ${pack.title}: ${percent}% (${mbNow}/${mbTotal} MB • ${speedStr}${etaStr})`;
-              }
-            }
-          }
+      const combinedBuffer = await streamAssetDownload(pack.url, pack.title, (percent, msg) => {
+        if (downloadProgressFill) {
+          downloadProgressFill.value = percent;
+          downloadProgressFill.setAttribute('value', String(percent));
         }
-
-        const combined = new Uint8Array(receivedBytes);
-        let offset = 0;
-        for (const chunk of chunks) {
-          combined.set(chunk, offset);
-          offset += chunk.length;
+        if (downloadProgressText) {
+          downloadProgressText.textContent = msg;
         }
-        combinedBuffer = combined.buffer;
-      }
+      });
 
-      // Save to IndexedDB cache
-      await saveCachedEmoji(pack.id, pack.name, combinedBuffer);
+      // Save to unified IndexedDB cache
+      const cacheItem: BrowseItem = {
+        id: cacheId,
+        name: pack.name,
+        type: 'emoji',
+        source: 'zfont',
+        category: 'Emoji',
+        author: pack.author,
+        sizeMb: pack.sizeMb,
+        url: pack.url,
+        variants: [{ name: 'Default', weight: 400, url: pack.url, sizeMb: pack.sizeMb }]
+      };
+      await saveCachedFont(cacheId, cacheItem, combinedBuffer);
 
       if (downloadProgressFill) {
         downloadProgressFill.value = 100;

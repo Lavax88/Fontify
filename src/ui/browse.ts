@@ -32,7 +32,6 @@ import {
   getAllCachedFontIds,
   deleteCachedFont
 } from '../browse/fontCache';
-import { removeCachedEmoji } from '../state/emojiCache';
 import type {
   BrowseItem,
   BrowseFilterState,
@@ -722,11 +721,6 @@ export async function loadPreviewFontFace(item: BrowseItem, variant?: FontVarian
 export async function handleDeleteCachedFont(item: BrowseItem): Promise<void> {
   try {
     await deleteCachedFont(item.id);
-    if (item.type === 'emoji') {
-      try {
-        await removeCachedEmoji(item.id.replace(/^emoji-/, ''));
-      } catch (_) {}
-    }
     state.cachedIds.delete(item.id);
     showToast(`Deleted ${item.name} from downloads`);
 

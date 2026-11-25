@@ -473,10 +473,17 @@ export async function syncOnlineCatalog(syncUrl = DEFAULT_SYNC_URL): Promise<Bro
     if (newItems.length > 0) {
       activeCatalog = [...activeCatalog, ...newItems];
 
-      // Cache the synced items into localStorage for offline persistence
+      // Cache the synced items into localStorage for offline persistence (merge with existing)
       try {
         if (typeof localStorage !== 'undefined') {
-          localStorage.setItem(SYNCED_STORAGE_KEY, JSON.stringify(newItems));
+          const prevRaw = localStorage.getItem(SYNCED_STORAGE_KEY);
+          const prevItems: BrowseItem[] = prevRaw ? JSON.parse(prevRaw) : [];
+          const mergedMap = new Map<string, BrowseItem>();
+          if (Array.isArray(prevItems)) {
+            for (const p of prevItems) mergedMap.set(p.id, p);
+          }
+          for (const n of newItems) mergedMap.set(n.id, n);
+          localStorage.setItem(SYNCED_STORAGE_KEY, JSON.stringify(Array.from(mergedMap.values())));
         }
       } catch (_) {
         // Ignored if storage quota exceeded or unavailable
@@ -491,6 +498,106 @@ export async function syncOnlineCatalog(syncUrl = DEFAULT_SYNC_URL): Promise<Bro
 }
 
 /**
+ * Streams a binary asset from primary CDN edge mirror with authoritative fallback
+ * and throttled speed/ETA progress reporting.
+ */
+export async function streamAssetDownload(
+  downloadUrl: string,
+  displayName: string,
+  onProgress?: (percent: number, message: string) => void
+): Promise<ArrayBuffer> {
+  let primaryUrl = downloadUrl;
+  let fallbackUrl = downloadUrl;
+
+  if (downloadUrl.startsWith('https://raw.githubusercontent.com/')) {
+    primaryUrl = `https://ghfast.top/${downloadUrl}`;
+    fallbackUrl = downloadUrl;
+  } else if (downloadUrl.includes('cdn.jsdelivr.net/gh/google/fonts@main/')) {
+    primaryUrl = downloadUrl;
+    fallbackUrl = downloadUrl.replace('cdn.jsdelivr.net/gh/google/fonts@main/', 'raw.githubusercontent.com/google/fonts/main/');
+  }
+
+  onProgress?.(5, `Connecting to ${displayName}...`);
+
+  let response: Response;
+  try {
+    response = await fetch(primaryUrl);
+  } catch (err) {
+    if (fallbackUrl && fallbackUrl !== primaryUrl) {
+      response = await fetch(fallbackUrl);
+    } else {
+      throw err;
+    }
+  }
+
+  if (!response.ok && fallbackUrl && fallbackUrl !== primaryUrl) {
+    try {
+      const fbResponse = await fetch(fallbackUrl);
+      if (fbResponse.ok) {
+        response = fbResponse;
+      }
+    } catch (_) {}
+  }
+
+  if (!response.ok) {
+    throw new Error(`Failed to download ${displayName}: HTTP ${response.status} ${response.statusText}`);
+  }
+
+  const contentLength = response.headers?.get ? response.headers.get('content-length') : null;
+  const totalBytes = contentLength ? parseInt(contentLength, 10) : 0;
+
+  if (!response.body || typeof response.body.getReader !== 'function' || totalBytes === 0) {
+    onProgress?.(45, `Downloading ${displayName}...`);
+    const buffer = await response.arrayBuffer();
+    onProgress?.(95, `Processing ${displayName}...`);
+    return buffer;
+  }
+
+  const reader = response.body.getReader();
+  let receivedBytes = 0;
+  const chunks: Uint8Array[] = [];
+  const startTime = typeof performance !== 'undefined' ? performance.now() : Date.now();
+  let lastProgressTime = startTime;
+
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+
+    chunks.push(value);
+    receivedBytes += value.length;
+
+    const now = typeof performance !== 'undefined' ? performance.now() : Date.now();
+    if (now - lastProgressTime >= 80 || receivedBytes === totalBytes) {
+      lastProgressTime = now;
+      const percent = totalBytes > 0 ? Math.min(99, Math.round((receivedBytes / totalBytes) * 100)) : 50;
+      const mbNow = (receivedBytes / (1024 * 1024)).toFixed(1);
+      const mbTotal = totalBytes > 0 ? (totalBytes / (1024 * 1024)).toFixed(1) : '?';
+      const elapsedSec = (now - startTime) / 1000;
+      const speedMBs = elapsedSec > 0 ? (receivedBytes / (1024 * 1024)) / elapsedSec : 0;
+      const speedStr = speedMBs >= 1 ? `${speedMBs.toFixed(1)} MB/s` : `${Math.round(speedMBs * 1024)} KB/s`;
+
+      let etaStr = '';
+      if (totalBytes > 0 && speedMBs > 0) {
+        const remainingMB = (totalBytes - receivedBytes) / (1024 * 1024);
+        const etaSec = Math.round(remainingMB / speedMBs);
+        etaStr = etaSec > 0 ? ` • ETA: ${etaSec}s` : ' • Finishing...';
+      }
+
+      onProgress?.(percent, `Downloading ${displayName}... ${percent}% (${mbNow}/${mbTotal} MB • ${speedStr}${etaStr})`);
+    }
+  }
+
+  const combined = new Uint8Array(receivedBytes);
+  let offset = 0;
+  for (const chunk of chunks) {
+    combined.set(chunk, offset);
+    offset += chunk.length;
+  }
+  onProgress?.(100, `Downloaded ${displayName}!`);
+  return combined.buffer;
+}
+
+/**
  * Downloads a font or emoji binary, checks the cache first, and saves to IndexedDB upon fetch.
  * Supports streaming progress callbacks for real-time modal progress reporting.
  */
@@ -500,10 +607,8 @@ export async function downloadAndCacheFont(
   onProgress?: (percent: number, message: string) => void
 ): Promise<ArrayBuffer> {
   const isVarVariant = isVariableVariant(variant);
-  // Only download variable font if caller explicitly requested variable variant, or if no variant specified and item is variable
   const wantsVariable = variant ? isVarVariant : Boolean(item.isVariable && item.variableUrl);
 
-  // Distinguish cache keys between variable fonts and specific static weights to prevent cache collisions
   const cacheKey = (!wantsVariable && variant && variant.weight)
     ? `${item.id}-weight-${variant.weight}`
     : item.id;
@@ -530,98 +635,7 @@ export async function downloadAndCacheFont(
     throw new Error(`Item ${item.name} (${item.id}) does not have a valid download URL.`);
   }
 
-  // Derive high-speed CDN edge mirror URL and reliable authoritative fallback URL
-  let primaryUrl = downloadUrl;
-  let fallbackUrl = downloadUrl;
-
-  if (downloadUrl.startsWith('https://raw.githubusercontent.com/')) {
-    primaryUrl = `https://ghfast.top/${downloadUrl}`;
-    fallbackUrl = downloadUrl;
-  } else if (downloadUrl.includes('cdn.jsdelivr.net/gh/google/fonts@main/')) {
-    primaryUrl = downloadUrl;
-    fallbackUrl = downloadUrl.replace('cdn.jsdelivr.net/gh/google/fonts@main/', 'raw.githubusercontent.com/google/fonts/main/');
-  }
-
-  onProgress?.(5, `Connecting to ${item.name}...`);
-
-  let response: Response;
-  try {
-    response = await fetch(primaryUrl);
-  } catch (err) {
-    if (fallbackUrl && fallbackUrl !== primaryUrl) {
-      response = await fetch(fallbackUrl);
-    } else {
-      throw err;
-    }
-  }
-
-  // Handle CDN error codes (e.g. mirror 403/404 or >50MB packages) by failing over to fallback
-  if (!response.ok && fallbackUrl && fallbackUrl !== primaryUrl) {
-    try {
-      const fbResponse = await fetch(fallbackUrl);
-      if (fbResponse.ok) {
-        response = fbResponse;
-      }
-    } catch (_) {}
-  }
-
-  if (!response.ok) {
-    throw new Error(`Failed to download ${item.name}: HTTP ${response.status} ${response.statusText}`);
-  }
-
-  const contentLength = response.headers?.get ? response.headers.get('content-length') : null;
-  const totalBytes = contentLength ? parseInt(contentLength, 10) : 0;
-
-  let buffer: ArrayBuffer;
-  if (!response.body || typeof response.body.getReader !== 'function' || totalBytes === 0) {
-    onProgress?.(45, `Downloading ${item.name}...`);
-    buffer = await response.arrayBuffer();
-    onProgress?.(95, `Processing ${item.name}...`);
-  } else {
-    const reader = response.body.getReader();
-    let receivedBytes = 0;
-    const chunks: Uint8Array[] = [];
-    const startTime = typeof performance !== 'undefined' ? performance.now() : Date.now();
-    let lastProgressTime = startTime;
-
-    while (true) {
-      const { done, value } = await reader.read();
-      if (done) break;
-
-      chunks.push(value);
-      receivedBytes += value.length;
-
-      const now = typeof performance !== 'undefined' ? performance.now() : Date.now();
-      if (now - lastProgressTime >= 80 || receivedBytes === totalBytes) {
-        lastProgressTime = now;
-        const percent = totalBytes > 0 ? Math.min(99, Math.round((receivedBytes / totalBytes) * 100)) : 50;
-        const mbNow = (receivedBytes / (1024 * 1024)).toFixed(1);
-        const mbTotal = totalBytes > 0 ? (totalBytes / (1024 * 1024)).toFixed(1) : '?';
-        const elapsedSec = (now - startTime) / 1000;
-        const speedMBs = elapsedSec > 0 ? (receivedBytes / (1024 * 1024)) / elapsedSec : 0;
-        const speedStr = speedMBs >= 1 ? `${speedMBs.toFixed(1)} MB/s` : `${Math.round(speedMBs * 1024)} KB/s`;
-
-        let etaStr = '';
-        if (totalBytes > 0 && speedMBs > 0) {
-          const remainingMB = (totalBytes - receivedBytes) / (1024 * 1024);
-          const etaSec = Math.round(remainingMB / speedMBs);
-          etaStr = etaSec > 0 ? ` • ETA: ${etaSec}s` : ' • Finishing...';
-        }
-
-        onProgress?.(percent, `Downloading ${item.name}... ${percent}% (${mbNow}/${mbTotal} MB • ${speedStr}${etaStr})`);
-      }
-    }
-
-    const combined = new Uint8Array(receivedBytes);
-    let offset = 0;
-    for (const chunk of chunks) {
-      combined.set(chunk, offset);
-      offset += chunk.length;
-    }
-    buffer = combined.buffer;
-    onProgress?.(100, `Downloaded ${item.name}!`);
-  }
-
+  const buffer = await streamAssetDownload(downloadUrl, item.name, onProgress);
   await saveCachedFont(cacheKey, item, buffer);
 
   return buffer;

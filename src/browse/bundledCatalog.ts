@@ -8,7 +8,7 @@
  */
 
 import type { BrowseItem, FontVariant } from './types';
-import { EMOJI_CATALOG } from '../ui/emojiCatalog';
+import { EMOJI_CATALOG } from './emojiCatalog';
 import { getGoogleVariableFontUrl } from './variableFonts';
 import { getWeightLabel } from '../font/variants';
 
