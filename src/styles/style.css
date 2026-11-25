@@ -718,10 +718,13 @@ m3e-snackbar {
   --m3e-snackbar-min-width: min(344px, calc(100vw - 32px));
 }
 
-m3e-dialog::backdrop,
-m3e-bottom-sheet[modal]::backdrop {
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
+/* Blur the background UI whenever a dialog or bottom sheet is open */
+#app-theme > :is(m3e-app-bar, .page-container, .floating-action-cluster, m3e-nav-bar) {
+  transition: filter 180ms cubic-bezier(0.2, 0, 0, 1);
+}
+
+#app-theme:has(m3e-dialog[open], m3e-bottom-sheet[open], m3e-bottom-sheet:popover-open) > :is(m3e-app-bar, .page-container, .floating-action-cluster, m3e-nav-bar) {
+  filter: blur(8px);
 }
 
 #credits-body {
