@@ -17,6 +17,7 @@ mkdir -p "$MODPATH/webroot"
 mkdir -p "$MODPATH/data"
 
 # 2. Preserve existing user font/emoji data & regenerate overlays across updates
+[ -f "$MODPATH/bin/lib_overlay.sh" ] && . "$MODPATH/bin/lib_overlay.sh"
 if [ -d "$MODULE_DIR/data" ] && [ "$(ls -A "$MODULE_DIR/data" 2>/dev/null)" ]; then
     ui_print "- Preserving existing font and emoji configuration..."
     cp -af "$MODULE_DIR/data/." "$MODPATH/data/" 2>/dev/null
@@ -24,42 +25,13 @@ if [ -d "$MODULE_DIR/data" ] && [ "$(ls -A "$MODULE_DIR/data" 2>/dev/null)" ]; t
     # Regenerate font overlay from preserved custom_font.ttf
     if [ -f "$MODPATH/data/custom_font.ttf" ] && [ -s "$MODPATH/data/custom_font.ttf" ]; then
         ui_print "- Restoring active custom font overlay..."
-        mkdir -p "$MODPATH/system/fonts" "$MODPATH/product/fonts" "$MODPATH/system/product/fonts" 2>/dev/null
-        CUSTOM_FONT="$MODPATH/data/custom_font.ttf"
-        cp -af "$CUSTOM_FONT" "$MODPATH/system/fonts/Roboto-Regular.ttf" 2>/dev/null
-        cp -af "$CUSTOM_FONT" "$MODPATH/system/fonts/RobotoFlex-Regular.ttf" 2>/dev/null
-        cp -af "$CUSTOM_FONT" "$MODPATH/system/fonts/RobotoStatic-Regular.ttf" 2>/dev/null
-        cp -af "$CUSTOM_FONT" "$MODPATH/system/fonts/DroidSans.ttf" 2>/dev/null
-        cp -af "$CUSTOM_FONT" "$MODPATH/system/fonts/DroidSans-Bold.ttf" 2>/dev/null
-        for target in Roboto-Bold.ttf Roboto-Italic.ttf Roboto-BoldItalic.ttf Roboto-Medium.ttf Roboto-MediumItalic.ttf Roboto-Light.ttf Roboto-LightItalic.ttf Roboto-Thin.ttf Roboto-ThinItalic.ttf Roboto-Black.ttf Roboto-BlackItalic.ttf SourceSansPro-Regular.ttf SourceSansPro-Bold.ttf SourceSansPro-SemiBold.ttf SourceSansPro-Italic.ttf SourceSansPro-BoldItalic.ttf SourceSansPro-SemiBoldItalic.ttf; do
-            cp -af "$CUSTOM_FONT" "$MODPATH/system/fonts/$target" 2>/dev/null
-        done
-        if [ -d /product/fonts ]; then
-            for pf in /product/fonts/GoogleSans*.ttf /product/fonts/GoogleSansFlex*.ttf /product/fonts/GoogleSansText*.ttf; do
-                [ -f "$pf" ] || continue
-                case "$pf" in
-                    *Clock*) continue ;;
-                    *)
-                        base="$(basename "$pf")"
-                        cp -af "$CUSTOM_FONT" "$MODPATH/product/fonts/$base" 2>/dev/null
-                        cp -af "$CUSTOM_FONT" "$MODPATH/system/product/fonts/$base" 2>/dev/null
-                        ;;
-                esac
-            done
-        fi
+        populate_font_overlay "$MODPATH" "$MODPATH/data/custom_font.ttf"
     fi
 
     # Regenerate emoji overlay from preserved custom_emoji.ttf
     if [ -f "$MODPATH/data/custom_emoji.ttf" ] && [ -s "$MODPATH/data/custom_emoji.ttf" ]; then
         ui_print "- Restoring active custom emoji overlay..."
-        mkdir -p "$MODPATH/system/fonts" "$MODPATH/product/fonts" "$MODPATH/system/product/fonts" 2>/dev/null
-        CUSTOM_EMOJI="$MODPATH/data/custom_emoji.ttf"
-        cp -af "$CUSTOM_EMOJI" "$MODPATH/system/fonts/NotoColorEmoji.ttf" 2>/dev/null
-        cp -af "$CUSTOM_EMOJI" "$MODPATH/product/fonts/NotoColorEmoji.ttf" 2>/dev/null
-        cp -af "$CUSTOM_EMOJI" "$MODPATH/system/product/fonts/NotoColorEmoji.ttf" 2>/dev/null
-        # Keep stock NotoColorEmojiFlags.ttf intact so all regional country flags render
-        rm -f "$MODPATH/system/fonts/NotoColorEmojiFlags.ttf" 2>/dev/null
-        rm -f "$MODPATH/product/fonts/NotoColorEmojiFlags.ttf" 2>/dev/null
+        populate_emoji_overlay "$MODPATH" "$MODPATH/data/custom_emoji.ttf"
     fi
 fi
 

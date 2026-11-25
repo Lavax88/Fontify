@@ -3,13 +3,8 @@
 # Author: Lava
 # Usage: ./apply_font.sh <font_path> <config_json_path>
 
-if [ -d "/data/adb/modules/fontify" ]; then
-    MODDIR="/data/adb/modules/fontify"
-elif [ -d "/data/adb/modules/custom_font_installer" ]; then
-    MODDIR="/data/adb/modules/custom_font_installer"
-else
-    MODDIR="${0%/*}/.."
-fi
+. "${0%/*}/lib_overlay.sh"
+MODDIR="$(resolve_moddir "$0")"
 
 DATA_DIR="$MODDIR/data"
 SRC_FONT="$1"
@@ -78,50 +73,15 @@ if [ "$IS_BOOTED" = "1" ] && [ -f "$MODDIR/system/fonts/Roboto-Regular.ttf" ]; t
 fi
 
 # 5. Populate module overlay trees (only when unpopulated or prior to initial boot)
-# Core system Roboto targets
-cp -af "$DEST_CUSTOM" "$MODDIR/system/fonts/Roboto-Regular.ttf"
-cp -af "$DEST_CUSTOM" "$MODDIR/system/fonts/RobotoFlex-Regular.ttf"
-cp -af "$DEST_CUSTOM" "$MODDIR/system/fonts/RobotoStatic-Regular.ttf"
-cp -af "$DEST_CUSTOM" "$MODDIR/system/fonts/DroidSans.ttf"
-cp -af "$DEST_CUSTOM" "$MODDIR/system/fonts/DroidSans-Bold.ttf"
+populate_font_overlay "$MODDIR" "$DEST_CUSTOM"
 
-# Legacy static Roboto and sans fallbacks
-for target in Roboto-Bold.ttf Roboto-Italic.ttf Roboto-BoldItalic.ttf Roboto-Medium.ttf Roboto-MediumItalic.ttf Roboto-Light.ttf Roboto-LightItalic.ttf Roboto-Thin.ttf Roboto-ThinItalic.ttf Roboto-Black.ttf Roboto-BlackItalic.ttf SourceSansPro-Regular.ttf SourceSansPro-Bold.ttf SourceSansPro-SemiBold.ttf SourceSansPro-Italic.ttf SourceSansPro-BoldItalic.ttf SourceSansPro-SemiBoldItalic.ttf; do
-    cp -af "$DEST_CUSTOM" "$MODDIR/system/fonts/$target"
-done
-
-# Product partition Google Sans targets (populated in BOTH $MODDIR/product/fonts and $MODDIR/system/product/fonts)
-# Note: Clock fonts (GoogleSansClock, GoogleSansFlexClock) are preserved to prevent lockscreen clock breakage
-if [ -d /product/fonts ]; then
-    for pf in /product/fonts/GoogleSans*.ttf /product/fonts/GoogleSansFlex*.ttf /product/fonts/GoogleSansText*.ttf; do
-        [ -f "$pf" ] || continue
-        case "$pf" in
-            *Clock*) continue ;; # Preserve lockscreen clock fonts
-            *)
-                base="$(basename "$pf")"
-                cp -af "$DEST_CUSTOM" "$MODDIR/product/fonts/$base"
-                cp -af "$DEST_CUSTOM" "$MODDIR/system/product/fonts/$base"
-                ;;
-        esac
-    done
-fi
-
-# 5. Preserve custom emoji overlays if custom emoji is active
+# 6. Preserve custom emoji overlays if custom emoji is active
 if [ -f "$DATA_DIR/custom_emoji.ttf" ] && [ -s "$DATA_DIR/custom_emoji.ttf" ]; then
-    cp -af "$DATA_DIR/custom_emoji.ttf" "$MODDIR/system/fonts/NotoColorEmoji.ttf"
-    cp -af "$DATA_DIR/custom_emoji.ttf" "$MODDIR/product/fonts/NotoColorEmoji.ttf"
-    cp -af "$DATA_DIR/custom_emoji.ttf" "$MODDIR/system/product/fonts/NotoColorEmoji.ttf"
+    populate_emoji_overlay "$MODDIR" "$DATA_DIR/custom_emoji.ttf"
 fi
 
-# 6. Set permissions and SELinux contexts for both system and product overlay trees
-for dir in "$MODDIR/system" "$MODDIR/product"; do
-    if [ -d "$dir" ]; then
-        chown -R 0:0 "$dir" 2>/dev/null
-        chmod -R 755 "$dir" 2>/dev/null
-        find "$dir" -type f -exec chmod 644 {} + 2>/dev/null
-        chcon -R u:object_r:system_file:s0 "$dir" 2>/dev/null
-    fi
-done
+# 7. Set permissions and SELinux contexts for both system and product overlay trees
+apply_overlay_permissions "$MODDIR"
 
 # 7. Staging complete: NoMount VFS redirection rules and font caches are safely synchronized
 # at boot by post-fs-data.sh. Live kernel VFS hot-swapping and live font clearing must NOT

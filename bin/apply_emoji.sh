@@ -3,13 +3,8 @@
 # Author: Lava
 # Usage: ./apply_emoji.sh <emoji_font_path> <config_json_path>
 
-if [ -d "/data/adb/modules/fontify" ]; then
-    MODDIR="/data/adb/modules/fontify"
-elif [ -d "/data/adb/modules/custom_font_installer" ]; then
-    MODDIR="/data/adb/modules/custom_font_installer"
-else
-    MODDIR="${0%/*}/.."
-fi
+. "${0%/*}/lib_overlay.sh"
+MODDIR="$(resolve_moddir "$0")"
 
 DATA_DIR="$MODDIR/data"
 SRC_EMOJI="$1"
@@ -75,30 +70,10 @@ if [ "$IS_BOOTED" = "1" ] && [ -f "$MODDIR/system/fonts/NotoColorEmoji.ttf" ]; t
 fi
 
 # 5. Populate module overlay trees for emojis (only when unpopulated or prior to initial boot)
-cp -af "$DEST_EMOJI" "$MODDIR/system/fonts/NotoColorEmoji.ttf"
-cp -af "$DEST_EMOJI" "$MODDIR/system/product/fonts/NotoColorEmoji.ttf"
-cp -af "$DEST_EMOJI" "$MODDIR/product/fonts/NotoColorEmoji.ttf"
+populate_emoji_overlay "$MODDIR" "$DEST_EMOJI"
 
-# Preserve system NotoColorEmojiFlags.ttf so national flag emojis (US, GB, IN, JP...)
-# always render correctly even if custom emoji pack does not contain flag glyphs.
-# Only replace NotoColorEmojiFlags.ttf if stock does not exist or custom pack has flag tables.
-rm -f "$MODDIR/system/fonts/NotoColorEmojiFlags.ttf" 2>/dev/null
-rm -f "$MODDIR/product/fonts/NotoColorEmojiFlags.ttf" 2>/dev/null
-
-# Legacy / vendor fallbacks if present in /system/fonts or /product/fonts
-if [ -f /system/fonts/NotoColorEmojiLegacy.ttf ]; then
-    cp -af "$DEST_EMOJI" "$MODDIR/system/fonts/NotoColorEmojiLegacy.ttf"
-fi
-
-# 4. Set permissions and SELinux contexts for both system and product overlays
-for dir in "$MODDIR/system" "$MODDIR/product"; do
-    if [ -d "$dir" ]; then
-        chown -R 0:0 "$dir" 2>/dev/null
-        chmod -R 755 "$dir" 2>/dev/null
-        find "$dir" -type f -exec chmod 644 {} + 2>/dev/null
-        chcon -R u:object_r:system_file:s0 "$dir" 2>/dev/null
-    fi
-done
+# 6. Set permissions and SELinux contexts for both system and product overlays
+apply_overlay_permissions "$MODDIR"
 
 # 5. Staging complete: NoMount VFS redirection rules and font caches are safely synchronized
 # at boot by post-fs-data.sh. Live kernel VFS hot-swapping and live font clearing must NOT

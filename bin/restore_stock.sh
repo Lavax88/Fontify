@@ -2,13 +2,8 @@
 # Fontify - restore_stock.sh
 # Safely reverts all font overlays and restores original stock system fonts
 
-if [ -d "/data/adb/modules/fontify" ]; then
-    MODDIR="/data/adb/modules/fontify"
-elif [ -d "/data/adb/modules/custom_font_installer" ]; then
-    MODDIR="/data/adb/modules/custom_font_installer"
-else
-    MODDIR="${0%/*}/.."
-fi
+. "${0%/*}/lib_overlay.sh"
+MODDIR="$(resolve_moddir "$0")"
 
 DATA_DIR="$MODDIR/data"
 
@@ -43,9 +38,7 @@ fi
 
 # 3. Clean font caches and updatable font overrides from storage.
 # NoMount VFS rules are safely synchronized on next boot by post-fs-data.sh.
-rm -rf /data/fonts/files/* 2>/dev/null
-rm -rf /data/fonts/config/* 2>/dev/null
-rm -rf /data/system/font_cache/* 2>/dev/null
+clear_android_font_caches
 
 echo '{"success": true, "message": "Custom font removed and stock font restored. Please reboot to apply."}'
 exit 0

@@ -3,13 +3,8 @@
 # Author: Lava
 # Synchronizes Kernel VFS path redirection rules when NoMount metamodule is active
 
-if [ -d "/data/adb/modules/fontify" ]; then
-    MODDIR="/data/adb/modules/fontify"
-elif [ -d "/data/adb/modules/custom_font_installer" ]; then
-    MODDIR="/data/adb/modules/custom_font_installer"
-else
-    MODDIR="${0%/*}/.."
-fi
+. "${0%/*}/lib_overlay.sh"
+MODDIR="$(resolve_moddir "$0")"
 
 ACTION="$1"
 

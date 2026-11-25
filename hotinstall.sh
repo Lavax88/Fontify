@@ -12,14 +12,10 @@ chmod 755 "$MODDIR/bin"/*.sh 2>/dev/null
 
 # Preserve permissions and SELinux contexts if a custom font or emoji overlay is present
 if { [ -f "$CUSTOM_FONT" ] && [ -s "$CUSTOM_FONT" ]; } || { [ -f "$CUSTOM_EMOJI" ] && [ -s "$CUSTOM_EMOJI" ]; }; then
-    for dir in "$MODDIR/system" "$MODDIR/product"; do
-        if [ -d "$dir" ]; then
-            chown -R 0:0 "$dir" 2>/dev/null
-            chmod -R 755 "$dir" 2>/dev/null
-            find "$dir" -type f -exec chmod 644 {} + 2>/dev/null
-            chcon -R u:object_r:system_file:s0 "$dir" 2>/dev/null
-        fi
-    done
+    if [ -f "$MODDIR/bin/lib_overlay.sh" ]; then
+        . "$MODDIR/bin/lib_overlay.sh"
+        apply_overlay_permissions "$MODDIR"
+    fi
 fi
 
 # Do not live-swap font inodes or clear font caches while booted to prevent
