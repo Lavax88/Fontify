@@ -82,7 +82,7 @@ export function initPageSwipe(options: PageSwipeOptions): () => void {
     // Skip horizontal page gestures on interactive M3E controls, dialogs, sheets, sliders, and editable playgrounds
     if (
       target.closest(
-        'm3e-bottom-sheet, m3e-dialog, m3e-slider, m3e-slider-thumb, m3e-search-bar, m3e-button-group, m3e-filter-chip-set, input[type="range"], [contenteditable="true"], .emoji-category-bar, .emoji-showcase-grid, .m3-presets-scroll, #browse-search-input, .browse-filter-row, #browse-preview-sheet, .specimen-box'
+        'm3e-bottom-sheet, m3e-dialog, m3e-slider, m3e-slider-thumb, m3e-search-bar, m3e-button-group, m3e-filter-chip-set, m3e-split-pane, input[type="range"], [contenteditable="true"], .emoji-category-bar, .emoji-showcase-grid, .m3-presets-scroll, #browse-search-input, .browse-filter-row, #browse-preview-sheet, .specimen-box'
       )
     ) {
       isPointerDown = false;

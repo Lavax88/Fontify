@@ -1,25 +1,28 @@
 /**
- * Fontify - Dual Floating Action Cluster Controller (M3 Expressive)
- * Handles bottom-right floating <m3e-fab> Reset and Apply actions for Customize and Emoji views.
+ * Fontify - M3E FAB Menu Controller (<m3e-fab-menu>)
+ * Handles bottom-right FAB menu Reset and Apply actions for Customize and Emoji views.
  */
 
 import { store } from '../state/store';
 import { applySelectedFont, restoreStockFont } from './customize';
 import { applySelectedEmoji, restoreStockEmoji } from './emoji';
 
-type FabElement = HTMLElement & { disabled?: boolean };
+type FabMenuItemElement = HTMLElement & { disabled?: boolean };
+type FabMenuElement = HTMLElement & { hide?: (restoreFocus?: boolean) => void };
 
 export function initFloatingActions(): { destroy: () => void } {
   const cluster = document.getElementById('floating-action-cluster');
-  const fabReset = document.getElementById('fab-reset') as FabElement | null;
-  const fabApply = document.getElementById('fab-apply') as FabElement | null;
+  const fabMenu = document.getElementById('fab-actions-menu') as FabMenuElement | null;
+  const fabReset = document.getElementById('fab-reset') as FabMenuItemElement | null;
+  const fabApply = document.getElementById('fab-apply') as FabMenuItemElement | null;
   const fabApplyLabel = document.getElementById('fab-apply-label');
+  const fabResetLabel = document.getElementById('fab-reset-label');
 
   if (!cluster || !fabReset || !fabApply) {
     return { destroy: () => {} };
   }
 
-  function setFabDisabled(el: FabElement, isDisabled: boolean): void {
+  function setItemDisabled(el: FabMenuItemElement, isDisabled: boolean): void {
     el.disabled = isDisabled;
     if (isDisabled) {
       el.setAttribute?.('disabled', '');
@@ -35,6 +38,7 @@ export function initFloatingActions(): { destroy: () => void } {
 
     if (tab === 'overview' || tab === 'browse') {
       cluster.classList.add('hidden');
+      fabMenu?.hide?.(false);
       return;
     }
 
@@ -42,18 +46,21 @@ export function initFloatingActions(): { destroy: () => void } {
 
     if (tab === 'customize') {
       if (fabApplyLabel) fabApplyLabel.textContent = 'Apply Font';
+      if (fabResetLabel) fabResetLabel.textContent = 'Revert Font to Stock';
       fabApply.setAttribute('aria-label', 'Apply Custom Font');
-      setFabDisabled(fabApply, !state.fontBuffer || !state.fontData || state.isApplying);
+      setItemDisabled(fabApply, !state.fontBuffer || !state.fontData || state.isApplying);
       fabReset.setAttribute('title', 'Revert Font to Stock');
     } else if (tab === 'emoji') {
       if (fabApplyLabel) fabApplyLabel.textContent = 'Apply Emoji';
+      if (fabResetLabel) fabResetLabel.textContent = 'Revert Emoji to Stock';
       fabApply.setAttribute('aria-label', 'Apply Emoji Font');
-      setFabDisabled(fabApply, !state.emojiBuffer || state.isApplyingEmoji);
+      setItemDisabled(fabApply, !state.emojiBuffer || state.isApplyingEmoji);
       fabReset.setAttribute('title', 'Revert Emoji to Stock');
     }
   }
 
   const onApplyClick = async () => {
+    fabMenu?.hide?.(false);
     const tab = store.getState().currentTab;
     if (tab === 'customize') {
       await applySelectedFont();
@@ -63,6 +70,7 @@ export function initFloatingActions(): { destroy: () => void } {
   };
 
   const onResetClick = async () => {
+    fabMenu?.hide?.(false);
     const tab = store.getState().currentTab;
     if (tab === 'customize') {
       await restoreStockFont();

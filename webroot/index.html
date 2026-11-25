@@ -18,7 +18,7 @@
   <link rel="stylesheet" crossorigin href="./assets/index.css">
 </head>
 <body>
-    <m3e-theme id="app-theme" color="#386a20" variant="expressive" motion="expressive" scheme="auto">
+    <m3e-theme id="app-theme" color="#386a20" variant="tonal-spot" motion="expressive" scheme="auto">
         <!-- Top App Bar -->
         <m3e-app-bar id="app-bar" size="small" scroll-behavior="elevate">
             <span slot="title" class="app-bar-title">Fontify</span>
@@ -33,19 +33,37 @@
                 <div class="viewpager-track" id="viewpager-track">
                     <!-- ================= TAB 1: OVERVIEW (HOME) ================= -->
                     <section class="tab-view active" id="view-overview" role="tabpanel" aria-labelledby="tab-overview">
-                        <!-- 1. Hero Status Card -->
-                        <m3e-card class="overview-banner is-stock" id="overview-banner" variant="filled">
-                            <div slot="content" class="banner-row">
-                                <div class="banner-icon-wrap" aria-hidden="true">
-                                    <m3e-icon id="banner-icon" name="check_circle" filled></m3e-icon>
+                        <!-- 1. Split Pane: Active Font & Active Emoji Status -->
+                        <m3e-split-pane id="overview-status-split" class="overview-split-pane" value="50" min="30" max="70" label="Resize font and emoji status panes">
+                            <m3e-card slot="start" class="overview-banner is-stock" id="overview-banner" variant="filled">
+                                <div slot="content" class="split-banner-content">
+                                    <div class="split-banner-top">
+                                        <div class="banner-icon-wrap" aria-hidden="true">
+                                            <m3e-icon id="banner-icon" name="font_download" filled></m3e-icon>
+                                        </div>
+                                        <m3e-badge id="banner-badge">STOCK</m3e-badge>
+                                    </div>
+                                    <div class="banner-text">
+                                        <div class="banner-title" id="banner-title">Default Font</div>
+                                        <div class="banner-subtitle" id="banner-subtitle">Stock System Font</div>
+                                    </div>
                                 </div>
-                                <div class="banner-text">
-                                    <div class="banner-title" id="banner-title">Default Font</div>
-                                    <div class="banner-subtitle" id="banner-subtitle">Stock System Font</div>
+                            </m3e-card>
+                            <m3e-card slot="end" class="overview-banner is-stock" id="overview-emoji-banner" variant="filled">
+                                <div slot="content" class="split-banner-content">
+                                    <div class="split-banner-top">
+                                        <div class="banner-icon-wrap" aria-hidden="true">
+                                            <m3e-icon id="emoji-banner-icon" name="mood" filled></m3e-icon>
+                                        </div>
+                                        <m3e-badge id="emoji-banner-badge">STOCK</m3e-badge>
+                                    </div>
+                                    <div class="banner-text">
+                                        <div class="banner-title" id="emoji-banner-title">Default Emoji</div>
+                                        <div class="banner-subtitle" id="emoji-banner-subtitle">Stock (Google)</div>
+                                    </div>
                                 </div>
-                                <m3e-badge id="banner-badge">STOCK</m3e-badge>
-                            </div>
-                        </m3e-card>
+                            </m3e-card>
+                        </m3e-split-pane>
 
                         <!-- 1b. Reboot Required Callout -->
                         <m3e-callout id="reboot-reminder-banner" variant="primary-container" shape="rounded" style="display: none;">
@@ -57,27 +75,24 @@
                             </div>
                         </m3e-callout>
 
-                        <!-- 2. Font & Module Configuration -->
+                        <!-- 2. Font & Module Configuration (Segmented List) -->
                         <m3e-card class="section-card" variant="outlined" aria-label="Font configuration">
                             <div slot="header" class="section-card-header">
                                 <span class="section-card-title">Font Configuration</span>
                             </div>
-                            <m3e-list class="info-list">
+                            <m3e-list variant="segmented" class="info-list">
                                 <m3e-list-item>
                                     Active Font
                                     <span slot="trailing" class="info-val" id="info-active-font">Roboto / Google Sans</span>
                                 </m3e-list-item>
-                                <m3e-divider></m3e-divider>
                                 <m3e-list-item>
                                     Active Emoji
                                     <span slot="trailing" class="info-val" id="info-active-emoji">Stock (Google)</span>
                                 </m3e-list-item>
-                                <m3e-divider></m3e-divider>
                                 <m3e-list-item>
                                     Overlay Target
                                     <span slot="trailing" class="info-val">/system + /product</span>
                                 </m3e-list-item>
-                                <m3e-divider></m3e-divider>
                                 <m3e-list-item>
                                     Stock Backup
                                     <span slot="trailing" class="info-val" id="info-backup-status">Protected (/data/adb)</span>
@@ -85,22 +100,20 @@
                             </m3e-list>
                         </m3e-card>
 
-                        <!-- 3. Device & System Environment -->
+                        <!-- 3. Device & System Environment (Segmented List) -->
                         <m3e-card class="section-card" variant="outlined" aria-label="Device and system environment">
                             <div slot="header" class="section-card-header">
                                 <span class="section-card-title">Device &amp; System</span>
                             </div>
-                            <m3e-list class="info-list">
+                            <m3e-list variant="segmented" class="info-list">
                                 <m3e-list-item>
                                     Device
                                     <span slot="trailing" class="info-val" id="info-device-name">POCO F7 (onyx)</span>
                                 </m3e-list-item>
-                                <m3e-divider></m3e-divider>
                                 <m3e-list-item>
                                     System version
                                     <span slot="trailing" class="info-val" id="info-system-ver">16 (API 36.1)</span>
                                 </m3e-list-item>
-                                <m3e-divider></m3e-divider>
                                 <m3e-list-item>
                                     System ABI
                                     <span slot="trailing" class="info-val" id="info-system-abi">arm64-v8a (4K)</span>
@@ -277,15 +290,23 @@
             </div>
         </main>
 
-        <!-- Dual M3E FAB Pair (Customize & Emoji tabs) -->
+        <!-- M3E FAB Menu (Customize & Emoji tabs) -->
         <div class="floating-action-cluster hidden" id="floating-action-cluster" aria-label="Quick Actions">
-            <m3e-fab id="fab-reset" size="small" variant="secondary-container" aria-label="Revert to Stock" title="Revert to Stock">
-                <m3e-icon name="restart_alt"></m3e-icon>
+            <m3e-fab id="fab-menu-trigger-btn" variant="primary" size="medium" aria-label="Quick Actions">
+                <m3e-fab-menu-trigger for="fab-actions-menu">
+                    <m3e-icon name="tune"></m3e-icon>
+                </m3e-fab-menu-trigger>
             </m3e-fab>
-            <m3e-fab id="fab-apply" variant="primary" extended disabled aria-label="Apply">
-                <m3e-icon name="check"></m3e-icon>
-                <span slot="label" id="fab-apply-label">Apply</span>
-            </m3e-fab>
+            <m3e-fab-menu id="fab-actions-menu" variant="primary">
+                <m3e-fab-menu-item id="fab-apply" disabled>
+                    <m3e-icon slot="icon" name="check"></m3e-icon>
+                    <span id="fab-apply-label">Apply</span>
+                </m3e-fab-menu-item>
+                <m3e-fab-menu-item id="fab-reset">
+                    <m3e-icon slot="icon" name="restart_alt"></m3e-icon>
+                    <span id="fab-reset-label">Revert to Stock</span>
+                </m3e-fab-menu-item>
+            </m3e-fab-menu>
         </div>
 
         <!-- M3E Docked Bottom Navigation Bar -->

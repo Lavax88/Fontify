@@ -11,6 +11,8 @@ import '@m3e/web/button-group';
 import '@m3e/web/icon-button';
 import '@m3e/web/icon';
 import '@m3e/web/fab';
+import '@m3e/web/fab-menu';
+import '@m3e/web/split-pane';
 import '@m3e/web/card';
 import '@m3e/web/callout';
 import '@m3e/web/list';

@@ -92,12 +92,9 @@
   transform: translateY(16px) scale(0.92);
 }
 
-#fab-apply[disabled] {
+#fab-actions-menu m3e-fab-menu-item[disabled] {
   background-color: var(--md-sys-color-surface-container-highest);
-  border-radius: 16px;
-  --m3e-primary-fab-disabled-container-color: var(--md-sys-color-surface-container-highest);
-  --m3e-primary-fab-disabled-container-opacity: 1;
-  --m3e-fab-disabled-container-opacity: 1;
+  border-radius: 9999px;
 }
 
 /* ================= SHARED CARD & LIST LAYOUTS ================= */
@@ -122,6 +119,7 @@
 
 .info-list {
   width: 100%;
+  --m3e-segmented-list-item-container-color: var(--md-sys-color-surface-container-low);
 }
 
 .info-val {
@@ -133,8 +131,15 @@
 }
 
 /* ================= OVERVIEW TAB ================= */
+.overview-split-pane {
+  width: 100%;
+  min-height: 120px;
+}
+
 .overview-banner {
-  --m3e-card-shape: 28px;
+  --m3e-card-shape: 24px;
+  height: 100%;
+  width: 100%;
 }
 
 .overview-banner.is-active {
@@ -147,10 +152,18 @@
   --m3e-filled-card-text-color: var(--md-sys-color-on-surface);
 }
 
-.banner-row {
+.split-banner-content {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  width: 100%;
+}
+
+.split-banner-top {
   display: flex;
   align-items: center;
-  gap: 14px;
+  justify-content: space-between;
+  gap: 8px;
   width: 100%;
 }
 

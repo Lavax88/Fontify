@@ -1,6 +1,7 @@
 /**
  * Fontify - Overview Tab Controller (M3E Expressive)
- * Subscribes to system status and renders Hero Status Card, Reboot Callout, and Device Info lists.
+ * Subscribes to system status and renders Split Pane (Font + Emoji status),
+ * Reboot Callout, and Segmented Device Info lists.
  */
 
 import { store } from '../state/store';
@@ -13,6 +14,13 @@ export function setupOverviewTab(): void {
   const bannerSubtitle = document.getElementById('banner-subtitle');
   const bannerBadge = document.getElementById('banner-badge');
   const bannerIcon = document.getElementById('banner-icon');
+
+  const emojiBanner = document.getElementById('overview-emoji-banner');
+  const emojiBannerTitle = document.getElementById('emoji-banner-title');
+  const emojiBannerSubtitle = document.getElementById('emoji-banner-subtitle');
+  const emojiBannerBadge = document.getElementById('emoji-banner-badge');
+  const emojiBannerIcon = document.getElementById('emoji-banner-icon');
+
   const infoActiveFont = document.getElementById('info-active-font');
   const infoActiveEmoji = document.getElementById('info-active-emoji');
   const infoSystemVer = document.getElementById('info-system-ver');
@@ -51,16 +59,35 @@ export function setupOverviewTab(): void {
     if (overviewBanner && bannerTitle && bannerSubtitle && bannerBadge) {
       if (isActive) {
         overviewBanner.className = 'overview-banner is-active';
-        bannerTitle.textContent = 'Activated';
-        bannerSubtitle.textContent = `${fontName} (Active)`;
-        bannerBadge.textContent = 'CUSTOM';
+        bannerTitle.textContent = 'Custom Font';
+        bannerSubtitle.textContent = fontName;
+        bannerBadge.textContent = 'ACTIVE';
         bannerIcon?.setAttribute('name', 'check_circle');
       } else {
         overviewBanner.className = 'overview-banner is-stock';
         bannerTitle.textContent = 'Default Font';
         bannerSubtitle.textContent = 'Stock System Font';
         bannerBadge.textContent = 'STOCK';
-        bannerIcon?.setAttribute('name', 'check_circle');
+        bannerIcon?.setAttribute('name', 'font_download');
+      }
+    }
+
+    const isEmojiActive = Boolean(status.emoji_active);
+    const emojiName = isEmojiActive ? status.active_emoji_name || 'Custom Emoji' : 'Stock (Google)';
+
+    if (emojiBanner && emojiBannerTitle && emojiBannerSubtitle && emojiBannerBadge) {
+      if (isEmojiActive) {
+        emojiBanner.className = 'overview-banner is-active';
+        emojiBannerTitle.textContent = 'Custom Emoji';
+        emojiBannerSubtitle.textContent = emojiName;
+        emojiBannerBadge.textContent = 'ACTIVE';
+        emojiBannerIcon?.setAttribute('name', 'check_circle');
+      } else {
+        emojiBanner.className = 'overview-banner is-stock';
+        emojiBannerTitle.textContent = 'Default Emoji';
+        emojiBannerSubtitle.textContent = 'Stock (Google)';
+        emojiBannerBadge.textContent = 'STOCK';
+        emojiBannerIcon?.setAttribute('name', 'mood');
       }
     }
 
@@ -69,9 +96,7 @@ export function setupOverviewTab(): void {
     }
 
     if (infoActiveEmoji) {
-      infoActiveEmoji.textContent = status.emoji_active
-        ? status.active_emoji_name || 'Custom Emoji'
-        : 'Stock (Google)';
+      infoActiveEmoji.textContent = emojiName;
     }
 
     if (status.device) {
