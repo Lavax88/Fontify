@@ -948,9 +948,7 @@ export async function handleApplyDirectly(item: BrowseItem, variant?: FontVarian
           await fontService.applyFont({
             fontBuffer: buffer,
             fontFile: new File([buffer], `${item.name}.ttf`, { type: 'font/ttf' }),
-            fontName: (isVariableFont && !isVarSelected && selectedVariant.name)
-              ? `${item.name} ${selectedVariant.name}`
-              : (parsed.fullName || `${item.name} ${selectedVariant.name}`),
+            fontName: (item.name || parsed.familyName || parsed.fullName || 'Custom Font').trim(),
             isVariable: isVariableFont,
             weightMode: 'normal',
             axisValues,

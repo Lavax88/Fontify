@@ -397,12 +397,12 @@ describe('Customize Reactive UI & Direct Apply Fixes', () => {
     expect(downloadedTargetVariant.weight).toBe(400);
     expect(downloadedTargetVariant.url).toContain('latin-400-normal.ttf');
 
-    // Applied options should register as static regular font
-    expect(appliedOptions.fontName).toBe('Outfit Regular');
+    // Applied options should register using the font family name only
+    expect(appliedOptions.fontName).toBe('Outfit');
     expect(appliedOptions.isVariable).toBe(false);
   });
 
-  it('resolves active font name from selected style/weight preset instead of default Thin fullName', async () => {
+  it('resolves active font name to the family name without weight or style suffix', async () => {
     const { resolveAppliedFontName } = await import('../src/ui/customize');
 
     const variableThinDefault: FontInfo = {
@@ -421,9 +421,9 @@ describe('Customize Reactive UI & Direct Apply Fixes', () => {
       instances: [{ name: 'Regular', values: { wght: 400 } }]
     };
 
-    expect(resolveAppliedFontName(variableThinDefault, 'Regular', 'custom', { wght: 400 })).toBe('Inter Regular');
-    expect(resolveAppliedFontName(variableThinDefault, 'SemiBold (600)', 'custom', { wght: 600 })).toBe('Inter SemiBold');
-    expect(resolveAppliedFontName(variableThinDefault, 'Auto (Stock)', 'auto', { wght: 100 })).toBe('Inter (Variable)');
-    expect(resolveAppliedFontName(variableThinDefault, 'Custom', 'custom', { wght: 550 })).toBe('Inter (wght 550)');
+    expect(resolveAppliedFontName(variableThinDefault, 'Regular', 'custom', { wght: 400 })).toBe('Inter');
+    expect(resolveAppliedFontName(variableThinDefault, 'SemiBold (600)', 'custom', { wght: 600 })).toBe('Inter');
+    expect(resolveAppliedFontName(variableThinDefault, 'Auto (Stock)', 'auto', { wght: 100 })).toBe('Inter');
+    expect(resolveAppliedFontName(variableThinDefault, 'Custom', 'custom', { wght: 550 })).toBe('Inter');
   });
 });

@@ -16,35 +16,11 @@ import type { FontInfo } from '../font/types';
 
 export function resolveAppliedFontName(
   fontData: FontInfo,
-  selectedPreset: string,
-  weightMode: string,
-  axisValues: Record<string, number>
+  _selectedPreset?: string,
+  _weightMode?: string,
+  _axisValues?: Record<string, number>
 ): string {
-  if (!fontData.isVariable) {
-    return fontData.fullName;
-  }
-
-  const family = (fontData.familyName || fontData.fullName || 'Custom Font').trim();
-  const preset = (selectedPreset || '').trim();
-
-  if (preset && preset !== 'Custom' && preset !== 'Auto (Stock)') {
-    // Normalize "Regular (400)" -> "Regular" while keeping named styles like "Regular" or "Bold Italic"
-    const cleanPreset = preset.replace(/\s*\(\d+\)\s*$/, '').trim();
-    if (cleanPreset.toLowerCase().startsWith(family.toLowerCase())) {
-      return cleanPreset;
-    }
-    return `${family} ${cleanPreset}`.trim();
-  }
-
-  if (weightMode === 'auto' || preset === 'Auto (Stock)') {
-    return `${family} (Variable)`;
-  }
-
-  if (preset === 'Custom' && typeof axisValues?.wght === 'number') {
-    return `${family} (wght ${axisValues.wght})`;
-  }
-
-  return fontData.fullName;
+  return (fontData.familyName || fontData.fullName || 'Custom Font').trim();
 }
 
 export async function applySelectedFont(): Promise<void> {
